@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "prism": {
+      "command": "/opt/homebrew/bin/prism",
+      "args": ["mcp", "/Users/tapabratapal/Projects/grove-suite"]
+    }
+  }
+}
