@@ -1,0 +1,17 @@
+// Copy this file to go.work in the parent directory of all repos.
+// go.work is gitignored — it is a local developer convenience only.
+// It tells Go to use local checkouts instead of published module versions.
+//
+// Setup:
+//   cd <parent-dir>
+//   cp grove-suite/go.work.template go.work
+//   # adjust paths if your checkouts live elsewhere
+
+go 1.22
+
+use (
+    ./grove
+    ./prism
+    ./fuse
+    ./relay
+)
