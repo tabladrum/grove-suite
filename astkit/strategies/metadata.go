@@ -1,18 +1,15 @@
-// Package parser — language-specific metadata extractors.
-//
-// This file contains the helpers that populate the v0.2 SymbolRecord fields
-// (Modifiers, TypeParameters, Annotations, CallSites) for each supported
-// language. Keeping these separate from treesitter.go keeps the per-language
-// symbol constructors small.
-package parser
+package strategies
 
 import (
 	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
 
-	"github.com/tabladrum/grove-suite/grove/internal/core"
+	"github.com/tabladrum/grove-suite/astkit"
+	"github.com/tabladrum/grove-suite/astkit/internalast"
 )
+
+var _ = internalast.NodeSpan // imported by extractors.go callers
 
 // ─── Generic call-site walker ────────────────────────────────────────────────
 //
@@ -25,11 +22,11 @@ type callSpec struct {
 	calleeFn  func(call *sitter.Node, src []byte) string
 }
 
-func collectCallSites(body *sitter.Node, src []byte, spec callSpec) []core.CallSite {
+func collectCallSites(body *sitter.Node, src []byte, spec callSpec) []astkit.CallSite {
 	if body == nil {
 		return nil
 	}
-	var out []core.CallSite
+	var out []astkit.CallSite
 	var walk func(*sitter.Node)
 	walk = func(n *sitter.Node) {
 		if n == nil {
@@ -39,7 +36,7 @@ func collectCallSites(body *sitter.Node, src []byte, spec callSpec) []core.CallS
 			if n.Type() == t {
 				callee := spec.calleeFn(n, src)
 				if callee != "" {
-					out = append(out, core.CallSite{
+					out = append(out, astkit.CallSite{
 						Callee: callee,
 						Line:   int(n.StartPoint().Row) + 1,
 					})
@@ -55,7 +52,7 @@ func collectCallSites(body *sitter.Node, src []byte, spec callSpec) []core.CallS
 	return out
 }
 
-func goCallSites(body *sitter.Node, src []byte) []core.CallSite {
+func goCallSites(body *sitter.Node, src []byte) []astkit.CallSite {
 	return collectCallSites(body, src, callSpec{
 		nodeTypes: []string{"call_expression"},
 		calleeFn: func(call *sitter.Node, src []byte) string {
@@ -77,7 +74,7 @@ func goCallSites(body *sitter.Node, src []byte) []core.CallSite {
 	})
 }
 
-func jsCallSites(body *sitter.Node, src []byte) []core.CallSite {
+func jsCallSites(body *sitter.Node, src []byte) []astkit.CallSite {
 	return collectCallSites(body, src, callSpec{
 		nodeTypes: []string{"call_expression", "new_expression"},
 		calleeFn: func(call *sitter.Node, src []byte) string {
@@ -103,7 +100,7 @@ func jsCallSites(body *sitter.Node, src []byte) []core.CallSite {
 	})
 }
 
-func pythonCallSites(body *sitter.Node, src []byte) []core.CallSite {
+func pythonCallSites(body *sitter.Node, src []byte) []astkit.CallSite {
 	return collectCallSites(body, src, callSpec{
 		nodeTypes: []string{"call"},
 		calleeFn: func(call *sitter.Node, src []byte) string {
@@ -125,7 +122,7 @@ func pythonCallSites(body *sitter.Node, src []byte) []core.CallSite {
 	})
 }
 
-func javaCallSites(body *sitter.Node, src []byte) []core.CallSite {
+func javaCallSites(body *sitter.Node, src []byte) []astkit.CallSite {
 	return collectCallSites(body, src, callSpec{
 		nodeTypes: []string{"method_invocation", "object_creation_expression"},
 		calleeFn: func(call *sitter.Node, src []byte) string {
@@ -145,7 +142,7 @@ func javaCallSites(body *sitter.Node, src []byte) []core.CallSite {
 	})
 }
 
-func rustCallSites(body *sitter.Node, src []byte) []core.CallSite {
+func rustCallSites(body *sitter.Node, src []byte) []astkit.CallSite {
 	return collectCallSites(body, src, callSpec{
 		nodeTypes: []string{"call_expression", "macro_invocation"},
 		calleeFn: func(call *sitter.Node, src []byte) string {
