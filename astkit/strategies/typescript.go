@@ -5,40 +5,37 @@ import (
 
 	sitter "github.com/smacker/go-tree-sitter"
 
-	"github.com/tabladrum/grove-suite/fuse/internal/core"
+	"github.com/tabladrum/grove-suite/astkit"
+	"github.com/tabladrum/grove-suite/astkit/internalast"
 )
 
 // jsLike is a base strategy shared by TypeScript, TSX, and JavaScript.
 type jsLike struct {
-	lang core.LanguageKey
+	lang astkit.LanguageKey
 	exts []string
 }
 
 func NewTypeScript(tsx bool) *jsLike {
 	if tsx {
-		return &jsLike{lang: core.LangTSX, exts: []string{".tsx"}}
+		return &jsLike{lang: astkit.LangTSX, exts: []string{".tsx"}}
 	}
-	return &jsLike{lang: core.LangTypeScript, exts: []string{".ts"}}
+	return &jsLike{lang: astkit.LangTypeScript, exts: []string{".ts"}}
 }
 
 func NewJavaScript() *jsLike {
-	return &jsLike{lang: core.LangJavaScript, exts: []string{".js", ".jsx", ".mjs", ".cjs"}}
+	return &jsLike{lang: astkit.LangJavaScript, exts: []string{".js", ".jsx", ".mjs", ".cjs"}}
 }
 
-func (j *jsLike) Language() core.LanguageKey { return j.lang }
+func (j *jsLike) Language() astkit.LanguageKey { return j.lang }
 func (j *jsLike) Extensions() []string       { return j.exts }
-func (j *jsLike) Capabilities() core.MergeCapabilities {
-	return core.MergeCapabilities{SupportsSymbolMerge: true, SupportsImportMerge: true}
-}
-
 // jsNamedSymbol describes the top-level statement kinds we surface.
-func (j *jsLike) Extract(tree *sitter.Tree, src []byte) ([]core.SymbolData, error) {
+func (j *jsLike) Extract(tree *sitter.Tree, src []byte) ([]astkit.Symbol, error) {
 	if tree == nil {
 		return nil, nil
 	}
 	root := tree.RootNode()
-	var out []core.SymbolData
-	walkChildren(root, func(n *sitter.Node) {
+	var out []astkit.Symbol
+	internalast.WalkChildren(root, func(n *sitter.Node) {
 		// export wraps an inner declaration we still want to surface.
 		exported := false
 		inner := n
@@ -84,10 +81,10 @@ func findFirstChildIn(n *sitter.Node, kinds []string) *sitter.Node {
 	return nil
 }
 
-func jsFunc(n *sitter.Node, src []byte, exported bool) core.SymbolData {
-	name := nodeText(n.ChildByFieldName("name"), src)
+func jsFunc(n *sitter.Node, src []byte, exported bool) astkit.Symbol {
+	name := internalast.NodeText(n.ChildByFieldName("name"), src)
 	body := n.ChildByFieldName("body")
-	sig := nodeText(n, src)
+	sig := internalast.NodeText(n, src)
 	if body != nil {
 		end := body.StartByte()
 		if int(end) > len(src) {
@@ -95,39 +92,39 @@ func jsFunc(n *sitter.Node, src []byte, exported bool) core.SymbolData {
 		}
 		sig = strings.TrimSpace(string(src[n.StartByte():end]))
 	}
-	return core.SymbolData{
-		Key:       name,
+	return astkit.Symbol{
+		QualifiedName: name,
 		Kind:      "function",
 		Name:      name,
 		Signature: sig,
-		Body:      nodeText(n, src),
-		Span:      nodeSpan(n),
+		Body:      internalast.NodeText(n, src),
+		Span:      internalast.NodeSpan(n),
 		Exported:  exported,
 	}
 }
 
-func jsNamed(n *sitter.Node, src []byte, kind string, exported bool) core.SymbolData {
-	name := nodeText(n.ChildByFieldName("name"), src)
-	return core.SymbolData{
-		Key:       name,
-		Kind:      kind,
+func jsNamed(n *sitter.Node, src []byte, kind string, exported bool) astkit.Symbol {
+	name := internalast.NodeText(n.ChildByFieldName("name"), src)
+	return astkit.Symbol{
+		QualifiedName: name,
+		Kind:      astkit.SymbolKind(kind),
 		Name:      name,
-		Signature: extractFirstLine(nodeText(n, src)),
-		Body:      nodeText(n, src),
-		Span:      nodeSpan(n),
+		Signature: internalast.FirstLine(internalast.NodeText(n, src)),
+		Body:      internalast.NodeText(n, src),
+		Span:      internalast.NodeSpan(n),
 		Exported:  exported,
 	}
 }
 
-func jsClass(n *sitter.Node, src []byte, exported bool) []core.SymbolData {
-	name := nodeText(n.ChildByFieldName("name"), src)
-	out := []core.SymbolData{{
-		Key:       name,
+func jsClass(n *sitter.Node, src []byte, exported bool) []astkit.Symbol {
+	name := internalast.NodeText(n.ChildByFieldName("name"), src)
+	out := []astkit.Symbol{{
+		QualifiedName: name,
 		Kind:      "class",
 		Name:      name,
-		Signature: extractFirstLine(nodeText(n, src)),
-		Body:      nodeText(n, src),
-		Span:      nodeSpan(n),
+		Signature: internalast.FirstLine(internalast.NodeText(n, src)),
+		Body:      internalast.NodeText(n, src),
+		Span:      internalast.NodeSpan(n),
 		Exported:  exported,
 	}}
 	body := n.ChildByFieldName("body")
@@ -141,31 +138,31 @@ func jsClass(n *sitter.Node, src []byte, exported bool) []core.SymbolData {
 		}
 		switch c.Type() {
 		case "method_definition":
-			methodName := nodeText(c.ChildByFieldName("name"), src)
+			methodName := internalast.NodeText(c.ChildByFieldName("name"), src)
 			key := name + "." + methodName
-			out = append(out, core.SymbolData{
-				Key:       key,
+			out = append(out, astkit.Symbol{
+				QualifiedName: key,
 				Kind:      "method",
 				Name:      methodName,
-				ParentKey: name,
-				Signature: extractFirstLine(nodeText(c, src)),
-				Body:      nodeText(c, src),
-				Span:      nodeSpan(c),
+				ParentName: name,
+				Signature: internalast.FirstLine(internalast.NodeText(c, src)),
+				Body:      internalast.NodeText(c, src),
+				Span:      internalast.NodeSpan(c),
 				Exported:  exported,
 			})
 		case "field_definition", "public_field_definition":
-			fieldName := nodeText(c.ChildByFieldName("name"), src)
+			fieldName := internalast.NodeText(c.ChildByFieldName("name"), src)
 			if fieldName == "" {
 				continue
 			}
-			out = append(out, core.SymbolData{
-				Key:       name + "." + fieldName,
+			out = append(out, astkit.Symbol{
+				QualifiedName: name + "." + fieldName,
 				Kind:      "field",
 				Name:      fieldName,
-				ParentKey: name,
-				Signature: extractFirstLine(nodeText(c, src)),
-				Body:      nodeText(c, src),
-				Span:      nodeSpan(c),
+				ParentName: name,
+				Signature: internalast.FirstLine(internalast.NodeText(c, src)),
+				Body:      internalast.NodeText(c, src),
+				Span:      internalast.NodeSpan(c),
 				Exported:  exported,
 			})
 		}
@@ -173,8 +170,8 @@ func jsClass(n *sitter.Node, src []byte, exported bool) []core.SymbolData {
 	return out
 }
 
-func jsVar(n *sitter.Node, src []byte, exported bool) []core.SymbolData {
-	var out []core.SymbolData
+func jsVar(n *sitter.Node, src []byte, exported bool) []astkit.Symbol {
+	var out []astkit.Symbol
 	for i := 0; i < int(n.ChildCount()); i++ {
 		c := n.Child(i)
 		if c == nil || c.Type() != "variable_declarator" {
@@ -184,35 +181,35 @@ func jsVar(n *sitter.Node, src []byte, exported bool) []core.SymbolData {
 		if nameNode == nil || nameNode.Type() != "identifier" {
 			continue
 		}
-		name := nodeText(nameNode, src)
+		name := internalast.NodeText(nameNode, src)
 		kind := "const"
-		out = append(out, core.SymbolData{
-			Key:       name,
-			Kind:      kind,
+		out = append(out, astkit.Symbol{
+			QualifiedName: name,
+			Kind:      astkit.SymbolKind(kind),
 			Name:      name,
-			Signature: extractFirstLine(nodeText(c, src)),
-			Body:      nodeText(c, src),
-			Span:      nodeSpan(c),
+			Signature: internalast.FirstLine(internalast.NodeText(c, src)),
+			Body:      internalast.NodeText(c, src),
+			Span:      internalast.NodeSpan(c),
 			Exported:  exported,
 		})
 	}
 	return out
 }
 
-func (j *jsLike) ExtractImports(tree *sitter.Tree, src []byte) ([]core.ImportStatement, error) {
+func (j *jsLike) ExtractImports(tree *sitter.Tree, src []byte) ([]astkit.ImportStatement, error) {
 	if tree == nil {
 		return nil, nil
 	}
 	root := tree.RootNode()
-	var imps []core.ImportStatement
-	walkChildren(root, func(n *sitter.Node) {
+	var imps []astkit.ImportStatement
+	internalast.WalkChildren(root, func(n *sitter.Node) {
 		if n.Type() != "import_statement" {
 			return
 		}
 		sourceNode := n.ChildByFieldName("source")
-		path := strings.Trim(nodeText(sourceNode, src), `"'`+"`")
-		imps = append(imps, core.ImportStatement{
-			Raw:  nodeText(n, src),
+		path := strings.Trim(internalast.NodeText(sourceNode, src), `"'`+"`")
+		imps = append(imps, astkit.ImportStatement{
+			Raw:  internalast.NodeText(n, src),
 			Path: path,
 			Line: int(n.StartPoint().Row) + 1,
 		})
@@ -220,15 +217,15 @@ func (j *jsLike) ExtractImports(tree *sitter.Tree, src []byte) ([]core.ImportSta
 	return imps, nil
 }
 
-func (j *jsLike) ExtractExports(tree *sitter.Tree, src []byte) ([]core.ExportStatement, error) {
+func (j *jsLike) ExtractExports(tree *sitter.Tree, src []byte) ([]astkit.Export, error) {
 	syms, err := j.Extract(tree, src)
 	if err != nil {
 		return nil, err
 	}
-	var out []core.ExportStatement
+	var out []astkit.Export
 	for _, s := range syms {
-		if s.Exported && s.ParentKey == "" {
-			out = append(out, core.ExportStatement{Name: s.Name, Kind: s.Kind})
+		if s.Exported && s.ParentName == "" {
+			out = append(out, astkit.Export{Name: s.Name, Kind: s.Kind})
 		}
 	}
 	return out, nil

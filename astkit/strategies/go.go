@@ -5,7 +5,8 @@ import (
 
 	sitter "github.com/smacker/go-tree-sitter"
 
-	"github.com/tabladrum/grove-suite/fuse/internal/core"
+	"github.com/tabladrum/grove-suite/astkit"
+	"github.com/tabladrum/grove-suite/astkit/internalast"
 )
 
 // Go strategy.
@@ -13,19 +14,15 @@ type goStrategy struct{}
 
 func NewGo() *goStrategy { return &goStrategy{} }
 
-func (g *goStrategy) Language() core.LanguageKey { return core.LangGo }
+func (g *goStrategy) Language() astkit.LanguageKey { return astkit.LangGo }
 func (g *goStrategy) Extensions() []string       { return []string{".go"} }
-func (g *goStrategy) Capabilities() core.MergeCapabilities {
-	return core.MergeCapabilities{SupportsSymbolMerge: true, SupportsImportMerge: true}
-}
-
-func (g *goStrategy) Extract(tree *sitter.Tree, src []byte) ([]core.SymbolData, error) {
+func (g *goStrategy) Extract(tree *sitter.Tree, src []byte) ([]astkit.Symbol, error) {
 	if tree == nil {
 		return nil, nil
 	}
 	root := tree.RootNode()
-	var out []core.SymbolData
-	walkChildren(root, func(n *sitter.Node) {
+	var out []astkit.Symbol
+	internalast.WalkChildren(root, func(n *sitter.Node) {
 		switch n.Type() {
 		case "function_declaration":
 			out = append(out, goFunc(n, src))
@@ -42,13 +39,13 @@ func (g *goStrategy) Extract(tree *sitter.Tree, src []byte) ([]core.SymbolData, 
 	return out, nil
 }
 
-func (g *goStrategy) ExtractImports(tree *sitter.Tree, src []byte) ([]core.ImportStatement, error) {
+func (g *goStrategy) ExtractImports(tree *sitter.Tree, src []byte) ([]astkit.ImportStatement, error) {
 	if tree == nil {
 		return nil, nil
 	}
 	root := tree.RootNode()
-	var imports []core.ImportStatement
-	walkChildren(root, func(n *sitter.Node) {
+	var imports []astkit.ImportStatement
+	internalast.WalkChildren(root, func(n *sitter.Node) {
 		if n.Type() != "import_declaration" {
 			return
 		}
@@ -78,55 +75,55 @@ func (g *goStrategy) ExtractImports(tree *sitter.Tree, src []byte) ([]core.Impor
 	return imports, nil
 }
 
-func (g *goStrategy) ExtractExports(tree *sitter.Tree, src []byte) ([]core.ExportStatement, error) {
+func (g *goStrategy) ExtractExports(tree *sitter.Tree, src []byte) ([]astkit.Export, error) {
 	syms, err := g.Extract(tree, src)
 	if err != nil {
 		return nil, err
 	}
-	var out []core.ExportStatement
+	var out []astkit.Export
 	for _, s := range syms {
 		if s.Exported {
-			out = append(out, core.ExportStatement{Name: s.Name, Kind: s.Kind})
+			out = append(out, astkit.Export{Name: s.Name, Kind: s.Kind})
 		}
 	}
 	return out, nil
 }
 
 // goFunc handles `func Name(args) ret { body }`.
-func goFunc(n *sitter.Node, src []byte) core.SymbolData {
-	name := nodeText(n.ChildByFieldName("name"), src)
-	body := nodeText(n, src)
+func goFunc(n *sitter.Node, src []byte) astkit.Symbol {
+	name := internalast.NodeText(n.ChildByFieldName("name"), src)
+	body := internalast.NodeText(n, src)
 	sig := goFuncSignature(n, src)
-	return core.SymbolData{
-		Key:       name,
+	return astkit.Symbol{
+		QualifiedName: name,
 		Kind:      "function",
 		Name:      name,
 		Signature: sig,
 		Body:      body,
-		Span:      nodeSpan(n),
-		Exported:  isCapitalized(name),
+		Span:      internalast.NodeSpan(n),
+		Exported:  internalast.IsCapitalized(name),
 	}
 }
 
 // goMethod handles `func (r Recv) Name(args) ret { body }`.
-func goMethod(n *sitter.Node, src []byte) core.SymbolData {
-	name := nodeText(n.ChildByFieldName("name"), src)
-	recv := nodeText(n.ChildByFieldName("receiver"), src)
+func goMethod(n *sitter.Node, src []byte) astkit.Symbol {
+	name := internalast.NodeText(n.ChildByFieldName("name"), src)
+	recv := internalast.NodeText(n.ChildByFieldName("receiver"), src)
 	recvType := extractReceiverType(recv)
 	key := name
 	if recvType != "" {
 		key = recvType + "." + name
 	}
-	body := nodeText(n, src)
-	return core.SymbolData{
-		Key:       key,
+	body := internalast.NodeText(n, src)
+	return astkit.Symbol{
+		QualifiedName: key,
 		Kind:      "method",
 		Name:      name,
-		ParentKey: recvType,
+		ParentName: recvType,
 		Signature: goFuncSignature(n, src),
 		Body:      body,
-		Span:      nodeSpan(n),
-		Exported:  isCapitalized(name),
+		Span:      internalast.NodeSpan(n),
+		Exported:  internalast.IsCapitalized(name),
 	}
 }
 
@@ -135,7 +132,7 @@ func goMethod(n *sitter.Node, src []byte) core.SymbolData {
 func goFuncSignature(n *sitter.Node, src []byte) string {
 	body := n.ChildByFieldName("body")
 	if body == nil {
-		return extractFirstLine(nodeText(n, src))
+		return internalast.FirstLine(internalast.NodeText(n, src))
 	}
 	end := body.StartByte()
 	if int(end) > len(src) {
@@ -164,8 +161,8 @@ func extractReceiverType(recv string) string {
 }
 
 // goTypeDecl produces a SymbolData per type_spec inside a type_declaration.
-func goTypeDecl(n *sitter.Node, src []byte) []core.SymbolData {
-	var out []core.SymbolData
+func goTypeDecl(n *sitter.Node, src []byte) []astkit.Symbol {
+	var out []astkit.Symbol
 	for i := 0; i < int(n.ChildCount()); i++ {
 		c := n.Child(i)
 		if c == nil || c.Type() != "type_spec" {
@@ -175,7 +172,7 @@ func goTypeDecl(n *sitter.Node, src []byte) []core.SymbolData {
 		if nameNode == nil {
 			continue
 		}
-		name := nodeText(nameNode, src)
+		name := internalast.NodeText(nameNode, src)
 		kind := "type"
 		typeBody := c.ChildByFieldName("type")
 		if typeBody != nil {
@@ -186,37 +183,37 @@ func goTypeDecl(n *sitter.Node, src []byte) []core.SymbolData {
 				kind = "interface"
 			}
 		}
-		out = append(out, core.SymbolData{
-			Key:       name,
-			Kind:      kind,
+		out = append(out, astkit.Symbol{
+			QualifiedName: name,
+			Kind:      astkit.SymbolKind(kind),
 			Name:      name,
-			Signature: extractFirstLine(nodeText(c, src)),
-			Body:      nodeText(c, src),
-			Span:      nodeSpan(c),
-			Exported:  isCapitalized(name),
+			Signature: internalast.FirstLine(internalast.NodeText(c, src)),
+			Body:      internalast.NodeText(c, src),
+			Span:      internalast.NodeSpan(c),
+			Exported:  internalast.IsCapitalized(name),
 		})
 	}
 	return out
 }
 
 // goValueDecl produces a SymbolData per identifier in a const/var declaration.
-func goValueDecl(n *sitter.Node, src []byte, kind string) []core.SymbolData {
-	var out []core.SymbolData
+func goValueDecl(n *sitter.Node, src []byte, kind string) []astkit.Symbol {
+	var out []astkit.Symbol
 	collect := func(spec *sitter.Node) {
 		for j := 0; j < int(spec.ChildCount()); j++ {
 			id := spec.Child(j)
 			if id == nil || id.Type() != "identifier" {
 				continue
 			}
-			name := nodeText(id, src)
-			out = append(out, core.SymbolData{
-				Key:       name,
-				Kind:      kind,
+			name := internalast.NodeText(id, src)
+			out = append(out, astkit.Symbol{
+				QualifiedName: name,
+				Kind:      astkit.SymbolKind(kind),
 				Name:      name,
-				Signature: extractFirstLine(nodeText(spec, src)),
-				Body:      nodeText(spec, src),
-				Span:      nodeSpan(spec),
-				Exported:  isCapitalized(name),
+				Signature: internalast.FirstLine(internalast.NodeText(spec, src)),
+				Body:      internalast.NodeText(spec, src),
+				Span:      internalast.NodeSpan(spec),
+				Exported:  internalast.IsCapitalized(name),
 			})
 		}
 	}
@@ -234,20 +231,20 @@ func goValueDecl(n *sitter.Node, src []byte, kind string) []core.SymbolData {
 }
 
 // goImportSpec parses one import spec like `alias "path"` or `"path"`.
-func goImportSpec(n *sitter.Node, src []byte) *core.ImportStatement {
+func goImportSpec(n *sitter.Node, src []byte) *astkit.ImportStatement {
 	pathNode := n.ChildByFieldName("path")
 	if pathNode == nil {
 		return nil
 	}
-	rawPath := nodeText(pathNode, src)
+	rawPath := internalast.NodeText(pathNode, src)
 	cleaned := strings.Trim(rawPath, `"`)
 	alias := ""
 	if nameNode := n.ChildByFieldName("name"); nameNode != nil {
-		alias = nodeText(nameNode, src)
+		alias = internalast.NodeText(nameNode, src)
 	}
 	group := goImportGroup(cleaned)
-	return &core.ImportStatement{
-		Raw:   nodeText(n, src),
+	return &astkit.ImportStatement{
+		Raw:   internalast.NodeText(n, src),
 		Path:  cleaned,
 		Alias: alias,
 		Group: group,

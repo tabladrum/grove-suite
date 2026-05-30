@@ -5,7 +5,8 @@ import (
 
 	sitter "github.com/smacker/go-tree-sitter"
 
-	"github.com/tabladrum/grove-suite/fuse/internal/core"
+	"github.com/tabladrum/grove-suite/astkit"
+	"github.com/tabladrum/grove-suite/astkit/internalast"
 )
 
 // Java strategy.
@@ -13,19 +14,15 @@ type javaStrategy struct{}
 
 func NewJava() *javaStrategy { return &javaStrategy{} }
 
-func (j *javaStrategy) Language() core.LanguageKey { return core.LangJava }
+func (j *javaStrategy) Language() astkit.LanguageKey { return astkit.LangJava }
 func (j *javaStrategy) Extensions() []string       { return []string{".java"} }
-func (j *javaStrategy) Capabilities() core.MergeCapabilities {
-	return core.MergeCapabilities{SupportsSymbolMerge: true, SupportsImportMerge: true}
-}
-
-func (j *javaStrategy) Extract(tree *sitter.Tree, src []byte) ([]core.SymbolData, error) {
+func (j *javaStrategy) Extract(tree *sitter.Tree, src []byte) ([]astkit.Symbol, error) {
 	if tree == nil {
 		return nil, nil
 	}
 	root := tree.RootNode()
-	var out []core.SymbolData
-	walkChildren(root, func(n *sitter.Node) {
+	var out []astkit.Symbol
+	internalast.WalkChildren(root, func(n *sitter.Node) {
 		switch n.Type() {
 		case "class_declaration", "interface_declaration", "enum_declaration", "record_declaration":
 			out = append(out, javaType(n, src)...)
@@ -34,8 +31,8 @@ func (j *javaStrategy) Extract(tree *sitter.Tree, src []byte) ([]core.SymbolData
 	return out, nil
 }
 
-func javaType(n *sitter.Node, src []byte) []core.SymbolData {
-	name := nodeText(n.ChildByFieldName("name"), src)
+func javaType(n *sitter.Node, src []byte) []astkit.Symbol {
+	name := internalast.NodeText(n.ChildByFieldName("name"), src)
 	kind := "class"
 	switch n.Type() {
 	case "interface_declaration":
@@ -46,15 +43,15 @@ func javaType(n *sitter.Node, src []byte) []core.SymbolData {
 		kind = "type"
 	}
 	modifiers := javaModifiers(n, src)
-	out := []core.SymbolData{{
-		Key:       name,
-		Kind:      kind,
+	out := []astkit.Symbol{{
+		QualifiedName: name,
+		Kind:      astkit.SymbolKind(kind),
 		Name:      name,
-		Signature: extractFirstLine(nodeText(n, src)),
-		Body:      nodeText(n, src),
-		Span:      nodeSpan(n),
+		Signature: internalast.FirstLine(internalast.NodeText(n, src)),
+		Body:      internalast.NodeText(n, src),
+		Span:      internalast.NodeSpan(n),
 		Modifiers: modifiers,
-		Exported:  hasModifier(modifiers, "public"),
+		Exported:  internalast.HasModifier(modifiers, "public"),
 	}}
 	body := n.ChildByFieldName("body")
 	if body == nil {
@@ -67,18 +64,18 @@ func javaType(n *sitter.Node, src []byte) []core.SymbolData {
 		}
 		switch c.Type() {
 		case "method_declaration":
-			methodName := nodeText(c.ChildByFieldName("name"), src)
+			methodName := internalast.NodeText(c.ChildByFieldName("name"), src)
 			mods := javaModifiers(c, src)
-			out = append(out, core.SymbolData{
-				Key:       name + "." + methodName,
+			out = append(out, astkit.Symbol{
+				QualifiedName: name + "." + methodName,
 				Kind:      "method",
 				Name:      methodName,
-				ParentKey: name,
-				Signature: extractFirstLine(nodeText(c, src)),
-				Body:      nodeText(c, src),
-				Span:      nodeSpan(c),
+				ParentName: name,
+				Signature: internalast.FirstLine(internalast.NodeText(c, src)),
+				Body:      internalast.NodeText(c, src),
+				Span:      internalast.NodeSpan(c),
 				Modifiers: mods,
-				Exported:  hasModifier(mods, "public"),
+				Exported:  internalast.HasModifier(mods, "public"),
 			})
 		case "field_declaration":
 			// emit one symbol per declarator
@@ -87,21 +84,21 @@ func javaType(n *sitter.Node, src []byte) []core.SymbolData {
 				if vd == nil || vd.Type() != "variable_declarator" {
 					continue
 				}
-				fieldName := nodeText(vd.ChildByFieldName("name"), src)
+				fieldName := internalast.NodeText(vd.ChildByFieldName("name"), src)
 				if fieldName == "" {
 					continue
 				}
 				mods := javaModifiers(c, src)
-				out = append(out, core.SymbolData{
-					Key:       name + "." + fieldName,
+				out = append(out, astkit.Symbol{
+					QualifiedName: name + "." + fieldName,
 					Kind:      "field",
 					Name:      fieldName,
-					ParentKey: name,
-					Signature: extractFirstLine(nodeText(c, src)),
-					Body:      nodeText(c, src),
-					Span:      nodeSpan(c),
+					ParentName: name,
+					Signature: internalast.FirstLine(internalast.NodeText(c, src)),
+					Body:      internalast.NodeText(c, src),
+					Span:      internalast.NodeSpan(c),
 					Modifiers: mods,
-					Exported:  hasModifier(mods, "public"),
+					Exported:  internalast.HasModifier(mods, "public"),
 				})
 			}
 		}
@@ -110,7 +107,7 @@ func javaType(n *sitter.Node, src []byte) []core.SymbolData {
 }
 
 func javaModifiers(n *sitter.Node, src []byte) []string {
-	mods := findChildByType(n, "modifiers")
+	mods := internalast.FindChildByType(n, "modifiers")
 	if mods == nil {
 		return nil
 	}
@@ -129,23 +126,23 @@ func javaModifiers(n *sitter.Node, src []byte) []string {
 	return out
 }
 
-func (j *javaStrategy) ExtractImports(tree *sitter.Tree, src []byte) ([]core.ImportStatement, error) {
+func (j *javaStrategy) ExtractImports(tree *sitter.Tree, src []byte) ([]astkit.ImportStatement, error) {
 	if tree == nil {
 		return nil, nil
 	}
 	root := tree.RootNode()
-	var imps []core.ImportStatement
-	walkChildren(root, func(n *sitter.Node) {
+	var imps []astkit.ImportStatement
+	internalast.WalkChildren(root, func(n *sitter.Node) {
 		if n.Type() != "import_declaration" {
 			return
 		}
-		raw := strings.TrimSuffix(strings.TrimSpace(nodeText(n, src)), ";")
+		raw := strings.TrimSuffix(strings.TrimSpace(internalast.NodeText(n, src)), ";")
 		raw = strings.TrimPrefix(raw, "import")
 		raw = strings.TrimSpace(raw)
 		raw = strings.TrimPrefix(raw, "static")
 		raw = strings.TrimSpace(raw)
-		imps = append(imps, core.ImportStatement{
-			Raw:  nodeText(n, src),
+		imps = append(imps, astkit.ImportStatement{
+			Raw:  internalast.NodeText(n, src),
 			Path: raw,
 			Line: int(n.StartPoint().Row) + 1,
 		})
@@ -153,15 +150,15 @@ func (j *javaStrategy) ExtractImports(tree *sitter.Tree, src []byte) ([]core.Imp
 	return imps, nil
 }
 
-func (j *javaStrategy) ExtractExports(tree *sitter.Tree, src []byte) ([]core.ExportStatement, error) {
+func (j *javaStrategy) ExtractExports(tree *sitter.Tree, src []byte) ([]astkit.Export, error) {
 	syms, err := j.Extract(tree, src)
 	if err != nil {
 		return nil, err
 	}
-	var out []core.ExportStatement
+	var out []astkit.Export
 	for _, s := range syms {
-		if s.Exported && s.ParentKey == "" {
-			out = append(out, core.ExportStatement{Name: s.Name, Kind: s.Kind})
+		if s.Exported && s.ParentName == "" {
+			out = append(out, astkit.Export{Name: s.Name, Kind: s.Kind})
 		}
 	}
 	return out, nil

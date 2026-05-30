@@ -1,19 +1,18 @@
 package strategies_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
-	"github.com/tabladrum/grove-suite/fuse/internal/core"
-	"github.com/tabladrum/grove-suite/fuse/internal/languages"
-	"github.com/tabladrum/grove-suite/fuse/internal/languages/strategies"
-	"github.com/tabladrum/grove-suite/fuse/internal/parser"
+	"github.com/tabladrum/grove-suite/astkit"
+	"github.com/tabladrum/grove-suite/astkit/strategies"
 )
 
-func extract(t *testing.T, s languages.Strategy, src string) []core.SymbolData {
+func extract(t *testing.T, s astkit.Strategy, src string) []astkit.Symbol {
 	t.Helper()
-	eng := parser.NewEngine()
-	tree, err := eng.Parse(s.Language(), []byte(src))
+	eng := astkit.NewEngine()
+	tree, err := eng.Parse(context.Background(), s.Language(), []byte(src))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,10 +24,10 @@ func extract(t *testing.T, s languages.Strategy, src string) []core.SymbolData {
 	return syms
 }
 
-func extractImps(t *testing.T, s languages.Strategy, src string) []core.ImportStatement {
+func extractImps(t *testing.T, s astkit.Strategy, src string) []astkit.ImportStatement {
 	t.Helper()
-	eng := parser.NewEngine()
-	tree, err := eng.Parse(s.Language(), []byte(src))
+	eng := astkit.NewEngine()
+	tree, err := eng.Parse(context.Background(), s.Language(), []byte(src))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,10 +36,10 @@ func extractImps(t *testing.T, s languages.Strategy, src string) []core.ImportSt
 	return imps
 }
 
-func keys(syms []core.SymbolData) []string {
+func keys(syms []astkit.Symbol) []string {
 	out := make([]string, 0, len(syms))
 	for _, s := range syms {
-		out = append(out, s.Key)
+		out = append(out, s.QualifiedName)
 	}
 	return out
 }

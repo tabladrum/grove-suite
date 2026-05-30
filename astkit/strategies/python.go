@@ -5,7 +5,8 @@ import (
 
 	sitter "github.com/smacker/go-tree-sitter"
 
-	"github.com/tabladrum/grove-suite/fuse/internal/core"
+	"github.com/tabladrum/grove-suite/astkit"
+	"github.com/tabladrum/grove-suite/astkit/internalast"
 )
 
 // Python strategy: indent-based, classes contain methods.
@@ -13,19 +14,15 @@ type pythonStrategy struct{}
 
 func NewPython() *pythonStrategy { return &pythonStrategy{} }
 
-func (p *pythonStrategy) Language() core.LanguageKey { return core.LangPython }
+func (p *pythonStrategy) Language() astkit.LanguageKey { return astkit.LangPython }
 func (p *pythonStrategy) Extensions() []string       { return []string{".py"} }
-func (p *pythonStrategy) Capabilities() core.MergeCapabilities {
-	return core.MergeCapabilities{SupportsSymbolMerge: true, SupportsImportMerge: true}
-}
-
-func (p *pythonStrategy) Extract(tree *sitter.Tree, src []byte) ([]core.SymbolData, error) {
+func (p *pythonStrategy) Extract(tree *sitter.Tree, src []byte) ([]astkit.Symbol, error) {
 	if tree == nil {
 		return nil, nil
 	}
 	root := tree.RootNode()
-	var out []core.SymbolData
-	walkChildren(root, func(n *sitter.Node) {
+	var out []astkit.Symbol
+	internalast.WalkChildren(root, func(n *sitter.Node) {
 		switch n.Type() {
 		case "function_definition":
 			out = append(out, pyFunc(n, src, ""))
@@ -42,16 +39,16 @@ func (p *pythonStrategy) Extract(tree *sitter.Tree, src []byte) ([]core.SymbolDa
 			out = append(out, pyClass(n, src)...)
 		case "expression_statement":
 			// module-level assignments (constants)
-			if assign := findChildByType(n, "assignment"); assign != nil {
+			if assign := internalast.FindChildByType(n, "assignment"); assign != nil {
 				if left := assign.ChildByFieldName("left"); left != nil && left.Type() == "identifier" {
-					name := nodeText(left, src)
-					out = append(out, core.SymbolData{
-						Key:       name,
+					name := internalast.NodeText(left, src)
+					out = append(out, astkit.Symbol{
+						QualifiedName: name,
 						Kind:      "variable",
 						Name:      name,
-						Signature: extractFirstLine(nodeText(n, src)),
-						Body:      nodeText(n, src),
-						Span:      nodeSpan(n),
+						Signature: internalast.FirstLine(internalast.NodeText(n, src)),
+						Body:      internalast.NodeText(n, src),
+						Span:      internalast.NodeSpan(n),
 						Exported:  !strings.HasPrefix(name, "_"),
 					})
 				}
@@ -78,7 +75,7 @@ func findDecoratedTarget(n *sitter.Node) *sitter.Node {
 
 // pyFunc extracts a function (possibly wrapped by decorated_definition).
 // parent is the enclosing class name (empty for module-level functions).
-func pyFunc(n *sitter.Node, src []byte, parent string) core.SymbolData {
+func pyFunc(n *sitter.Node, src []byte, parent string) astkit.Symbol {
 	def := n
 	if n.Type() == "decorated_definition" {
 		if t := findDecoratedTarget(n); t != nil && t.Type() == "function_definition" {
@@ -86,21 +83,21 @@ func pyFunc(n *sitter.Node, src []byte, parent string) core.SymbolData {
 		}
 	}
 	nameNode := def.ChildByFieldName("name")
-	name := nodeText(nameNode, src)
+	name := internalast.NodeText(nameNode, src)
 	key := name
 	kind := "function"
 	if parent != "" {
 		key = parent + "." + name
 		kind = "method"
 	}
-	return core.SymbolData{
-		Key:       key,
-		Kind:      kind,
+	return astkit.Symbol{
+		QualifiedName: key,
+		Kind:      astkit.SymbolKind(kind),
 		Name:      name,
-		ParentKey: parent,
+		ParentName: parent,
 		Signature: pyFuncSignature(def, src),
-		Body:      nodeText(n, src),
-		Span:      nodeSpan(n),
+		Body:      internalast.NodeText(n, src),
+		Span:      internalast.NodeSpan(n),
 		Exported:  !strings.HasPrefix(name, "_"),
 	}
 }
@@ -109,7 +106,7 @@ func pyFunc(n *sitter.Node, src []byte, parent string) core.SymbolData {
 func pyFuncSignature(n *sitter.Node, src []byte) string {
 	body := n.ChildByFieldName("body")
 	if body == nil {
-		return extractFirstLine(nodeText(n, src))
+		return internalast.FirstLine(internalast.NodeText(n, src))
 	}
 	end := body.StartByte()
 	if int(end) > len(src) {
@@ -119,7 +116,7 @@ func pyFuncSignature(n *sitter.Node, src []byte) string {
 }
 
 // pyClass returns the class itself plus one SymbolData per method inside it.
-func pyClass(n *sitter.Node, src []byte) []core.SymbolData {
+func pyClass(n *sitter.Node, src []byte) []astkit.Symbol {
 	def := n
 	if n.Type() == "decorated_definition" {
 		if t := findDecoratedTarget(n); t != nil && t.Type() == "class_definition" {
@@ -127,15 +124,15 @@ func pyClass(n *sitter.Node, src []byte) []core.SymbolData {
 		}
 	}
 	nameNode := def.ChildByFieldName("name")
-	name := nodeText(nameNode, src)
+	name := internalast.NodeText(nameNode, src)
 	classBody := def.ChildByFieldName("body")
-	out := []core.SymbolData{{
-		Key:       name,
+	out := []astkit.Symbol{{
+		QualifiedName: name,
 		Kind:      "class",
 		Name:      name,
 		Signature: pyFuncSignature(def, src),
-		Body:      nodeText(n, src),
-		Span:      nodeSpan(n),
+		Body:      internalast.NodeText(n, src),
+		Span:      internalast.NodeSpan(n),
 		Exported:  !strings.HasPrefix(name, "_"),
 	}}
 	if classBody == nil {
@@ -158,13 +155,13 @@ func pyClass(n *sitter.Node, src []byte) []core.SymbolData {
 	return out
 }
 
-func (p *pythonStrategy) ExtractImports(tree *sitter.Tree, src []byte) ([]core.ImportStatement, error) {
+func (p *pythonStrategy) ExtractImports(tree *sitter.Tree, src []byte) ([]astkit.ImportStatement, error) {
 	if tree == nil {
 		return nil, nil
 	}
 	root := tree.RootNode()
-	var imps []core.ImportStatement
-	walkChildren(root, func(n *sitter.Node) {
+	var imps []astkit.ImportStatement
+	internalast.WalkChildren(root, func(n *sitter.Node) {
 		switch n.Type() {
 		case "import_statement":
 			// import X, Y, Z
@@ -174,32 +171,32 @@ func (p *pythonStrategy) ExtractImports(tree *sitter.Tree, src []byte) ([]core.I
 					continue
 				}
 				if c.Type() == "dotted_name" || c.Type() == "aliased_import" {
-					path := nodeText(c, src)
-					imps = append(imps, core.ImportStatement{
-						Raw: nodeText(n, src), Path: path, Line: int(n.StartPoint().Row) + 1,
+					path := internalast.NodeText(c, src)
+					imps = append(imps, astkit.ImportStatement{
+						Raw: internalast.NodeText(n, src), Path: path, Line: int(n.StartPoint().Row) + 1,
 					})
 				}
 			}
 		case "import_from_statement":
 			modNode := n.ChildByFieldName("module_name")
-			mod := nodeText(modNode, src)
-			imps = append(imps, core.ImportStatement{
-				Raw: nodeText(n, src), Path: mod, Line: int(n.StartPoint().Row) + 1,
+			mod := internalast.NodeText(modNode, src)
+			imps = append(imps, astkit.ImportStatement{
+				Raw: internalast.NodeText(n, src), Path: mod, Line: int(n.StartPoint().Row) + 1,
 			})
 		}
 	})
 	return imps, nil
 }
 
-func (p *pythonStrategy) ExtractExports(tree *sitter.Tree, src []byte) ([]core.ExportStatement, error) {
+func (p *pythonStrategy) ExtractExports(tree *sitter.Tree, src []byte) ([]astkit.Export, error) {
 	syms, err := p.Extract(tree, src)
 	if err != nil {
 		return nil, err
 	}
-	var out []core.ExportStatement
+	var out []astkit.Export
 	for _, s := range syms {
-		if s.Exported && s.ParentKey == "" {
-			out = append(out, core.ExportStatement{Name: s.Name, Kind: s.Kind})
+		if s.Exported && s.ParentName == "" {
+			out = append(out, astkit.Export{Name: s.Name, Kind: s.Kind})
 		}
 	}
 	return out, nil
