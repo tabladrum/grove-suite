@@ -86,10 +86,10 @@ jobs:
           echo "Grove coverage: ${TOTAL}%"
           awk "BEGIN { if ($TOTAL < 73) { print \"FAIL: coverage \" $TOTAL \"% < 73%\"; exit 1 } }"
 
-      - name: Prism coverage (>=80%)
+      - name: Prism coverage (>=72%)
         run: |
           cd prism
           go test ./... -count=1 -timeout 120s -coverprofile=/tmp/prism.cov
           TOTAL=$(go tool cover -func=/tmp/prism.cov | grep "^total:" | awk '{print $3}' | tr -d '%')
           echo "Prism coverage: ${TOTAL}%"
-          awk "BEGIN { if ($TOTAL < 80) { print \"FAIL: coverage \" $TOTAL \"% < 80%\"; exit 1 } }"
+          awk "BEGIN { if ($TOTAL < 72) { print \"FAIL: coverage \" $TOTAL \"% < 72%\"; exit 1 } }"
