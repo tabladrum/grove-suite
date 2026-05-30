@@ -1,0 +1,209 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-go:
+    name: Build Go binaries (${{ matrix.goos }}/${{ matrix.goarch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # grove
+          - module: grove
+            binary: grove
+            goos: linux
+            goarch: amd64
+          - module: grove
+            binary: grove
+            goos: linux
+            goarch: arm64
+          - module: grove
+            binary: grove
+            goos: darwin
+            goarch: amd64
+          - module: grove
+            binary: grove
+            goos: darwin
+            goarch: arm64
+          - module: grove
+            binary: grove
+            goos: windows
+            goarch: amd64
+          # prism
+          - module: prism
+            binary: prism
+            goos: linux
+            goarch: amd64
+          - module: prism
+            binary: prism
+            goos: linux
+            goarch: arm64
+          - module: prism
+            binary: prism
+            goos: darwin
+            goarch: amd64
+          - module: prism
+            binary: prism
+            goos: darwin
+            goarch: arm64
+          - module: prism
+            binary: prism
+            goos: windows
+            goarch: amd64
+          # fuse
+          - module: fuse
+            binary: fuse
+            goos: linux
+            goarch: amd64
+          - module: fuse
+            binary: fuse
+            goos: linux
+            goarch: arm64
+          - module: fuse
+            binary: fuse
+            goos: darwin
+            goarch: amd64
+          - module: fuse
+            binary: fuse
+            goos: darwin
+            goarch: arm64
+          - module: fuse
+            binary: fuse
+            goos: windows
+            goarch: amd64
+          # relay
+          - module: relay
+            binary: relay
+            goos: linux
+            goarch: amd64
+          - module: relay
+            binary: relay
+            goos: linux
+            goarch: arm64
+          - module: relay
+            binary: relay
+            goos: darwin
+            goarch: amd64
+          - module: relay
+            binary: relay
+            goos: darwin
+            goarch: arm64
+          - module: relay
+            binary: relay
+            goos: windows
+            goarch: amd64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache: true
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          VERSION="${{ github.ref_name }}"
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
+          OUT="${{ matrix.binary }}-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}${EXT}"
+          cd ${{ matrix.module }}
+          go build -ldflags="-s -w -X github.com/tabladrum/grove-suite/${{ matrix.module }}/internal/version.Version=${VERSION#v}" \
+            -o "../dist/${OUT}" \
+            ./cmd/${{ matrix.binary }}
+          echo "ASSET=dist/${OUT}" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/
+          retention-days: 1
+
+  build-vsix:
+    name: Build VS Code extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: prism/vscode-extension/package-lock.json
+
+      - name: Package VSIX
+        run: |
+          cd prism/vscode-extension
+          npm ci
+          npx @vscode/vsce package --no-dependencies
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prism-vsix
+          path: prism/vscode-extension/*.vsix
+          retention-days: 1
+
+  release:
+    name: Create GitHub Release
+    needs: [build-go, build-vsix]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "grove-suite ${{ github.ref_name }}"
+          body: |
+            ## grove-suite ${{ github.ref_name }}
+
+            ### Binaries
+            | Binary | Platforms |
+            |--------|-----------|
+            | `grove` | linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64 |
+            | `prism` | linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64 |
+            | `fuse`  | linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64 |
+            | `relay` | linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64 |
+
+            ### VS Code Extension
+            Download `prism-vscode-*.vsix` and install via `Extensions: Install from VSIX...`
+
+            ### Installation (macOS/Linux)
+            ```bash
+            # Example: install grove on macOS arm64
+            curl -L https://github.com/tabladrum/grove-suite/releases/download/${{ github.ref_name }}/grove-${{ github.ref_name }}-darwin-arm64 -o grove
+            chmod +x grove
+            sudo mv grove /usr/local/bin/
+            ```
+
+            See `checksums.txt` to verify downloads.
+          files: dist/*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
