@@ -55,10 +55,10 @@ Fuse replaces `git`'s line-level merge algorithm with a symbol-aware one. When G
 
 [Full documentation →](fuse/README.md)
 
-### Relay — Intent-Driven Delivery
-**BSL license · Port 9000 (gRPC)**
+### Relay — Certified Delivery for Coding Agents
+**MIT license · Port 9000 (gRPC)**
 
-Relay replaces the branch/PR/CI/CD workflow with an intent-driven pipeline. Developers write intent YAML files describing what they want built; Relay's certification pipeline handles the rest — granularity check, graph-assisted impact analysis, agent execution in an ephemeral K8s namespace, three-stage certification, and linear admission to `main`. There are no branches.
+Relay is the certified delivery layer for autonomous coding agents. It accepts ChangeSets from any agent (Claude Code, Cursor, Devin, Copilot Workspace, internal scripts), runs Grove-driven certification (impact analysis, intelligent test selection, policy gates), resolves multi-agent conflicts via Fuse semantic merge, and admits the result to a linear branch with a cryptographic certificate and full audit trail. Designed to work alongside GitHub today; makes branches unnecessary for approved classes of agent-delivered work as confidence builds.
 
 ## Dependency Order
 

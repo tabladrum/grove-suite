@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relay</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #f9fafb; color: #111; }
+  header { background: #1a1a2e; color: #fff; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+  header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+  .pipeline { display: flex; gap: 0; margin: 1.5rem 2rem 0; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; }
+  .stage { flex: 1; padding: 1rem; text-align: center; background: #fff; border-right: 1px solid #e5e7eb; }
+  .stage:last-child { border-right: none; }
+  .stage .count { font-size: 1.75rem; font-weight: 700; }
+  .stage .label { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+  .stage.draft      .count { color: #6b7280; }
+  .stage.unrouted   .count { color: #9333ea; }
+  .stage.validating .count { color: #2563eb; }
+  .stage.needs_info .count { color: #d97706; }
+  .stage.queued     .count { color: #059669; }
+  .stage.rejected   .count { color: #dc2626; }
+  .section { margin: 1.5rem 2rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+  .section-header { padding: 0.75rem 1rem; font-weight: 600; font-size: 0.875rem; border-bottom: 1px solid #e5e7eb; background: #f3f4f6; display: flex; align-items: center; justify-content: space-between; }
+  .section-header .hint { font-weight: 400; color: #9ca3af; font-size: 0.75rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  th { text-align: left; padding: 0.5rem 1rem; font-weight: 500; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 0.625rem 1rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+  .badge.native           { background: #e0e7ff; color: #3730a3; }
+  .badge.jira             { background: #dbeafe; color: #1e40af; }
+  .badge.github_issue     { background: #d1fae5; color: #065f46; }
+  .badge.github_projects  { background: #dcfce7; color: #166534; }
+  .badge.draft            { background: #f3f4f6; color: #374151; }
+  .badge.unrouted         { background: #f3e8ff; color: #7e22ce; }
+  .badge.validating       { background: #dbeafe; color: #1d4ed8; }
+  .badge.needs_info       { background: #fef3c7; color: #92400e; }
+  .badge.queued           { background: #d1fae5; color: #065f46; }
+  .badge.rejected         { background: #fee2e2; color: #991b1b; }
+  .gs-score { font-variant-numeric: tabular-nums; }
+  .desc { max-width: 28rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 2rem; }
+  .two-col .section { margin: 0; }
+  .integrations { display: flex; gap: 1rem; padding: 0.75rem 1rem; flex-wrap: wrap; }
+  .int-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.ok  { background: #10b981; }
+  .dot.err { background: #ef4444; }
+  .alert-row { background: #fffbeb; }
+  code { font-size: 0.8rem; background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  .mono { font-family: ui-monospace, monospace; font-size: 0.8rem; color: #6b7280; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Relay</h1>
+  <span style="opacity:0.6; font-size:0.875rem;">intent-driven delivery</span>
+</header>
+
+<!-- Pipeline strip -->
+<div class="pipeline">
+  <div class="stage draft">
+    <div class="count">{{index .Counts "draft"}}</div>
+    <div class="label">Draft</div>
+  </div>
+  <div class="stage unrouted">
+    <div class="count">{{index .Counts "unrouted"}}</div>
+    <div class="label">Unrouted</div>
+  </div>
+  <div class="stage validating">
+    <div class="count">{{index .Counts "validating"}}</div>
+    <div class="label">Validating</div>
+  </div>
+  <div class="stage needs_info">
+    <div class="count">{{index .Counts "needs_info"}}</div>
+    <div class="label">Needs Info</div>
+  </div>
+  <div class="stage queued">
+    <div class="count">{{index .Counts "queued"}}</div>
+    <div class="label">Queued</div>
+  </div>
+  <div class="stage rejected">
+    <div class="count">{{index .Counts "rejected"}}</div>
+    <div class="label">Rejected</div>
+  </div>
+</div>
+
+<!-- Unrouted triage queue -->
+{{if .Unrouted}}
+<div class="section">
+  <div class="section-header">
+    Unrouted — Triage Queue
+    <span class="hint">relay intent assign &lt;id&gt; --project &lt;name&gt;</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Source</th>
+        <th>Ref</th>
+        <th>Description</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range .Unrouted}}
+      <tr class="alert-row">
+        <td><code>{{slice .ID 0 8}}</code></td>
+        <td><span class="badge {{.Source}}">{{.Source}}</span></td>
+        <td class="mono">{{.SourceRef}}</td>
+        <td><span class="desc" title="{{.Description}}">{{.Description}}</span></td>
+        <td>{{age .CreatedAt}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+
+<!-- Recent intents -->
+<div class="section">
+  <div class="section-header">Recent Intents</div>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Source</th>
+        <th>Project</th>
+        <th>Description</th>
+        <th>GS</th>
+        <th>Status</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range .Intents}}
+      <tr>
+        <td><code>{{slice .ID 0 8}}</code></td>
+        <td><span class="badge {{.Source}}">{{.Source}}</span></td>
+        <td class="mono">{{if .ProjectID}}{{slice .ProjectID 0 8}}{{else}}&mdash;{{end}}</td>
+        <td><span class="desc" title="{{.Description}}">{{.Description}}</span></td>
+        <td class="gs-score">{{if gt .GSScore 0.0}}{{printf "%.2f" .GSScore}}{{else}}&mdash;{{end}}</td>
+        <td><span class="badge {{.Status}}">{{.Status}}</span></td>
+        <td>{{age .CreatedAt}}</td>
+      </tr>
+    {{else}}
+      <tr><td colspan="7" style="text-align:center; color:#9ca3af; padding:2rem;">No intents yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+
+<!-- Repos and Projects side by side -->
+<div class="two-col">
+  <div class="section">
+    <div class="section-header">Repos</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>URL</th>
+          <th>Branch</th>
+        </tr>
+      </thead>
+      <tbody>
+      {{range .Repos}}
+        <tr>
+          <td><strong>{{.Name}}</strong></td>
+          <td class="mono">{{.URL}}</td>
+          <td class="mono">{{.DefaultBranch}}</td>
+        </tr>
+      {{else}}
+        <tr><td colspan="3" style="text-align:center; color:#9ca3af; padding:1.5rem;">No repos registered. Use <code>relay repo add</code>.</td></tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-header">Projects</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Path</th>
+          <th>GS Threshold</th>
+          <th>Owner</th>
+        </tr>
+      </thead>
+      <tbody>
+      {{range .Projects}}
+        <tr>
+          <td><strong>{{.Name}}</strong></td>
+          <td class="mono">{{.SourcePath}}</td>
+          <td class="mono">{{printf "%.2f" .GSThreshold}}</td>
+          <td class="mono">{{if .Owner}}{{.Owner}}{{else}}&mdash;{{end}}</td>
+        </tr>
+      {{else}}
+        <tr><td colspan="4" style="text-align:center; color:#9ca3af; padding:1.5rem;">No projects yet. Use <code>relay project add</code>.</td></tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Integration status -->
+<div class="section">
+  <div class="section-header">Integrations</div>
+  <div class="integrations">
+    {{range .Integrations}}
+    <div class="int-item">
+      <span class="dot {{if .OK}}ok{{else}}err{{end}}"></span>
+      <span>{{.Name}}</span>
+    </div>
+    {{end}}
+    <div class="int-item">
+      <span class="dot {{if .GroveOK}}ok{{else}}err{{end}}"></span>
+      <span>Grove</span>
+    </div>
+    {{if and (not .Integrations) (not .GroveOK)}}
+    <span style="color:#9ca3af; font-size:0.875rem;">No integrations configured.</span>
+    {{end}}
+  </div>
+</div>
+</body>
+</html>
