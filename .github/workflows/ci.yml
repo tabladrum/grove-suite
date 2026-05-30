@@ -23,6 +23,8 @@ jobs:
         with:
           go-version: "1.26.3"
           cache: true
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -68,26 +70,26 @@ jobs:
           go-version: "1.26.3"
           cache: true
 
-      - name: Fuse coverage (≥85%)
+      - name: Fuse coverage (>=85%)
         run: |
           cd fuse
           go test ./... -count=1 -timeout 180s -coverprofile=/tmp/fuse.cov
           TOTAL=$(go tool cover -func=/tmp/fuse.cov | grep "^total:" | awk '{print $3}' | tr -d '%')
           echo "Fuse coverage: ${TOTAL}%"
-          awk "BEGIN { if ($TOTAL < 85) { print \"FAIL: coverage $TOTAL% < 85%\"; exit 1 } }"
+          awk "BEGIN { if ($TOTAL < 85) { print \"FAIL: coverage \" $TOTAL \"% < 85%\"; exit 1 } }"
 
-      - name: Grove coverage (≥80%)
+      - name: Grove coverage (>=80%)
         run: |
           cd grove
           go test ./... -count=1 -short -timeout 120s -coverprofile=/tmp/grove.cov
           TOTAL=$(go tool cover -func=/tmp/grove.cov | grep "^total:" | awk '{print $3}' | tr -d '%')
           echo "Grove coverage: ${TOTAL}%"
-          awk "BEGIN { if ($TOTAL < 80) { print \"FAIL: coverage $TOTAL% < 80%\"; exit 1 } }"
+          awk "BEGIN { if ($TOTAL < 80) { print \"FAIL: coverage \" $TOTAL \"% < 80%\"; exit 1 } }"
 
-      - name: Prism coverage (≥80%)
+      - name: Prism coverage (>=80%)
         run: |
           cd prism
           go test ./... -count=1 -timeout 120s -coverprofile=/tmp/prism.cov
           TOTAL=$(go tool cover -func=/tmp/prism.cov | grep "^total:" | awk '{print $3}' | tr -d '%')
           echo "Prism coverage: ${TOTAL}%"
-          awk "BEGIN { if ($TOTAL < 80) { print \"FAIL: coverage $TOTAL% < 80%\"; exit 1 } }"
+          awk "BEGIN { if ($TOTAL < 80) { print \"FAIL: coverage \" $TOTAL \"% < 80%\"; exit 1 } }"
