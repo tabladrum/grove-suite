@@ -79,15 +79,15 @@ const (
 
 // ReplayReport is emitted by `relay cert replay <ref>` as a JSON document.
 type ReplayReport struct {
-	CertID                  string        `json:"cert_id"`
-	ChangeSetID             string        `json:"changeset_id"`
-	Verdict                 ReplayVerdict `json:"verdict"`
-	OriginalConfigHash      string        `json:"original_config_hash"`
-	CurrentConfigHash       string        `json:"current_config_hash"`
-	OriginalPolicyVerdicts  []GatePair    `json:"original_policy_verdicts"`
-	ReplayedPolicyVerdicts  []GatePair    `json:"replayed_policy_verdicts,omitempty"`
-	DiffingGates            []string      `json:"diffing_gates,omitempty"`
-	Note                    string        `json:"note,omitempty"`
+	CertID                 string        `json:"cert_id"`
+	ChangeSetID            string        `json:"changeset_id"`
+	Verdict                ReplayVerdict `json:"verdict"`
+	OriginalConfigHash     string        `json:"original_config_hash"`
+	CurrentConfigHash      string        `json:"current_config_hash"`
+	OriginalPolicyVerdicts []GatePair    `json:"original_policy_verdicts"`
+	ReplayedPolicyVerdicts []GatePair    `json:"replayed_policy_verdicts,omitempty"`
+	DiffingGates           []string      `json:"diffing_gates,omitempty"`
+	Note                   string        `json:"note,omitempty"`
 }
 
 // GatePair is one gate's verdict in a replay comparison.

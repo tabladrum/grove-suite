@@ -15,9 +15,11 @@ import (
 
 	"github.com/tabladrum/grove-suite/relay/internal/admission"
 	"github.com/tabladrum/grove-suite/relay/internal/analyzers"
+	"github.com/tabladrum/grove-suite/relay/internal/analyzers/eslint"
 	"github.com/tabladrum/grove-suite/relay/internal/analyzers/gitleaks"
 	"github.com/tabladrum/grove-suite/relay/internal/analyzers/govulncheck"
 	"github.com/tabladrum/grove-suite/relay/internal/analyzers/inlinesecrets"
+	"github.com/tabladrum/grove-suite/relay/internal/analyzers/ruff"
 	"github.com/tabladrum/grove-suite/relay/internal/analyzers/semgrep"
 	"github.com/tabladrum/grove-suite/relay/internal/cert/stage1"
 	"github.com/tabladrum/grove-suite/relay/internal/cert/stage2"
@@ -32,6 +34,9 @@ import (
 	"github.com/tabladrum/grove-suite/relay/internal/policy/secrets"
 	"github.com/tabladrum/grove-suite/relay/internal/profiles"
 	"github.com/tabladrum/grove-suite/relay/internal/runner/gotest"
+	"github.com/tabladrum/grove-suite/relay/internal/runner/multilang"
+	"github.com/tabladrum/grove-suite/relay/internal/runner/nodetest"
+	"github.com/tabladrum/grove-suite/relay/internal/runner/pytest"
 	"github.com/tabladrum/grove-suite/relay/internal/signer"
 	"github.com/tabladrum/grove-suite/relay/internal/stacks"
 )
@@ -413,14 +418,31 @@ func BuildEngine(start string) (*engine.Engine, func(), error) {
 		gitleaks.New(),
 		semgrep.New(),
 		govulncheck.New(),
+		eslint.New(),
+		ruff.New(),
 	}
+	// Multilang dispatcher: Go is checked first (it's the only language
+	// whose runner requires a separate build step today), then Python and
+	// Node. The dispatcher returns a multilang-tagged empty TestRun when
+	// nothing matches; Stage 1 treats that as a skip via the Detector
+	// callback below.
+	goRunner := gotest.New()
+	dispatcher := multilang.New(goRunner, pytest.New(), nodetest.New())
+	s1 := stage1.New(dispatcher)
+	s1.Detector = func(dir string) (string, bool) {
+		name := dispatcher.MatchedName(dir)
+		return name, name != ""
+	}
+	// Builder runs only for Go projects; Python/Node runners produce
+	// build+test in a single invocation.
+	s1.Builder = goBuilderIfGo{goRunner: goRunner, fallback: stage1.GoBuilder{}}
 	e := &engine.Engine{
 		Store:    store,
 		Policies: reg,
 		ICR:      engine.NoopICRProvider{},
 		Signer:   sgn,
 		Config:   cfg,
-		Stage1:   stage1.New(gotest.New()),
+		Stage1:   s1,
 		Stage2:   stage2.New(stage2Analyzers...),
 	}
 	// Stage-aware gates read the cached results via closures.
@@ -428,6 +450,22 @@ func BuildEngine(start string) (*engine.Engine, func(), error) {
 	reg.Register(&secrets.Gate{Stage2: e.Stage2Result})
 	reg.Register(&deps.Gate{Stage2: e.Stage2Result})
 	return e, func() { _ = store.Close() }, nil
+}
+
+// goBuilderIfGo runs the Go builder only when goRunner.Detect(dir) is true.
+// For other detected languages (Python, Node, ...) the runner itself handles
+// build+test in a single invocation, so we report success without doing
+// anything.
+type goBuilderIfGo struct {
+	goRunner *gotest.Runner
+	fallback stage1.GoBuilder
+}
+
+func (g goBuilderIfGo) Build(ctx context.Context, dir string) (string, error) {
+	if g.goRunner.Detect(dir) {
+		return g.fallback.Build(ctx, dir)
+	}
+	return "", nil
 }
 
 func printCheckResult(w io.Writer, res *engine.Result) {

@@ -10,7 +10,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,6 +20,10 @@ import (
 
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
 )
+
+func osStatFile(dir, name string) (os.FileInfo, error) {
+	return os.Stat(filepath.Join(dir, name))
+}
 
 // Runner runs `go test` and produces a normalized TestRun.
 type Runner struct {
@@ -37,6 +43,16 @@ func New() *Runner {
 		MaxOutputBytes: 64 << 10, // 64 KiB
 	}
 }
+
+// Detect returns true if dir looks like a Go module (has go.mod at root).
+// Implements the multilang dispatch contract.
+func (r *Runner) Detect(dir string) bool {
+	_, err := osStatFile(dir, "go.mod")
+	return err == nil
+}
+
+// Name identifies this runner in TestRun.Runner output and logs.
+func (r *Runner) Name() string { return "gotest" }
 
 // goTestEvent matches the schema of `go test -json` events.
 //

@@ -50,6 +50,12 @@ func (GoBuilder) Build(ctx context.Context, dir string) (string, error) {
 type Stage1 struct {
 	Builder Builder
 	Runner  Runner
+	// Detector, when set, decides whether the worktree has an applicable
+	// language runner. It returns (matched-name, true) when something is
+	// detected, or ("", false) to short-circuit Stage1 as Skipped. When
+	// nil, Stage1 falls back to "does go.mod exist?" for backward
+	// compatibility with single-runner gotest wiring.
+	Detector func(dir string) (string, bool)
 	// MaxOutputBytes truncates BuildOutput. Defaults to 64 KiB if zero.
 	MaxOutputBytes int
 }
@@ -89,10 +95,23 @@ func (s *Stage1) Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage1Result
 		}
 	}
 
-	// Skip cleanly when the project has no applicable runner. MVP-L2 only
-	// detects Go (go.mod at the worktree root); MVP-L4 will add stack
-	// detection for node/python/etc.
-	if _, err := os.Stat(filepath.Join(wt, "go.mod")); err != nil {
+	// Detection: skip cleanly when no language runner detects the worktree.
+	// A Detector callback (set by multilang dispatcher consumers) is the
+	// primary signal. Legacy go.mod fallback is kept for direct
+	// stage1.New(gotest.New()) users.
+	if s.Detector != nil {
+		if name, ok := s.Detector(wt); !ok {
+			reason := "no language detected; Stage 1 has no applicable runner"
+			if name != "" {
+				reason = "detector returned no match (" + name + ")"
+			}
+			return cert.Stage1Result{
+				Skipped:    true,
+				SkipReason: reason,
+				BuildOk:    true,
+			}, nil
+		}
+	} else if _, err := os.Stat(filepath.Join(wt, "go.mod")); err != nil {
 		return cert.Stage1Result{
 			Skipped:    true,
 			SkipReason: "no go.mod found; Stage 1 has no applicable runner",
@@ -102,14 +121,20 @@ func (s *Stage1) Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage1Result
 
 	res := cert.Stage1Result{}
 
-	bStart := time.Now()
-	bOut, bErr := s.Builder.Build(ctx, wt)
-	res.BuildDuration = time.Since(bStart)
-	res.BuildOutput = truncate(bOut, s.MaxOutputBytes)
-	res.BuildOk = bErr == nil
-	if bErr != nil {
-		// Skip tests when build is broken; nothing meaningful to run.
-		return res, nil
+	if s.Builder != nil {
+		bStart := time.Now()
+		bOut, bErr := s.Builder.Build(ctx, wt)
+		res.BuildDuration = time.Since(bStart)
+		res.BuildOutput = truncate(bOut, s.MaxOutputBytes)
+		res.BuildOk = bErr == nil
+		if bErr != nil {
+			// Skip tests when build is broken; nothing meaningful to run.
+			return res, nil
+		}
+	} else {
+		// No builder: the language runner is expected to handle build+test
+		// in a single invocation (pytest, jest, mvn test, ...).
+		res.BuildOk = true
 	}
 
 	tr, terr := s.Runner.Run(ctx, wt)

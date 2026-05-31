@@ -163,6 +163,45 @@ func TestStage1_BuildErrorSkipsTests(t *testing.T) {
 	}
 }
 
+func TestStage1_DetectorSkipsWhenNoMatch(t *testing.T) {
+	ensureGit(t)
+	repo, sha := initRepo(t)
+
+	cs := &core.ChangeSet{RepoRoot: repo, BaseSHA: sha}
+	s := New(gotest.New())
+	s.Detector = func(dir string) (string, bool) { return "", false }
+	res, err := s.Run(context.Background(), cs)
+	if err != nil {
+		t.Fatalf("Run error: %v", err)
+	}
+	if !res.Skipped {
+		t.Errorf("expected Skipped=true, got %+v", res)
+	}
+	if res.SkipReason == "" {
+		t.Error("expected non-empty SkipReason")
+	}
+}
+
+func TestStage1_NilBuilderSkipsBuild(t *testing.T) {
+	ensureGit(t)
+	ensureGo(t)
+	repo, sha := initRepo(t)
+
+	cs := &core.ChangeSet{RepoRoot: repo, BaseSHA: sha}
+	s := New(gotest.New())
+	s.Builder = nil // language runner handles build+test in one call (gotest does)
+	res, err := s.Run(context.Background(), cs)
+	if err != nil {
+		t.Fatalf("Run error: %v", err)
+	}
+	if !res.BuildOk {
+		t.Errorf("expected BuildOk=true when Builder is nil")
+	}
+	if res.BuildOutput != "" {
+		t.Errorf("expected empty BuildOutput when no builder, got %q", res.BuildOutput)
+	}
+}
+
 func writeFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
