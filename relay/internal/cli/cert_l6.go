@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/tabladrum/grove-suite/relay/internal/config"
@@ -14,18 +16,35 @@ import (
 	"github.com/tabladrum/grove-suite/relay/internal/enginestore"
 )
 
-// lookupCert resolves a certificate by ID first, then falls back to
-// admitted commit SHA. Returning enginestore.ErrNotFound from both is
-// surfaced verbatim so callers can distinguish "no such ref" from real
-// I/O errors.
-func lookupCert(store *enginestore.Store, ref string) (*core.Certificate, error) {
+// lookupCert resolves a certificate by ID first, then falls back to admitted
+// commit SHA. If ref is a normal git ref (HEAD, branch, tag), it resolves it
+// to a commit SHA before the final lookup.
+func lookupCert(store *enginestore.Store, repoRoot, ref string) (*core.Certificate, error) {
 	ctx := context.Background()
 	if c, err := store.GetCertificate(ctx, ref); err == nil {
 		return c, nil
 	} else if !errors.Is(err, enginestore.ErrNotFound) {
 		return nil, err
 	}
-	return store.GetCertificateByCommit(ctx, ref)
+	if c, err := store.GetCertificateByCommit(ctx, ref); err == nil {
+		return c, nil
+	} else if !errors.Is(err, enginestore.ErrNotFound) {
+		return nil, err
+	}
+	sha, ok := resolveCommitRef(repoRoot, ref)
+	if !ok || sha == ref {
+		return nil, enginestore.ErrNotFound
+	}
+	return store.GetCertificateByCommit(ctx, sha)
+}
+
+func resolveCommitRef(repoRoot, ref string) (string, bool) {
+	out, err := exec.Command("git", "-C", repoRoot, "rev-parse", "--verify", ref+"^{commit}").Output()
+	if err != nil {
+		return "", false
+	}
+	sha := strings.TrimSpace(string(out))
+	return sha, sha != ""
 }
 
 // toJSONLD returns a JSON-LD projection of a certificate suitable for

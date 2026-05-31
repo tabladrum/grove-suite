@@ -109,6 +109,19 @@ func TestE2E_CertShowJSONLD(t *testing.T) {
 	if _, ok := doc["payload"]; !ok {
 		t.Fatalf("expected payload (risk heatmap) in cert output: %s", out)
 	}
+
+	headOut := captureStdout(t, func() {
+		if code := RunEngine([]string{"cert", "show", "--jsonld", "HEAD"}); code != 0 {
+			t.Fatalf("cert show --jsonld HEAD exit=%d", code)
+		}
+	})
+	var headDoc map[string]any
+	if err := json.Unmarshal([]byte(headOut), &headDoc); err != nil {
+		t.Fatalf("HEAD output is not valid JSON: %v\n%s", err, headOut)
+	}
+	if headDoc["admitted_commit_sha"] != sha {
+		t.Fatalf("HEAD resolved commit = %v, want %s", headDoc["admitted_commit_sha"], sha)
+	}
 }
 
 func TestE2E_CertReplay_ByteReproducible(t *testing.T) {

@@ -321,7 +321,7 @@ func cmdCert(args []string) int {
 	}
 	defer store.Close()
 
-	cert, err := lookupCert(store, ref)
+	cert, err := lookupCert(store, root, ref)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "lookup cert:", err)
 		return 1

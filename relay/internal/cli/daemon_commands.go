@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/tabladrum/grove-suite/relay/internal/daemon"
 )
@@ -141,11 +142,34 @@ func cmdDaemonStop(args []string, stdout, stderr *os.File) int {
 	if _, err := c.Call("daemon.stop", nil); err != nil {
 		// daemon.stop intentionally closes the socket before replying in some
 		// cases; treat a short-read as success.
-		fmt.Fprintln(stdout, "stop sent")
+		if waitDaemonStopped(sock, 2*time.Second) {
+			fmt.Fprintln(stdout, "daemon stopped")
+		} else {
+			fmt.Fprintln(stdout, "stop sent")
+		}
 		return 0
 	}
-	fmt.Fprintln(stdout, "daemon stopped")
+	if waitDaemonStopped(sock, 2*time.Second) {
+		fmt.Fprintln(stdout, "daemon stopped")
+	} else {
+		fmt.Fprintln(stdout, "stop sent")
+	}
 	return 0
+}
+
+func waitDaemonStopped(sock string, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for {
+		if !daemon.IsRunning(sock) {
+			_ = os.Remove(sock)
+			_ = os.Remove(daemon.PidFilePath(sock))
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
 }
 
 func cmdDaemonStatus(args []string, stdout, stderr *os.File) int {
