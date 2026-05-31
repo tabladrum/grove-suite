@@ -1,53 +1,96 @@
 # Relay
 
+> **Certified delivery for AI coding agents. Every commit signed, tested, and traceable to the prompt that created it.**
+
 **MIT licensed · Part of [Grove Suite](../README.md)**
 
-Relay is the certified delivery layer for autonomous coding agents. It sits between an AI agent writing code and that code reaching your codebase — running build, tests, and static analysis locally, signing the result with a cryptographic certificate, and admitting it as a linear commit with a full audit trail.
+---
+
+## The Loop That Wastes Everyone's Time
+
+Here is how AI-assisted development works today — at every company, every team:
+
+1. Developer prompts the agent
+2. Agent codes, writes tests, opens a PR
+3. CI runs — catches a security finding, a coverage gap, a linting violation
+4. Developer goes back to the agent with the CI output
+5. Agent fixes it, updates the PR
+6. CI runs again — different finding
+7. Repeat until it passes
+8. Human reviews the diff — but has no idea what the original prompt was
+
+This loop is slow, expensive, and gets *worse* as agent output volume grows. The fundamental problem: quality gates live at the end of the pipeline (CI, PR review), but the agent is at the beginning. By the time it sees a finding, it's already forgotten the full context.
+
+**Relay moves the quality gate into the agent loop.**
+
+The agent calls `relay_check` every iteration — sub-10 seconds, structured findings (file, line, rule, severity, fix-hint) returned directly. The agent self-corrects before it commits. Before it opens a PR. Before anyone waits for CI.
+
+When the code is ready, `relay_certify` runs the full suite: build, tests, coverage, secrets scanning, SAST, dependency audit. It signs the result with Ed25519 and admits it as a linear commit — with cryptographic proof that those specific gates passed at that specific toolchain version, and with the original user prompt committed alongside the code as a YAML intent linked via `Intent-ID:` trailer.
 
 ---
 
-## Why Relay
+41% of production code is now AI-generated. Gartner puts that at 60% by end of 2026. The bottleneck isn't the agent's code quality — it's the infrastructure around the agent that was built for humans. PRs were invented for human review. CI was designed to catch what developers missed. Neither was designed for the volume, speed, or accountability requirements of autonomous agent output.
 
-AI-generated code volume has outrun human PR review capacity. Reviewing every agent-produced diff at the same depth as human-written code doesn't scale — but letting agents self-merge without any gate erodes code quality and destroys the audit trail.
-
-Relay is what the agent calls between writing code and pushing it. It provides:
-
-- **Pre-flight certification** — the agent calls `relay_check` in its iteration loop; structured findings (file, line, rule, severity, fix-hint) flow back so the agent self-corrects before any human sees the diff.
-- **Signed certificates** — every admitted commit carries an Ed25519 signature over the exact config, toolchain, test results, and findings. The cert is byte-reproducible: `relay cert replay <id>` re-runs gates and tells you whether the result still matches.
-- **Audit-proof intent trail** — the user's natural-language prompt is captured as a YAML intent, committed alongside the code, and linked to the admission cert via `Intent-ID:` trailer. Not just the output — also the request that produced it.
-
-The core design constraint: laptop mode requires zero infrastructure. One binary, SQLite, a local Ed25519 key. The same binary scales to team (Postgres + Redis + KMS) via config.
+Relay is that infrastructure. One binary. Laptop mode (SQLite, local Ed25519 key, zero config) or team mode (Postgres + Redis + KMS) — same certs, same audit trail.
 
 ---
 
-## What Relay Does
+## What Changes When You Add Relay
 
-| Capability | How it works |
-|------------|-------------|
-| Pre-flight check | `relay_check` / `relay check`: SAST on changed files + Grove-affected unit tests. Sub-10 s target. |
-| Full certification | `relay_certify` / `relay certify`: Stage 1 (build + test + coverage) + Stage 2 (static analysis suite). |
-| Signed admission | Linear commit to target branch with Ed25519 signature and full trailer metadata. |
-| Risk heatmap | Per-diff risk score: ICR + stage2 severity + coverage delta + touch intensity. Versioned model. |
-| Certificate replay | `relay cert replay <id>`: re-runs gates, returns `byte_reproducible` / `tool_drift` / `config_drift`. |
-| Intent capture | Auto-captures the user's prompt as a committed YAML intent before coding starts. |
-| Agent wiring | `relay init` auto-writes Pre-Flight Autopilot instructions and MCP config for every detected AI tool (Claude Code, GitHub Copilot, Cursor, Codex CLI, Windsurf, Zed, VS Code, and more). |
-| Batteries-included | Ships semgrep, gitleaks, govulncheck, eslint, ruff pre-bundled. No setup required. |
-| Policy profiles | Built-in compliance profiles: `soc2-baseline`, `pci-dss-baseline`, stack-strict variants. |
+**Before Relay — the expensive loop:**
+```
+Prompt → agent codes → opens PR → CI finds issue → back to agent 
+→ agent fixes → CI finds another issue → repeat 3–5× → human reviews
+→ commit merged → 6 months later: nobody knows what the prompt was
+```
+
+**After Relay — quality moves into the agent loop:**
+```
+Prompt → intent captured as YAML → agent codes → relay_check (sub-10s)
+→ agent self-corrects against structured findings → relay_certify
+→ Ed25519-signed cert: proof of build + tests + coverage + SAST
+→ linear commit with Intent-ID: trailer linking cert to prompt
+→ PR opened already certified — CI is a formality, not a gatekeeper
+```
+
+Every admitted commit carries:
+- **Cryptographic proof** (Ed25519 signature) of exactly what gates ran, what passed, and with which toolchain versions
+- **Audit trail** — the original user prompt committed as a YAML intent, the cert linked to the commit via `Intent-ID:` trailer, byte-reproducible via `relay cert replay <id>`
+- **Risk score** — ICR + static analysis severity + coverage delta + change intensity, versioned so you can compare across time
+
+---
+
+## Capabilities
+
+| # | Capability | How it works |
+|---|------------|-------------|
+| 1 | **In-loop pre-flight** | `relay_check` / `relay check`: SAST on changed files + Grove-affected unit tests. Sub-10 s. Findings are structured (file, line, rule, severity, fix-hint) — returned to the agent so it self-corrects before any PR is opened. |
+| 2 | **Full certification** | `relay_certify` / `relay certify`: Stage 1 (build + full test suite + coverage) + Stage 2 (secrets, SAST, dependency audit, language linters). Runs in a clean git worktree — isolated from local state. |
+| 3 | **Signed admission** | Linear commit to target branch with Ed25519 signature over the exact ChangeSet, effective config hash, toolchain versions, and test results. The signature is computed before the commit SHA exists — the admitted SHA is added to the trailer after signing. |
+| 4 | **Risk heatmap** | Per-diff risk score: ICR (0.30) + stage2 severity (0.30) + coverage delta (0.25) + touch intensity (0.15). Versioned model — scores are comparable over time. |
+| 5 | **Cryptographic audit trail** | Every admitted commit links to a certificate. `relay cert show <id>` shows exactly what ran and what passed. `relay cert replay <id>` re-runs the gates against current tools and config and returns `byte_reproducible` / `tool_drift` / `config_drift`. Proof that the cert is still valid, or explanation of why it isn't. |
+| 6 | **Intent trail** | The user's natural-language prompt is captured as a committed YAML intent before coding starts, linked to every admission cert via `Intent-ID:` commit trailer. Not just what the agent produced — the request that caused it. The prompt is committed to the repo alongside the code, not lost when the agent session ends. |
+| 7 | **Agent wiring** | `relay init` auto-writes Pre-Flight Autopilot instructions and MCP config for every detected AI tool (Claude Code, GitHub Copilot, Cursor, Codex CLI, Windsurf, Zed, VS Code, and more). The agent is told to call `relay_check` before every PR, automatically. |
+| 8 | **Batteries-included** | Ships semgrep, gitleaks, govulncheck, eslint, ruff pre-bundled. No setup required. Import a SonarQube profile XML with one command. |
+| 9 | **Policy profiles** | Built-in compliance profiles: `soc2-baseline`, `pci-dss-baseline`, stack-strict variants. Gates are configurable: `warn` / `enforce` / `off` per gate type. |
 
 ---
 
 ## Quick Start
 
-### Laptop (single binary, SQLite, no server required)
+### Laptop — zero infrastructure required
 
 ```bash
-# 1. Build and install
+# 1. Build Grove first (Relay requires it), then Relay
+cd grove && make install
 cd relay && make install
 
-# 2. Initialize in your project — scaffolds .relay/, generates local Ed25519 key,
-#    writes Pre-Flight Autopilot instructions to CLAUDE.md / .cursorrules / .github/copilot-instructions.md
-#    / AGENTS.md / GEMINI.md / .clinerules and registers MCP for every detected tool
-#    (Claude Code, GitHub Copilot, Cursor, Codex CLI, VS Code, Claude Desktop, Windsurf, Zed, …)
+# 2. Initialize in your project
+#    - Scaffolds .relay/, generates local Ed25519 key
+#    - Writes Pre-Flight Autopilot to CLAUDE.md / .cursorrules /
+#      .github/copilot-instructions.md / AGENTS.md / GEMINI.md / .clinerules / …
+#    - Registers MCP for every detected tool
+#      (Claude Code, GitHub Copilot, Cursor, Codex CLI, VS Code, Claude Desktop, Windsurf, Zed, …)
 cd /your/project
 relay init --stack=go-microservice
 
@@ -57,8 +100,8 @@ git add .relay/ && git commit -m "Add Relay configuration"
 # 4. Install the git pre-push hook (backstop for unmanaged pushes)
 relay hook install
 
-# 5. Have your AI agent use relay_check in its loop
-#    System-prompt fragment: see docs/agent-prompt.md
+# 5. Your AI agent now calls relay_check in its iteration loop automatically
+#    (Pre-Flight Autopilot instructions tell it to)
 ```
 
 ---
@@ -143,12 +186,6 @@ relay mcp install-for windsurf       # writes .windsurf/mcp.json
 relay mcp install-for continue       # writes .continue/config.json
 ```
 
-**Start MCP stdio server directly:**
-
-```bash
-relay mcp serve [--repo .]
-```
-
 For the recommended agent system-prompt fragment, see [docs/agent-prompt.md](docs/agent-prompt.md).
 
 ---
@@ -200,26 +237,26 @@ relay hook install [--force] [--repo .]    # install git pre-push hook
 relay hook uninstall [--repo .]            # remove hook
 ```
 
-### Outbox
+### Intent management
 
 ```bash
-relay outbox push --intent-store=<path> [--repo .] [--batch 10]
-# Push certified changesets from local store to the intent-store git repo
+relay intent open --title <t> --description <d>   # capture intent before coding
+relay intent list                                   # list all intents (laptop: file-backed)
+relay intent get-captured --id <id>                # show a captured intent
+relay intent close --id <id>                       # commit draft intent
 ```
 
-### Intent intake (Phase 1)
+### Intent intake (Phase 1 team features)
 
 ```bash
 relay serve [--port 9000]            # start HTTP server + dashboard
 relay intent create <description> --project <name>
-relay intent list [--status <s>]
-relay intent show <id>
 relay intent approve <id>
 relay intent reject <id>
 relay intent from-jira <ticket-id>
 relay intent from-github <owner/repo#number>
 relay repo add --name <name> <url>
-relay project add <name> --repo <repo-name> [--path /]
+relay project add <name> --repo <repo-name>
 relay project link <project> jira <board-key>
 relay project link <project> github_issues <owner/repo>
 ```
@@ -232,10 +269,10 @@ relay project link <project> github_issues <owner/repo>
 agent writes code
       │
       ▼
-relay_check  (fast, in-loop)
+relay_check  (fast, in-loop — sub-10s)
   ├── SAST on changed files (semgrep, gitleaks, inline-secrets)
   ├── Grove-affected unit tests only
-  └── findings → agent self-corrects
+  └── structured findings → agent self-corrects
 
       │  agent satisfied
       ▼
@@ -275,12 +312,12 @@ Every certificate is an Ed25519-signed record over: the ChangeSet, the effective
 relay cert show HEAD
 # Certificate: relay-cert-abc123
 # Intent-ID:   INT-0042
-# Agent:       claude-sonnet-4-6
-# Stage1:      PASS (42 tests, 87.3% coverage)
-# Stage2:      PASS (0 HIGH, 1 MEDIUM suppressed by policy)
-# Risk:        0.12 (low) — model v1
-# Admitted:    a1b2c3d (relay-main)
-# Signed-By:   ~/.relay/keys/admission.ed25519
+# Agent:        claude-sonnet-4-6
+# Stage1:       PASS (42 tests, 87.3% coverage)
+# Stage2:       PASS (0 HIGH, 1 MEDIUM suppressed by policy)
+# Risk:         0.12 (low) — model v1
+# Admitted:     a1b2c3d (relay-main)
+# Signed-By:    ~/.relay/keys/admission.ed25519
 
 relay cert show --jsonld HEAD    # JSON-LD export for AI Code Passport / audit systems
 relay cert replay HEAD           # re-run gates against current tools → byte_reproducible
@@ -342,21 +379,5 @@ go test ./internal/routing/...               # B→C→A routing
 ```
 
 ---
-
-## Intent Intake (Phase 1)
-
-Relay can also ingest work items from Jira and GitHub Issues, validate their scope via GS scoring, and route them to registered projects. This surface is independent of the certification engine.
-
-```bash
-relay serve --port 9000   # start HTTP server + dashboard at http://localhost:9000
-
-# Register repos and projects
-relay repo add --name backend --url https://github.com/acme/backend
-relay project add auth-service --repo backend --path /services/auth
-relay project link auth-service jira AUTH --trigger "Ready for Relay"
-relay project link auth-service github_issues acme/backend --label relay
-```
-
-Dashboard at `http://localhost:9000` shows the triage queue, intent pipeline, GS scores, Grove connectivity, and registered projects.
 
 See [docs/architecture.md](docs/architecture.md) and [docs/design.md](docs/design.md) for the full system design.

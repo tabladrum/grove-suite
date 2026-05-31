@@ -1,17 +1,21 @@
 # Grove Suite
 
-A suite of four developer tools built on a shared code intelligence foundation.
+> **The infrastructure layer that makes AI coding agents production-safe.**
 
-## Why This Exists
+---
 
-AI coding agents are only as good as the context they receive and the gates that validate their output. Feed an agent too little context and it hallucinates. Feed it too much and it loses focus. Let it push without gates and code quality erodes, audit trails disappear, and you can't replay what the agent actually did.
+Every major AI coding tool is racing to be a better agent — write more code, handle bigger tasks, work faster. GitHub Copilot. Cursor. Claude Code. Devin. Codex CLI.
 
-Grove Suite attacks both problems at the infrastructure level:
+Nobody is building the infrastructure *beneath* those agents.
 
-- **Grove** builds and maintains a persistent knowledge graph of your codebase — symbols, edges, and fast traversal.
-- **Prism** uses that graph to deliver token-optimized context to AI agents (35–92% savings over raw file delivery).
-- **Fuse** uses that graph to merge agent-produced code changes at symbol granularity instead of line granularity.
-- **Relay** uses that graph to certify agent-produced commits — running build, test, and static analysis locally, signing the result, and admitting it with a full audit trail.
+That gap is real and growing. When an AI agent writes code today:
+
+- It works **blind** — it reads the files you pointed at, guesses at what else matters, and hallucinates the rest of your codebase
+- Its output lands in a **PR queue** that a human must review at a pace that cannot scale with agent volume
+- It **conflicts** with the three other agents your team is running simultaneously, because git's line-level diff knows nothing about function boundaries
+- Six months later, nobody knows **why** that code was written — the prompt is gone, the session is gone, the audit trail never existed
+
+Grove Suite is the infrastructure that fills this gap. Four tools, one shared foundation:
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -19,17 +23,20 @@ Grove Suite attacks both problems at the infrastructure level:
 │                                                                │
 │   ┌──────────────────────────────────────────────────────┐    │
 │   │                        Grove                         │    │
-│   │  Tree-sitter parser · SQLite graph · BFS traversal  │    │
-│   │  11 languages · 8 edge types · MCP + HTTP + gRPC    │    │
-│   │  127.0.0.1:7777 (HTTP) · 127.0.0.1:7778 (gRPC)     │    │
+│   │         Your codebase's persistent memory            │    │
+│   │  Tree-sitter · SQLite graph · 11 languages           │    │
+│   │  8 edge types · BFS traversal · MCP + HTTP + gRPC   │    │
 │   └───────────────────────┬──────────────────────────────┘    │
-│                           │  HTTP + shared-secret token        │
+│                           │                                    │
 │              ┌────────────┼────────────────┐                   │
 │              ▼            ▼                ▼                   │
 │         ┌────────┐   ┌────────┐    ┌───────────┐              │
 │         │ Prism  │   │  Fuse  │    │   Relay   │              │
-│         │ :8888  │   │  (git  │    │   :9000   │              │
-│         │  MCP   │   │ driver)│    │           │              │
+│         │        │   │        │    │           │              │
+│         │ Focused│   │Symbol- │    │Certified  │              │
+│         │ context│   │aware   │    │admission  │              │
+│         │ for any│   │merge   │    │+ audit    │              │
+│         │ agent  │   │driver  │    │trail      │              │
 │         └────────┘   └────────┘    └───────────┘              │
 └────────────────────────────────────────────────────────────────┘
 ```
@@ -38,37 +45,47 @@ Grove Suite attacks both problems at the infrastructure level:
 
 ## The Four Products
 
-### Grove — Code Knowledge Graph
+### Grove — Your Codebase's Long-Term Memory
 **MIT license · `:7777` (HTTP) · `:7778` (gRPC)**
 
-Grove indexes a codebase into a persistent SQLite graph. Tree-sitter AST walkers (11 languages) extract symbols, link them with 8 edge types, and store them with delta indexing by git blob SHA — unchanged files are never re-parsed. The graph is queryable via CLI, HTTP API, MCP stdio, and gRPC.
+Static search (grep, ctags, a language server) answers "where is this symbol defined?" Grove answers harder questions: "what does this function transitively call?", "which tests cover this method?", "what is the full blast radius of changing this interface?"
+
+Those are the questions that matter for AI task planning, merge conflict resolution, and certification. Grove indexes your code into a persistent SQLite graph — 11 languages, 8 edge types, delta-aware (files whose git blob SHA hasn't changed are never re-parsed). The graph is queryable over CLI, HTTP API, MCP stdio, and gRPC.
 
 Grove is the only product with its own storage. All others delegate graph operations to it.
 
 [Full documentation →](grove/README.md)
 
-### Prism — Token-Optimized Context Delivery
+---
+
+### Prism — Focused Context for Any AI Agent
 **MIT license · `:8888` (optional HTTP)**
 
-Prism sits between an AI agent and Grove. It receives a task description, queries the knowledge graph, ranks results across 5 signals (graph distance, semantic similarity, recency, test relevance, edit frequency), allocates tokens across 5 budget categories, and applies progressive disclosure (full → signature → reference) to maximize information density within a token budget.
+An agent that gets bad context produces bad code — not because it's a bad agent, but because it's working blind. Prism sits between an agent and Grove, receives the task description, queries the knowledge graph, scores candidates across 5 signals (graph distance, semantic similarity, recency, test relevance, edit frequency), allocates a token budget, and delivers exactly what matters for the task at hand.
 
-Typical savings: 35–92% versus sending files manually. Works with Claude Code, GitHub Copilot (VS Code), Cursor, Codex CLI, Windsurf, Zed (MCP), and VS Code Copilot Agent (native extension).
+Typical savings: **35–92%** versus sending files manually. Works with Claude Code, GitHub Copilot (VS Code), Cursor, Codex CLI, Windsurf, Zed, and any MCP-capable tool. A VS Code extension provides the same 8 tools natively via `vscode.lm.registerTool` — no MCP server required.
 
 [Full documentation →](prism/README.md)
 
-### Fuse — Semantic Git Merge Driver
+---
+
+### Fuse — Symbol-Aware Git Merge Driver
 **MIT license · No port (invoked by git)**
 
-Fuse replaces git's line-level merge with a symbol-aware one. When Git delegates to `fuse merge`, it parses all three file versions in-memory with Tree-sitter, extracts symbols, queries Grove for cross-file blast radius, then runs the 7-phase IntelliMerge pipeline. Incremental conflicts (different symbols, adjacent lines) resolve automatically. Complex ones produce conflict markers plus an AI-ready handoff prompt at `.git/fuse/conflict-<hash>.md`.
+When multiple agents — or agents and humans — touch the same file simultaneously, git declares a conflict. Except most of those conflicts aren't real: one agent changed `Login()`, another changed `validatePassword()`. Different symbols, adjacent lines. Git sees a conflict. Fuse sees two independent changes and resolves automatically.
+
+Fuse replaces git's line-level merge with a 7-phase IntelliMerge pipeline: parse all three file versions with Tree-sitter, query Grove for cross-file blast radius, classify the conflict, choose a resolution strategy. Incremental conflicts resolve at ~85% auto-resolution rate. Unresolvable ones produce conflict markers plus an AI-ready handoff prompt at `.git/fuse/conflict-<hash>.md`.
 
 [Full documentation →](fuse/README.md)
+
+---
 
 ### Relay — Certified Delivery for Coding Agents
 **MIT license · `:9000` (HTTP)**
 
-Relay is what the AI agent calls between writing code and pushing it. It runs build + test + static analysis locally, computes a risk heatmap, enforces policy gates, signs the result with Ed25519, and admits it as a linear commit with a full audit trail. The agent's original prompt is captured as a committed intent YAML (`Intent-ID:` in the commit trailer) — not just the output, but the request that produced it.
+41% of production code is AI-generated (Gartner: 60% by end of 2026). "The developer reviewed the PR" is becoming a fiction. PRs are too big, too fast, too many. And even when someone reviews, the audit trail is gone — nobody recorded what the agent was actually asked to do.
 
-`relay init` auto-wires every detected AI tool in one step: it appends the **Pre-Flight Autopilot** workflow to `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`, `AGENTS.md`, `GEMINI.md`, `.clinerules`, and more, then writes MCP server configs for Claude Code, GitHub Copilot / VS Code, Cursor, Codex CLI, and any of Windsurf / Zed / Claude Desktop / Kiro / Continue that are installed.
+Relay is what the agent calls between writing code and pushing it. It runs build + test + static analysis locally, computes a risk heatmap, enforces policy gates, signs the result with Ed25519, and admits it as a linear commit. The original user prompt is captured as a YAML intent (`Intent-ID:` in every commit trailer) — not just the output, but the request that produced it. Every cert is byte-reproducible: `relay cert replay <id>` re-runs the gates and tells you whether the result still matches.
 
 One binary: laptop mode (SQLite, local Ed25519 key, zero config) or team mode (Postgres + Redis + KMS) — same config, same certs.
 
@@ -78,76 +95,73 @@ One binary: laptop mode (SQLite, local Ed25519 key, zero config) or team mode (P
 
 ## Quick Start
 
-### Most common path — VS Code with Copilot Agent
-
-```bash
-# Install binaries
-cd grove && make install
-cd ../prism && make install
-
-# Initialize Prism in your project — detects VS Code, writes languageModelTools config,
-# writes Grove+Prism status items to left status bar, enables auto-index on save
-cd /your/project
-prism init
-```
-
-Restart VS Code. Grove and Prism status appear in the bottom-left status bar. All `#prism*` tools are available in Copilot Agent mode.
-
-### Claude Code / GitHub Copilot / Cursor / Codex CLI / Windsurf / Zed
+### The common path — VS Code with Copilot Agent
 
 ```bash
 cd grove && make install
 cd ../prism && make install
 
 cd /your/project
-prism init    # auto-detects your tool and writes MCP config
-# restart your tool to pick up the MCP server config
-
-prism index   # initial index
+prism init    # auto-detects VS Code, writes MCP config + steering instructions
+              # restart VS Code — all #prism* tools appear in Copilot Agent mode
+prism index
 prism savings # verify token savings are accumulating
 ```
 
-### Add git merge intelligence
+### Claude Code / Cursor / Codex CLI / Windsurf / Zed
+
+```bash
+cd grove && make install
+cd ../prism && make install
+
+cd /your/project
+prism init    # detects your tool, writes .claude/mcp.json or equivalent
+              # restart your tool to pick up the MCP server config
+prism index
+```
+
+### Add symbol-aware merge resolution
 
 ```bash
 cd fuse && make install
 
-# In any git repo:
-fuse install                           # writes ~/.gitconfig merge driver entry
+cd /your/project
+fuse install                        # writes ~/.gitconfig merge driver entry
 echo "*.go merge=fuse" >> .gitattributes
+echo "*.ts merge=fuse" >> .gitattributes
+echo "*.py merge=fuse" >> .gitattributes
 ```
 
-### Add agent certification (laptop)
+### Add agent certification (laptop — zero infrastructure)
 
 ```bash
 cd relay && make install
 
 cd /your/project
-relay init --stack=go-microservice     # scaffolds .relay/, generates Ed25519 key,
-                                        # writes Pre-Flight Autopilot instructions to
-                                        # CLAUDE.md / .cursorrules / .github/copilot-instructions.md
-                                        # / AGENTS.md / GEMINI.md / .clinerules / …
-                                        # registers MCP for Claude Code, Copilot, Cursor,
-                                        # Codex CLI, VS Code, and any installed global tools
-relay hook install                      # git pre-push backstop
+relay init --stack=go-microservice  # scaffolds .relay/, generates Ed25519 key,
+                                    # writes Pre-Flight Autopilot to CLAUDE.md /
+                                    # .cursorrules / .github/copilot-instructions.md /
+                                    # AGENTS.md / GEMINI.md / .clinerules / …
+                                    # registers MCP for all detected tools
+relay hook install                  # git pre-push backstop
+
 git add .relay/ && git commit -m "Add Relay configuration"
 ```
 
 ---
 
-## Dependency Order
+## Build Order
 
-Grove has no suite dependencies. Prism, Fuse, and Relay each require a running Grove instance and auto-start one if unreachable.
-
-**Build Grove first.**
+Grove has no suite dependencies. Build it first.
 
 ```bash
 cd grove && make install   # required by Prism, Fuse, Relay
-
-cd prism && make install   # context delivery
-cd fuse  && make install   # merge driver
-cd relay && make install   # certification
+cd prism && make install
+cd fuse  && make install
+cd relay && make install
 ```
+
+Prism, Fuse, and Relay auto-start Grove if unreachable at `$GROVE_URL` (default `http://localhost:7777`).
 
 ---
 
@@ -180,4 +194,4 @@ make install  # install to $GOPATH/bin
 
 All HTTP servers bind to `127.0.0.1` — no LAN exposure. Grove generates a 64-char hex token at `.grove/.token` (mode 0600) from `crypto/rand` and requires `Authorization: Bearer <token>` on all non-health requests. Prism, Fuse, and Relay read this token automatically. Relay's Ed25519 admission key lives at `~/.relay/keys/admission.ed25519` (mode 0600).
 
-See [Architecture.md](Architecture.md) for the full security model and data flows.
+See [Architecture.md](Architecture.md) for the full security model and inter-product API contracts.
