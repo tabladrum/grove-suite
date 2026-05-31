@@ -76,6 +76,19 @@ func defaultRelayConfig() *core.RelayConfig {
 				"max_files":       100,
 				"max_added_lines": 5000,
 			}},
+			"coverage": {Enabled: true, Options: map[string]any{
+				"min_coverage": 0,
+			}},
+			"secrets": {Enabled: true},
+			"fileclass": {Enabled: true, Options: map[string]any{
+				"deny_exts": []any{".pem", ".p12", ".pfx", ".key"},
+				"deny_globs": []any{
+					"**/id_rsa", "**/id_ed25519", "**/*.crt",
+				},
+			}},
+			"deps": {Enabled: true, Options: map[string]any{
+				"deny_high": false,
+			}},
 		},
 	}
 }
