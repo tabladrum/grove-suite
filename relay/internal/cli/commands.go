@@ -38,6 +38,9 @@ func Run(args []string) int {
 		return cmdProject(args[1:])
 	case "intent":
 		return cmdIntent(args[1:])
+	case "submit", "check", "init", "cert":
+		// Engine-mode (MVP-L1) commands.
+		return RunEngine(args)
 	case "version", "--version", "-v":
 		fmt.Println("relay", version.Version)
 		return 0
