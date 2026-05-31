@@ -1,0 +1,5 @@
+# Grove runtime files — do not commit
+grove.db
+grove.db-shm
+grove.db-wal
+.token
