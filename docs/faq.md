@@ -1,0 +1,353 @@
+# Grove Suite FAQ
+
+Top questions, grouped by who is asking them.
+
+---
+
+## General
+
+### What is Grove Suite, in one sentence?
+
+Four open-source command-line tools — Grove, Prism, Fuse, Relay — that together form the infrastructure layer beneath AI coding agents: persistent code knowledge graph, token-optimized context delivery, symbol-aware merge resolution, and certified commit admission with full audit trail.
+
+### Who built this and why?
+
+A small team that was tired of watching AI coding agents — which are genuinely good at writing code — get bottlenecked by infrastructure that was designed for humans. PRs, line-based merge, post-hoc CI. We built Grove Suite as the replacement infrastructure: local-first, open-source, and designed for the volume and accountability requirements of agent-driven development.
+
+### Is this production-ready?
+
+Phase 1 is built and tested. We run it on our own work daily. The benchmarks in each product's README are real numbers on real hardware. That said:
+- The MIT license is real: use at your own risk, no warranty, no SLA
+- Phase 2 features (team mode with Postgres + Redis, agent execution platform) are on the roadmap, not shipped
+- Edge cases in unusual codebases will exist — please file issues
+
+### What licenses?
+
+All four products are MIT licensed. The repository is at [github.com/tabladrum/grove-suite](https://github.com/tabladrum/grove-suite).
+
+### Does it phone home?
+
+No. There is zero telemetry. No analytics. No "improving our models with your usage." Grove Suite runs entirely on your machine. The only network calls are:
+- Grove HTTP / gRPC bound to `127.0.0.1`
+- Optional, opt-in calls to external embedding APIs (off by default — local Model2Vec is the default)
+- The Grove → Prism → Relay communication, all on localhost
+
+### How do I install all four?
+
+```bash
+git clone https://github.com/tabladrum/grove-suite
+cd grove-suite
+cd grove && make install && cd ..
+cd prism && make install && cd ..
+cd fuse  && make install && cd ..
+cd relay && make install && cd ..
+```
+
+Grove must be installed first — the other three depend on it. They auto-start Grove if it isn't running.
+
+### Do I have to install all four?
+
+No. You can install only what you need. The minimum useful subset:
+- **Just Prism (+ Grove):** Better context for your agent. 5-minute install. Saves 35–92% tokens on first reads.
+- **Just Fuse (+ Grove):** Symbol-level merge. 2-minute install. Solves false git conflicts.
+- **Just Relay (+ Grove):** Certified admission. 10-minute install. Eliminates the CI-loop with agents.
+
+Grove is the only hard dependency.
+
+---
+
+## For Developers
+
+### How long until I see value?
+
+If you install Prism and start a coding agent task, **the first query.** Run `prism savings` and you'll see the token reduction. Most developers see immediate improvement in the agent's ability to find relevant code.
+
+### Will it slow down my agent?
+
+No. Prism `query` end-to-end is under 200 ms (target). The Grove BFS + ranking is faster than the agent's first generation token would have been.
+
+### What languages are supported?
+
+Eleven AST-parsed languages today: Go, TypeScript, TSX, JavaScript (incl. JSX/MJS/CJS), Python, Java, Rust, C, C++, C#, PHP.
+
+Non-code files indexed as documents: Markdown, YAML, JSON, XML, TOML, INI, shell scripts, Dockerfiles, Makefiles, SQL, GraphQL, Protobuf, plain text, and more.
+
+### My language isn't there. What now?
+
+Two options:
+1. **File an issue.** Most language additions are 1–2 days of work (Tree-sitter grammar + extractor in `grove/internal/parser/strategies/`). Ruby, Swift, Kotlin, and Elixir are commonly requested.
+2. **Fall back to plaintext indexing.** Files with unknown extensions are still indexed for full-text search; you'll get FTS5 keyword matching but no symbol graph.
+
+### Does it work with monorepos?
+
+Yes. We benchmark against a 9,901-file monorepo. Index time is 34 seconds cold (delta is milliseconds on incremental). Query latency stays under 70 ms.
+
+For very large monorepos (50K+ files), expect higher resident memory (the in-memory graph scales with project size). We're working on lazy-loading for monorepo scale.
+
+### Does it work offline / on a flight?
+
+Yes. Once installed, everything runs locally. No network calls. The Model2Vec embedding model (29 MB) is compiled into the Grove binary — no model download at runtime.
+
+### What MCP-capable tools work with this?
+
+Confirmed working today:
+- Claude Code CLI
+- GitHub Copilot in VS Code (and native VS Code extension without MCP)
+- Cursor
+- Codex CLI
+- Windsurf
+- Zed
+- Claude Desktop
+- Kiro
+- Continue
+
+`prism init` and `relay init` auto-detect installed tools and write their MCP configs.
+
+### I use [tool not in the list]. Will it work?
+
+If it speaks MCP (Model Context Protocol over stdio), almost certainly. Point it at `prism mcp <dir>` or `relay mcp serve` and the tools will appear.
+
+### Does this work alongside my existing tools (LSP, ctags, etc.)?
+
+Yes — Grove doesn't conflict with LSP or any other tool. It's a separate process exposing its own API. Keep your LSP for IDE features (hover, completion, refactor). Use Grove for AI agents.
+
+---
+
+## For Team Leads
+
+### How do I roll this out to my team?
+
+Start with **Prism alone**, on opt-in basis. Five-minute install, no shared infrastructure, immediate per-developer wins. After 1–2 weeks, you'll have data on which developers found it useful.
+
+Then add **Fuse** as a per-repo opt-in via `.gitattributes`. Each developer who wants symbol-merge runs `fuse install` once on their laptop. Doesn't affect anyone who hasn't.
+
+Add **Relay** last, and start with `relay check` in warning mode. After your team is comfortable with the findings, switch gates to enforce. The `relay init` command writes Pre-Flight Autopilot instructions to your repo's agent files (CLAUDE.md, .cursorrules, etc.) so the agent calls Relay automatically.
+
+### Does it require special CI configuration?
+
+Not initially. Relay can run as a git pre-push hook with zero CI changes. When you want CI to enforce the same gates Relay runs locally, point CI at `relay certify` — same config, same gates, same results.
+
+### How do I prevent developers from bypassing the hook?
+
+Use `relay hook install --enforce` to refuse `--no-verify` pushes. For team-scale enforcement, point your remote (GitHub branch protection, GitLab push rules) at the same `relay.yaml` config — the gates run server-side too.
+
+### What's the upgrade path from "individual laptops" to "team-wide"?
+
+Phase 1 (today): SQLite + local Ed25519 key per developer. Each laptop has its own audit trail.
+
+Phase 2 (on the roadmap): Same binary, same config, but pointing at a shared Postgres + Redis + KMS. Same certificate format. Shared audit trail. No re-training, no migration.
+
+### How does it work with code review?
+
+Relay doesn't replace human code review. It moves the *mechanical* gates (build, tests, coverage, secrets, SAST, deps) out of the post-PR loop and into the agent loop. Human review focuses on what humans are good at: architectural fit, business logic, intent.
+
+CodeRabbit-style AI review still adds value on top — Grove Suite doesn't try to replicate it.
+
+---
+
+## For Engineering Executives
+
+### What problem is Grove Suite actually solving?
+
+The bottleneck in AI-assisted development has moved. It's not the agent's code quality anymore — agents are good. It's:
+1. Context delivery (agents work with too little information)
+2. Merge friction (false conflicts on agent PRs)
+3. CI loop churn (agents iterate against CI findings 3–5×)
+4. Audit gap (no record of what the agent was asked to do)
+
+Grove Suite addresses all four.
+
+### Is there a business case I can present?
+
+Yes — see the [Financial brief](audiences/financial.md) when published. The headline numbers:
+- Token cost per developer drops 30–60% for any agent using Prism
+- Merge time on parallel agent PRs drops to near-zero for incremental conflicts
+- CI-loop iterations per PR drop from 3–5 to 0–1 with Relay in the agent loop
+- Audit prep time drops dramatically — every commit has a signed cert linked to the prompt
+
+### What's the ROI argument?
+
+Take a team of 10 developers each producing 5 agent-assisted PRs per week:
+- 50 PRs/week × 3 average CI-loop iterations × 8 minutes per iteration = **20 developer-hours/week lost to CI-loop churn**
+- 50 PRs/week × ~25% with merge conflicts × 15 minutes = **3 developer-hours/week lost to false conflicts**
+- Token cost reduction: ~$200–$400/developer/month at typical usage
+
+The combined operational savings, just from the loop reduction, are typically $30K–$80K/year for a 10-developer team — before counting the audit / compliance value.
+
+These are estimates, not guarantees. The right move is to measure on your team with a 30-day trial.
+
+### How is this different from Copilot Enterprise?
+
+Copilot Enterprise is a managed agent + features. Grove Suite is infrastructure beneath any agent. They are not substitutes — they are complementary. You can run Copilot Enterprise on top of Prism + Fuse + Relay. The agent gets better context (Prism), causes fewer merge conflicts (Fuse), and produces certified commits (Relay) — without changing the developer's chosen agent.
+
+### What's the path to commercialization?
+
+The four products are MIT licensed and will remain so. We expect the commercial path to be:
+- Team mode (Postgres + Redis + KMS) — open-source binary, paid support for enterprise deployment
+- Agent execution platform (Phase 3) — paid product, self-hostable, with optional managed
+- Compliance attestation packs (SOC 2, FedRAMP, EU AI Act) — paid evidence-mapping consulting
+
+Today, no paid path exists. We are intentionally pre-revenue.
+
+---
+
+## For Security / CISO
+
+### Where does my code go?
+
+Nowhere. Grove Suite is 100% local. All daemons bind to `127.0.0.1`. No outbound network calls (except optional, opt-in embedding APIs which are off by default).
+
+### What about telemetry?
+
+None.
+
+### How are secrets protected?
+
+- HTTP daemons bind to `127.0.0.1` only — no LAN exposure
+- Grove generates a 64-char random bearer token at `.grove/.token` (mode 0600) — every non-health request requires it
+- The Ed25519 admission key for Relay lives at `~/.relay/keys/admission.ed25519` (mode 0600)
+- Credentials (Jira, GitHub) are environment variables only — never persisted to `.relay/relay.yaml`
+
+### What if my codebase is in a regulated environment (HIPAA, FedRAMP, etc.)?
+
+Grove Suite is well-suited to regulated environments precisely because it runs locally. The full code path:
+- Source code never leaves your machine
+- Index data lives in `.grove/grove.db` on your laptop (or your team's self-hosted server in Phase 2)
+- Cryptographic admission certificates are reproducible — you can prove what gates passed at commit time
+- Static analysis findings, test results, and signed commits all live in your git history
+
+For specific compliance frameworks, see the [Audit brief](audiences/audit.md) when published.
+
+### Are the dependencies safe?
+
+Grove Suite is built on:
+- Go 1.22+ (compiled into static binaries — no Go runtime needed at runtime)
+- Tree-sitter (C library, vendored)
+- SQLite (embedded via `modernc.org/sqlite` — pure Go, no CGO)
+- Model2Vec (potion-base-8M, embedded in the binary — no inference server)
+- Standard Go crypto libraries for Ed25519, SHA-256, etc.
+
+Each product's `go.mod` is auditable. We avoid heavy dependency trees deliberately.
+
+### How does the Ed25519 signing chain work?
+
+1. `relay init` generates an Ed25519 keypair at `~/.relay/keys/admission.ed25519` (mode 0600)
+2. On each admission, Relay computes CanonicalBytes over: ChangeSet + effective config hash + toolchain versions + test results + findings
+3. Ed25519 signature is computed before the commit SHA exists
+4. After signing, Relay creates the commit; the commit SHA is recorded in the trailer
+5. `relay cert verify <id>` re-validates the signature
+6. `relay cert replay <id>` re-runs the gates against current tools and returns `byte_reproducible` / `tool_drift` / `config_drift`
+
+The signature attests to gates passing — not to the commit existing. This separation is what enables auditable replay.
+
+### What's the threat model?
+
+See [Security brief](audiences/security.md) when published. Summary:
+- Threat: agent produces malicious code → Mitigation: Relay's gates run regardless of agent
+- Threat: attacker forges a Relay cert → Mitigation: Ed25519 signature with private key never leaving disk
+- Threat: dependency supply-chain attack → Mitigation: Stage 2 dep audit (govulncheck, npm audit, pip-audit) + Sigstore/SLSA on the build artifact (out of scope for Relay)
+- Threat: leaked bearer token → Mitigation: token bound to `127.0.0.1`, rotate by deleting `.grove/.token`
+
+---
+
+## For Compliance / Audit
+
+### What evidence does Grove Suite produce?
+
+For every admitted commit:
+- The original user prompt, captured as a YAML intent in the repo
+- The Ed25519-signed certificate proving build, test, coverage, secrets, SAST, deps gates passed
+- The exact toolchain versions that ran (Stage 1 + Stage 2)
+- The effective config hash, byte-reproducible
+- The commit trailer linking all of the above to the commit SHA
+
+### Can I audit a 6-month-old commit?
+
+Yes. `relay cert show <id-or-ref>` displays the full certificate. `relay cert replay <id>` re-runs the gates and returns one of:
+- `byte_reproducible` — current tools + config match the cert's gates
+- `tool_drift` — tool versions have changed; gates would pass but not bit-identically
+- `config_drift` — your `.relay/relay.yaml` has changed since the cert was created
+
+This is the difference between "we had CI green at the time" (no longer verifiable after CI logs roll off) and "we have a cryptographic record we can re-validate today."
+
+### Does this help with SOC 2?
+
+It directly addresses several SOC 2 Type II controls:
+- CC4.1, CC4.2: ongoing monitoring of controls — every commit's cert is a control evidence record
+- CC6.1: logical access — Ed25519 keys per developer, bearer tokens for HTTP access
+- CC7.1: detection of vulnerabilities — Stage 2 SAST + dep audit on every commit
+- CC8.1: change management — every change is admitted via Relay, linked to an intent, signed
+
+A detailed mapping is in the [Audit brief](audiences/audit.md) when published.
+
+### Does this help with EU AI Act compliance?
+
+The EU AI Act's high-risk activation in August 2026 creates documentation and traceability requirements for AI-generated artifacts in regulated industries. Relay's intent-capture + signed-admission flow gives you the traceability artefact the act requires: a record of what the AI was asked to do, what gates verified the output, and a cryptographic proof you can show an auditor.
+
+This is not legal advice. Talk to your compliance team about which AI Act provisions apply to you.
+
+---
+
+## Operational / Troubleshooting
+
+### Grove won't start — port 7777 already in use
+
+```bash
+lsof -i :7777    # find what's using it
+grove serve --port 7778
+# or set GROVE_URL=http://localhost:7778 for other Grove Suite tools
+```
+
+### Prism savings shows 0 even after using the agent
+
+The agent isn't calling Prism tools. Check:
+1. `prism init` was run in this directory — look for `.claude/mcp.json` or `.cursor/mcp.json`
+2. The coding tool was restarted after `prism init`
+3. The CLAUDE.md / .cursorrules instructions tell the agent to use Prism
+
+### Fuse declares conflicts on files it should auto-resolve
+
+Most common cause: the language isn't in the `.gitattributes` whitelist. Check:
+```bash
+cat .gitattributes
+# Should have entries like *.go merge=fuse
+```
+
+If your file extension is included, the conflict may be genuinely ambiguous — Fuse intentionally falls back to conflict markers when confidence < 0.70. Read `.git/fuse/conflict-<hash>.md` for the structured handoff.
+
+### Relay certify is failing
+
+The first thing to check: `relay certify --verbose` shows which stage failed.
+- Stage 1 fail: build or tests failed. Run them outside Relay to confirm.
+- Stage 2 fail: a SAST or secrets finding above your gate threshold. `relay explain <finding-id>` shows the rule and fix.
+
+### relay init didn't detect my coding tool
+
+The detection is based on global configs and executables. If your tool is installed in an unusual location, run:
+```bash
+relay mcp install-for <tool>   # claude-code, cursor, windsurf, continue
+```
+
+### The pre-push hook is blocking my push and I need to push now
+
+The hook is a backstop, not the only enforcement. To bypass for one push:
+```bash
+git push --no-verify
+# This is detected and audited — see .relay/.cache/audit.log
+```
+
+Use sparingly. If you find yourself bypassing often, the gates may be too strict — adjust `.relay/relay.yaml`.
+
+### My index is stale — what triggers a re-index?
+
+Grove uses git blob SHA as the freshness key. Files committed (or staged) get re-indexed automatically on the next `prism index` or via the auto-index hook. To force a clean re-index:
+```bash
+rm -rf .grove/grove.db
+grove index .
+```
+
+---
+
+## Anything else?
+
+Open an issue at [github.com/tabladrum/grove-suite/issues](https://github.com/tabladrum/grove-suite/issues) or add to this FAQ via PR.
