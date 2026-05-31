@@ -1,4 +1,3 @@
-package engine
 // Package engine orchestrates the certified-merge pipeline: policy gates,
 // ICR computation, certificate signing, and admission of a ChangeSet onto
 // the linear `relay-main` branch.

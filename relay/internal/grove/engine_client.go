@@ -1,5 +1,4 @@
 package grove
-package grove
 
 // Engine-mode Grove client extensions.
 // The legacy ICR() (returning {SymbolCount, Rating}) is preserved for Phase-1

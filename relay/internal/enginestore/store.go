@@ -1,4 +1,3 @@
-package enginestore
 // Package enginestore is the laptop-mode (SQLite, pure-Go) persistence layer
 // for the certified-merge engine. Schema is intentionally portable so the
 // team-mode Postgres adapter (MVP-T1) can reuse it without migration.
