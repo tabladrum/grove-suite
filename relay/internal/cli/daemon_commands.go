@@ -16,10 +16,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"runtime"
-	"syscall"
 
 	"github.com/tabladrum/grove-suite/relay/internal/daemon"
 )
@@ -114,9 +112,7 @@ func cmdDaemonStart(args []string, stdout, stderr *os.File) int {
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	cmd.Stdin = nil
-	if runtime.GOOS != "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	}
+	setSid(cmd)
 	if err := cmd.Start(); err != nil {
 		fmt.Fprintln(stderr, "daemon start:", err)
 		return 1
@@ -200,12 +196,7 @@ func serveDaemon(sock string, stderr *os.File) int {
 	d := daemon.New(sock)
 	// Handle SIGINT/SIGTERM gracefully.
 	if runtime.GOOS != "windows" {
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			<-sig
-			_ = d.Stop()
-		}()
+		installSignalHandler(d)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
