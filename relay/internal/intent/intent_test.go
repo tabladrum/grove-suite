@@ -126,6 +126,22 @@ func TestService_UpdatePatchesDraft(t *testing.T) {
 	}
 }
 
+func TestService_UpdateNotFound(t *testing.T) {
+	s := newService(t)
+	_, err := s.Update("nonexistent-id", map[string]any{"title": "x"})
+	if err == nil {
+		t.Fatal("expected error for unknown intent ID, got nil")
+	}
+}
+
+func TestService_CloseNotFound(t *testing.T) {
+	s := newService(t)
+	_, _, _, err := s.Close("nonexistent-id", "agent")
+	if err == nil {
+		t.Fatal("expected error for unknown intent ID, got nil")
+	}
+}
+
 func TestService_ClosePromotes(t *testing.T) {
 	s := newService(t)
 	i, draftPath, _ := s.Open("ship feature", "the verbatim prompt", OriginatedFrom{
