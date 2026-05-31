@@ -65,10 +65,11 @@ func TestLinkInto_CreatesBinDir(t *testing.T) {
 	}
 	root := filepath.Join(t.TempDir(), "deep", "root")
 	inst := &Installer{Root: root}
-	if err := inst.linkInto(src, "tool"); err != nil {
+	dstName := binaryFileName("tool")
+	if err := inst.linkInto(src, dstName); err != nil {
 		t.Fatalf("linkInto: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "bin", binaryFileName("tool"))); err != nil {
+	if _, err := os.Stat(filepath.Join(root, "bin", dstName)); err != nil {
 		t.Fatalf("shim missing: %v", err)
 	}
 }
