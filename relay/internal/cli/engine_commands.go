@@ -14,11 +14,14 @@ import (
 	"path/filepath"
 
 	"github.com/tabladrum/grove-suite/relay/internal/admission"
+	"github.com/tabladrum/grove-suite/relay/internal/cert/stage1"
 	"github.com/tabladrum/grove-suite/relay/internal/config"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
 	"github.com/tabladrum/grove-suite/relay/internal/engine"
 	"github.com/tabladrum/grove-suite/relay/internal/enginestore"
 	"github.com/tabladrum/grove-suite/relay/internal/policy"
+	"github.com/tabladrum/grove-suite/relay/internal/policy/coverage"
+	"github.com/tabladrum/grove-suite/relay/internal/runner/gotest"
 	"github.com/tabladrum/grove-suite/relay/internal/signer"
 )
 
@@ -305,7 +308,10 @@ func buildEngine(start string) (*engine.Engine, func(), error) {
 		ICR:      engine.NoopICRProvider{},
 		Signer:   sgn,
 		Config:   cfg,
+		Stage1:   stage1.New(gotest.New()),
 	}
+	// coverage gate reads Stage1Result via this closure.
+	reg.Register(&coverage.Gate{Stage1: e.Stage1Result})
 	return e, func() { _ = store.Close() }, nil
 }
 
