@@ -1,0 +1,397 @@
+---
+title: Installation
+layout: default
+nav_order: 2
+description: "How to install Grove Suite on macOS, Linux, and Windows — from GitHub Releases binaries or from source."
+permalink: /installation/
+---
+
+# Installation
+
+Grove Suite ships four single-file binaries: `grove`, `prism`, `fuse`, and `relay`. Pick the installation method that fits your environment.
+
+| Method | Best for | Speed |
+|--------|---------|-------|
+| [Pre-built binaries](#pre-built-binaries-from-github-releases) | Production use, CI, locked-down environments | 30 seconds |
+| [Build from source](#build-from-source) | Developers, contributors, custom builds | 5 minutes |
+| [Homebrew](#homebrew-macos--linux) | macOS / Linux users with Homebrew | 1 minute (planned) |
+
+**Required:** Git 2.x. Everything else (Go toolchain, build dependencies) is only needed for source builds.
+
+---
+
+## Pre-built Binaries (from GitHub Releases)
+
+Binaries are signed, checksummed, and built on GitHub Actions for every release tag.
+
+**Releases:** [github.com/tabladrum/grove-suite/releases](https://github.com/tabladrum/grove-suite/releases)
+
+### Supported platforms
+
+| OS | Architecture | Binary suffix |
+|----|-------------|---------------|
+| Linux | amd64 (Intel/AMD x86_64) | `-linux-amd64` |
+| Linux | arm64 (Graviton, Ampere, Raspberry Pi 4+) | `-linux-arm64` |
+| macOS | amd64 (Intel Macs) | `-darwin-amd64` |
+| macOS | arm64 (Apple Silicon M1/M2/M3/M4) | `-darwin-arm64` |
+| Windows | amd64 | `-windows-amd64.exe` |
+
+### macOS (Apple Silicon)
+
+```bash
+VERSION=v0.1.0   # check https://github.com/tabladrum/grove-suite/releases/latest
+
+for binary in grove prism fuse relay; do
+  curl -L "https://github.com/tabladrum/grove-suite/releases/download/${VERSION}/${binary}-${VERSION}-darwin-arm64" -o "${binary}"
+  chmod +x "${binary}"
+  sudo mv "${binary}" /usr/local/bin/
+done
+
+# Verify
+grove version && prism version && fuse version && relay version
+```
+
+If macOS Gatekeeper blocks the binary on first run:
+
+```bash
+xattr -d com.apple.quarantine /usr/local/bin/grove
+# repeat for prism, fuse, relay
+```
+
+We're working on Apple Developer signing — until then, the quarantine-removal step is required.
+
+### macOS (Intel)
+
+Same as above but replace `darwin-arm64` with `darwin-amd64`.
+
+### Linux (amd64)
+
+```bash
+VERSION=v0.1.0
+
+for binary in grove prism fuse relay; do
+  curl -L "https://github.com/tabladrum/grove-suite/releases/download/${VERSION}/${binary}-${VERSION}-linux-amd64" -o "${binary}"
+  chmod +x "${binary}"
+  sudo mv "${binary}" /usr/local/bin/
+done
+```
+
+### Linux (arm64 — Raspberry Pi, AWS Graviton, Ampere Altra)
+
+Same as above but replace `linux-amd64` with `linux-arm64`.
+
+### Windows
+
+1. Open [the latest release page](https://github.com/tabladrum/grove-suite/releases/latest).
+2. Download `grove-vX.Y.Z-windows-amd64.exe`, `prism-...exe`, `fuse-...exe`, `relay-...exe`.
+3. Move them to a folder on your `PATH`. We recommend `C:\Users\<you>\bin\` and adding that to `PATH` if it isn't already.
+4. Rename each file by removing the version suffix:
+   ```powershell
+   Rename-Item grove-v0.1.0-windows-amd64.exe grove.exe
+   Rename-Item prism-v0.1.0-windows-amd64.exe prism.exe
+   Rename-Item fuse-v0.1.0-windows-amd64.exe fuse.exe
+   Rename-Item relay-v0.1.0-windows-amd64.exe relay.exe
+   ```
+5. Verify in a new PowerShell window:
+   ```powershell
+   grove version
+   prism version
+   fuse version
+   relay version
+   ```
+
+### Verifying downloads
+
+Every release ships a `checksums.txt`. Verify integrity before running:
+
+```bash
+VERSION=v0.1.0
+curl -L "https://github.com/tabladrum/grove-suite/releases/download/${VERSION}/checksums.txt" -o checksums.txt
+sha256sum -c checksums.txt --ignore-missing
+```
+
+If any line says `FAILED`, **do not run the binary** — the download was corrupted or tampered with. Re-download or open an issue.
+
+### Pinning a version
+
+Production deployments should pin to a specific tag rather than `latest`:
+
+```bash
+# Pin in CI / install scripts
+GROVE_SUITE_VERSION=v0.1.0
+```
+
+Don't pin to `main` — that's our development branch.
+
+---
+
+## Build from Source
+
+Build from source if:
+- You're contributing to Grove Suite
+- You need a build for an unsupported platform
+- Your security policy requires building from source
+- You want to test the unreleased main branch
+
+### Prerequisites
+
+| Tool | Version | Why |
+|------|---------|-----|
+| Go | 1.22+ (1.26+ recommended) | Compiler |
+| Git | 2.x | Source checkout |
+| `gcc` / `clang` / MSVC | any recent version | CGO compilation (tree-sitter requires C) |
+| `make` | GNU make or BSD make | Build orchestration |
+
+#### macOS prerequisites
+
+```bash
+# Install Xcode Command Line Tools (provides clang + git + make)
+xcode-select --install
+
+# Install Go
+brew install go
+```
+
+#### Linux (Debian / Ubuntu) prerequisites
+
+```bash
+sudo apt update
+sudo apt install -y golang-1.26 build-essential git make
+# Or grab Go directly from https://go.dev/doc/install if your distro's package is older
+```
+
+#### Linux (Fedora / RHEL) prerequisites
+
+```bash
+sudo dnf install -y golang gcc make git
+```
+
+#### Windows prerequisites
+
+1. Install Go from [go.dev/dl](https://go.dev/dl/) — pick the latest Windows installer
+2. Install [Git for Windows](https://git-scm.com/download/win) — provides `git` and a bash shell
+3. Install a C compiler: [MinGW-w64](https://www.mingw-w64.org/) or [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) — required for CGO
+
+### Build steps
+
+```bash
+git clone https://github.com/tabladrum/grove-suite
+cd grove-suite
+
+# Grove must be built first — Prism, Fuse, and Relay depend on it
+cd grove && make install && cd ..
+cd prism && make install && cd ..
+cd fuse  && make install && cd ..
+cd relay && make install && cd ..
+```
+
+`make install` compiles to `./bin/<name>` and copies to `$GOPATH/bin` (default `~/go/bin`). Make sure that directory is on your `PATH`:
+
+```bash
+echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.zshrc   # or ~/.bashrc
+source ~/.zshrc
+```
+
+### Building a specific version
+
+```bash
+cd grove-suite
+git checkout v0.1.0
+cd grove && make install && cd ..
+# ... etc
+```
+
+### Running tests after build
+
+```bash
+cd grove && make test && cd ..
+cd prism && make test && cd ..
+cd fuse  && make test && cd ..
+cd relay && make test && cd ..
+```
+
+---
+
+## Homebrew (macOS & Linux)
+
+**Status:** planned — not yet available.
+
+When ready, you'll be able to:
+
+```bash
+brew tap tabladrum/grove-suite
+brew install grove-suite       # installs all four
+brew install grove             # or one at a time
+brew install prism
+brew install fuse
+brew install relay
+```
+
+[Track progress on this issue.](https://github.com/tabladrum/grove-suite/issues)
+
+---
+
+## After Installation
+
+### 1. Initialize Prism in your project
+
+```bash
+cd /your/project
+prism init    # auto-detects Claude Code / Copilot / Cursor / Codex CLI / Windsurf / Zed
+              # writes MCP config + agent steering instructions
+prism index   # initial code-graph index
+```
+
+Then restart your coding tool to pick up the MCP server.
+
+### 2. Add symbol-aware merge (optional)
+
+```bash
+fuse install                           # writes ~/.gitconfig merge driver entry
+
+# Per-repo, add to .gitattributes:
+echo "*.go merge=fuse"  >> .gitattributes
+echo "*.ts merge=fuse"  >> .gitattributes
+echo "*.py merge=fuse"  >> .gitattributes
+```
+
+### 3. Add certified delivery (optional)
+
+```bash
+relay init --stack=go-microservice    # scaffolds .relay/, generates Ed25519 key
+                                      # writes agent instructions + MCP config
+                                      # for every detected coding tool
+relay hook install                    # git pre-push backstop
+git add .relay/ && git commit -m "Add Relay configuration"
+```
+
+Pick the stack matching your project: `go-microservice` | `node-api` | `python-service` | `java-spring`. List all with `relay init --list-stacks`.
+
+---
+
+## Verify Everything Works
+
+After installation, run a smoke test:
+
+```bash
+# Health check — all four binaries on PATH
+which grove prism fuse relay
+
+# Version sanity
+grove version
+prism version
+fuse version
+relay version
+
+# Start Grove and verify HTTP API
+grove serve --port 7777 &
+sleep 2
+curl http://localhost:7777/health
+# Expected: {"status":"ok"}
+
+# Use Prism to query (in a project that has been indexed)
+cd /your/project
+prism index
+prism query "where is authentication handled?"
+```
+
+---
+
+## Uninstall
+
+### Binaries installed via GitHub Releases
+
+```bash
+# macOS / Linux
+sudo rm /usr/local/bin/grove /usr/local/bin/prism /usr/local/bin/fuse /usr/local/bin/relay
+```
+
+```powershell
+# Windows
+Remove-Item "$env:USERPROFILE\bin\grove.exe","$env:USERPROFILE\bin\prism.exe","$env:USERPROFILE\bin\fuse.exe","$env:USERPROFILE\bin\relay.exe"
+```
+
+### Binaries built from source
+
+```bash
+rm $GOPATH/bin/grove $GOPATH/bin/prism $GOPATH/bin/fuse $GOPATH/bin/relay
+```
+
+### Per-project state
+
+```bash
+cd /your/project
+rm -rf .grove .git/fuse
+# Keep .relay/ unless you want to discard your config — it's part of your repo
+```
+
+### Per-user state
+
+```bash
+rm -rf ~/.relay/keys ~/.cache/prism
+```
+
+---
+
+## Common Installation Issues
+
+### "command not found" after install
+
+Your `PATH` doesn't include the install directory.
+
+- **Source build:** add `$GOPATH/bin` (typically `~/go/bin`) to your `PATH`
+- **Binary install (macOS/Linux):** `/usr/local/bin/` should already be on `PATH` — check with `echo $PATH`
+- **Binary install (Windows):** add `C:\Users\<you>\bin\` to your `PATH` via System Properties → Environment Variables
+
+### macOS: "cannot be opened because the developer cannot be verified"
+
+```bash
+xattr -d com.apple.quarantine /usr/local/bin/grove
+xattr -d com.apple.quarantine /usr/local/bin/prism
+xattr -d com.apple.quarantine /usr/local/bin/fuse
+xattr -d com.apple.quarantine /usr/local/bin/relay
+```
+
+This is the macOS Gatekeeper challenge on unsigned binaries. We're working on Apple Developer signing.
+
+### `make install` fails with CGO error
+
+Tree-sitter (used by Grove and Fuse) requires a C compiler.
+
+- **macOS:** `xcode-select --install`
+- **Linux:** `sudo apt install build-essential` or `sudo dnf groupinstall "Development Tools"`
+- **Windows:** install MinGW-w64 or TDM-GCC
+
+### Port conflicts
+
+Default ports: Grove uses 7777 (HTTP) and 7778 (gRPC). Relay uses 9000.
+
+```bash
+# Find what's using port 7777
+lsof -i :7777
+
+# Run Grove on a different port
+grove serve --port 7778
+export GROVE_URL=http://localhost:7778
+```
+
+### Behind a corporate proxy
+
+Set the standard proxy env vars before running:
+
+```bash
+export HTTP_PROXY=http://proxy.corp:8080
+export HTTPS_PROXY=http://proxy.corp:8080
+export NO_PROXY=localhost,127.0.0.1
+```
+
+Grove Suite doesn't make external HTTP calls during normal operation, so proxies only matter for `go install` / `git clone` during source builds.
+
+---
+
+## Where to Go Next
+
+- **[Get up and running fast](/why#what-we-want-from-you)** — the 5-minute path with Prism
+- **[Documentation home](/README)** — full doc map
+- **[Troubleshooting](/troubleshooting)** — common operational issues
+- **[Compare to alternatives](/comparisons)** — Prism vs Copilot, Fuse vs git merge, Relay vs CI
