@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
+	"github.com/tabladrum/grove-suite/relay/internal/cert/risk"
 	"github.com/tabladrum/grove-suite/relay/internal/config"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
 	"github.com/tabladrum/grove-suite/relay/internal/enginestore"
@@ -236,6 +237,14 @@ func (e *Engine) Certify(ctx context.Context, cs *core.ChangeSet) (*Result, erro
 		PolicyVersion:       "v1",
 		SignedBy:            e.Signer.KeyID(),
 		CreatedAt:           e.now(),
+	}
+	crt.Payload = map[string]any{
+		"risk_heatmap": risk.Compute(risk.Inputs{
+			ICR:    icr,
+			Stage1: res.Stage1,
+			Stage2: res.Stage2,
+		}),
+		"risk_model_version": risk.ModelVersion,
 	}
 	sig, err := e.Signer.Sign(crt)
 	if err != nil {

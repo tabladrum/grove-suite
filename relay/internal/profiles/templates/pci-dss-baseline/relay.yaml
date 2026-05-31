@@ -1,0 +1,20 @@
+# PCI-DSS baseline profile
+# Card-data-environment guard rails: hardened secrets + fileclass + coverage.
+relay_version: v1
+stack: generic
+policies:
+  secrets:
+    scope: ["**/*"]
+    deny: ["aws-access-key-id", "github-token", "slack-webhook-url", "stripe-secret"]
+  coverage:
+    min_pct: 80.0
+  deps:
+    block_severity: ["critical", "high"]
+  fileclass:
+    deny:
+      - "**/*.pem"
+      - "**/*.p12"
+      - "**/*cardholder*"
+      - "**/*pan*.txt"
+      - "**/*track1*"
+      - "**/*track2*"

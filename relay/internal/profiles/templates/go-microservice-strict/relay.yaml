@@ -1,0 +1,13 @@
+# Go microservice — strict variant
+relay_version: v1
+stack: go-microservice
+policies:
+  secrets:
+    scope: ["**/*"]
+    deny: ["aws-access-key-id", "github-token", "slack-webhook-url"]
+  coverage:
+    min_pct: 85.0
+  deps:
+    block_severity: ["critical", "high"]
+  fileclass:
+    deny: ["**/*.pem", "**/.env*"]

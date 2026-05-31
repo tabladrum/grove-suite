@@ -1,0 +1,13 @@
+# Python service — strict variant
+relay_version: v1
+stack: python-service
+policies:
+  secrets:
+    scope: ["**/*"]
+    deny: ["aws-access-key-id", "github-token", "slack-webhook-url"]
+  coverage:
+    min_pct: 80.0
+  deps:
+    block_severity: ["critical", "high"]
+  fileclass:
+    deny: ["**/*.pem", "**/.env*"]

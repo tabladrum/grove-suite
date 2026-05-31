@@ -84,6 +84,11 @@ type Certificate struct {
 	SignedBy            string // public-key ID
 	Signature           []byte // raw Ed25519 signature over CanonicalBytes
 	CreatedAt           time.Time
+
+	// Payload carries unsigned informational extensions (risk heatmap,
+	// risk model version, replay metadata). Excluded from CanonicalBytes
+	// so additions never invalidate existing signatures.
+	Payload map[string]any `json:"payload,omitempty"`
 }
 
 // RelayConfig is the in-memory representation of merged .relay/ configuration.

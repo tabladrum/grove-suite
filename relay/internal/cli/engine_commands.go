@@ -30,6 +30,7 @@ import (
 	"github.com/tabladrum/grove-suite/relay/internal/policy/deps"
 	"github.com/tabladrum/grove-suite/relay/internal/policy/fileclass"
 	"github.com/tabladrum/grove-suite/relay/internal/policy/secrets"
+	"github.com/tabladrum/grove-suite/relay/internal/profiles"
 	"github.com/tabladrum/grove-suite/relay/internal/runner/gotest"
 	"github.com/tabladrum/grove-suite/relay/internal/signer"
 	"github.com/tabladrum/grove-suite/relay/internal/stacks"
@@ -62,7 +63,9 @@ func cmdInit(args []string) int {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
 	dir := fs.String("dir", ".", "directory in which to create .relay/")
 	stack := fs.String("stack", "", "stack template to scaffold (go-microservice|node-api|python-service|java-spring)")
+	profile := fs.String("profile", "", "compliance / hardened profile to scaffold (soc2-baseline|pci-dss-baseline|<stack>-strict)")
 	listStacks := fs.Bool("list-stacks", false, "print available stack templates and exit")
+	listProfiles := fs.Bool("list-profiles", false, "print available profiles and exit")
 	if err := fs.Parse(args); err != nil {
 		return 1
 	}
@@ -76,6 +79,21 @@ func cmdInit(args []string) int {
 			fmt.Printf("  %-20s %s\n", s.Name, s.Description)
 		}
 		return 0
+	}
+	if *listProfiles {
+		ps, err := profiles.Known()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+		for _, p := range ps {
+			fmt.Printf("  %-26s %s\n", p.Name, p.Description)
+		}
+		return 0
+	}
+	if *stack != "" && *profile != "" {
+		fmt.Fprintln(os.Stderr, "--stack and --profile are mutually exclusive")
+		return 1
 	}
 	root, err := filepath.Abs(*dir)
 	if err != nil {
@@ -97,6 +115,22 @@ func cmdInit(args []string) int {
 		written, skipped, err := stacks.Apply(*stack, relayDir)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "stack apply:", err)
+			return 1
+		}
+		for _, p := range written {
+			fmt.Printf("wrote .relay/%s\n", p)
+		}
+		for _, p := range skipped {
+			fmt.Printf("skipped (exists) .relay/%s\n", p)
+		}
+	} else if *profile != "" {
+		if !profiles.IsKnown(*profile) {
+			fmt.Fprintf(os.Stderr, "unknown profile %q (try --list-profiles)\n", *profile)
+			return 1
+		}
+		written, skipped, err := profiles.Apply(*profile, relayDir)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "profile apply:", err)
 			return 1
 		}
 		for _, p := range written {
@@ -213,18 +247,33 @@ func cmdSubmit(args []string) int {
 	return 0
 }
 
-// cmdCert handles `relay cert verify <commit-sha>` and `relay cert show <commit-sha>`.
+// cmdCert handles `relay cert <verify|show|replay> <ref>`.
+// `ref` is a commit SHA for show/verify/replay; show/replay also accept a
+// certificate ID.
 func cmdCert(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: relay cert <verify|show> <commit-sha>")
+		fmt.Fprintln(os.Stderr, "usage: relay cert <verify|show|replay> [--jsonld] <ref>")
 		return 1
 	}
 	sub := args[0]
-	if len(args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage: relay cert %s <commit-sha>\n", sub)
+	rest := args[1:]
+	jsonld := false
+	positional := make([]string, 0, len(rest))
+	for _, a := range rest {
+		switch a {
+		case "--jsonld":
+			jsonld = true
+		case "--json":
+			jsonld = false
+		default:
+			positional = append(positional, a)
+		}
+	}
+	if len(positional) < 1 {
+		fmt.Fprintf(os.Stderr, "usage: relay cert %s [--jsonld] <ref>\n", sub)
 		return 1
 	}
-	sha := args[1]
+	ref := positional[0]
 
 	repoRoot, err := os.Getwd()
 	if err != nil {
@@ -242,7 +291,8 @@ func cmdCert(args []string) int {
 		return 1
 	}
 	defer store.Close()
-	cert, err := store.GetCertificateByCommit(context.Background(), sha)
+
+	cert, err := lookupCert(store, ref)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "lookup cert:", err)
 		return 1
@@ -250,6 +300,10 @@ func cmdCert(args []string) int {
 
 	switch sub {
 	case "show":
+		if jsonld {
+			_ = json.NewEncoder(os.Stdout).Encode(toJSONLD(cert))
+			return 0
+		}
 		_ = json.NewEncoder(os.Stdout).Encode(cert)
 		return 0
 	case "verify":
@@ -263,7 +317,18 @@ func cmdCert(args []string) int {
 			fmt.Fprintln(os.Stderr, "verify FAILED:", err)
 			return 1
 		}
-		fmt.Printf("verify OK  cert=%s  commit=%s  signed_by=%s\n", cert.ID, sha, cert.SignedBy)
+		fmt.Printf("verify OK  cert=%s  commit=%s  signed_by=%s\n", cert.ID, cert.AdmittedCommitSHA, cert.SignedBy)
+		return 0
+	case "replay":
+		report, err := replayCert(context.Background(), store, root, cert)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "replay:", err)
+			return 1
+		}
+		_ = json.NewEncoder(os.Stdout).Encode(report)
+		if report.Verdict != "byte_reproducible" {
+			return 2
+		}
 		return 0
 	default:
 		fmt.Fprintf(os.Stderr, "unknown cert subcommand: %s\n", sub)

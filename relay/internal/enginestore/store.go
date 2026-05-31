@@ -57,6 +57,12 @@ func Open(path string) (*Store, error) {
 func (s *Store) Close() error { return s.db.Close() }
 
 func runMigrations(db *sql.DB) error {
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+		name TEXT PRIMARY KEY,
+		applied_at TEXT NOT NULL
+	)`); err != nil {
+		return fmt.Errorf("create schema_migrations: %w", err)
+	}
 	entries, err := migrationFS.ReadDir("migrations")
 	if err != nil {
 		return err
@@ -66,6 +72,13 @@ func runMigrations(db *sql.DB) error {
 		if !strings.HasSuffix(e.Name(), ".sql") {
 			continue
 		}
+		var existing string
+		row := db.QueryRow(`SELECT name FROM schema_migrations WHERE name = ?`, e.Name())
+		if err := row.Scan(&existing); err == nil {
+			continue
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("check migration %s: %w", e.Name(), err)
+		}
 		data, err := migrationFS.ReadFile("migrations/" + e.Name())
 		if err != nil {
 			return fmt.Errorf("read %s: %w", e.Name(), err)
@@ -73,10 +86,31 @@ func runMigrations(db *sql.DB) error {
 		// Split on ';' is unsafe in general; modernc.org/sqlite accepts
 		// multi-statement Exec, so we pass the entire file as one call.
 		if _, err := db.Exec(string(data)); err != nil {
-			return fmt.Errorf("exec %s: %w", e.Name(), err)
+			// Self-healing: if 001 was already applied on a pre-tracker DB
+			// and a follow-up migration tries to add a column that exists,
+			// the column-exists error is ignorable IF the migration is a
+			// pure ALTER TABLE ADD COLUMN. Mark as applied and continue.
+			if !isBenignAlreadyAppliedErr(err) {
+				return fmt.Errorf("exec %s: %w", e.Name(), err)
+			}
+		}
+		if _, err := db.Exec(`INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)`,
+			e.Name(), time.Now().UTC().Format(rfc3339Nano)); err != nil {
+			return fmt.Errorf("record migration %s: %w", e.Name(), err)
 		}
 	}
 	return nil
+}
+
+// isBenignAlreadyAppliedErr returns true for SQLite errors that mean
+// "this DDL was already applied on a database that predates the
+// schema_migrations tracker". Today that's just "duplicate column".
+func isBenignAlreadyAppliedErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "duplicate column name")
 }
 
 const rfc3339Nano = time.RFC3339Nano
@@ -157,16 +191,23 @@ func (s *Store) InsertCertificate(ctx context.Context, cert *core.Certificate) e
 	if err != nil {
 		return fmt.Errorf("marshal policies: %w", err)
 	}
+	payloadJSON := []byte("{}")
+	if cert.Payload != nil {
+		payloadJSON, err = json.Marshal(cert.Payload)
+		if err != nil {
+			return fmt.Errorf("marshal payload: %w", err)
+		}
+	}
 	_, err = s.db.ExecContext(ctx, `
 		INSERT INTO certificates
 		  (id, changeset_id, intent_id, admitted_commit_sha, base_sha, icr_json, policies_json,
-		   effective_config_hash, policy_version, toolchain_image, signed_by, signature, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		   effective_config_hash, policy_version, toolchain_image, signed_by, signature, created_at, payload_json)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		cert.ID, cert.ChangeSetID, cert.IntentID, cert.AdmittedCommitSHA, cert.BaseSHA,
 		string(icrJSON), string(polJSON),
 		cert.EffectiveConfigHash, cert.PolicyVersion, cert.ToolchainImage,
-		cert.SignedBy, cert.Signature, cert.CreatedAt.Format(rfc3339Nano),
+		cert.SignedBy, cert.Signature, cert.CreatedAt.Format(rfc3339Nano), string(payloadJSON),
 	)
 	if err != nil {
 		return fmt.Errorf("insert certificate: %w", err)
@@ -178,7 +219,7 @@ func (s *Store) InsertCertificate(ctx context.Context, cert *core.Certificate) e
 func (s *Store) GetCertificate(ctx context.Context, id string) (*core.Certificate, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT id, changeset_id, intent_id, admitted_commit_sha, base_sha, icr_json, policies_json,
-		       effective_config_hash, policy_version, toolchain_image, signed_by, signature, created_at
+		       effective_config_hash, policy_version, toolchain_image, signed_by, signature, created_at, payload_json
 		FROM certificates WHERE id = ?
 	`, id)
 	return scanCertificate(row)
@@ -188,7 +229,7 @@ func (s *Store) GetCertificate(ctx context.Context, id string) (*core.Certificat
 func (s *Store) GetCertificateByCommit(ctx context.Context, sha string) (*core.Certificate, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT id, changeset_id, intent_id, admitted_commit_sha, base_sha, icr_json, policies_json,
-		       effective_config_hash, policy_version, toolchain_image, signed_by, signature, created_at
+		       effective_config_hash, policy_version, toolchain_image, signed_by, signature, created_at, payload_json
 		FROM certificates WHERE admitted_commit_sha = ?
 	`, sha)
 	return scanCertificate(row)
@@ -200,10 +241,10 @@ type rowScanner interface {
 
 func scanCertificate(row rowScanner) (*core.Certificate, error) {
 	cert := &core.Certificate{}
-	var icrJSON, polJSON, createdAt string
+	var icrJSON, polJSON, createdAt, payloadJSON string
 	err := row.Scan(&cert.ID, &cert.ChangeSetID, &cert.IntentID, &cert.AdmittedCommitSHA, &cert.BaseSHA,
 		&icrJSON, &polJSON, &cert.EffectiveConfigHash, &cert.PolicyVersion, &cert.ToolchainImage,
-		&cert.SignedBy, &cert.Signature, &createdAt)
+		&cert.SignedBy, &cert.Signature, &createdAt, &payloadJSON)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -215,6 +256,11 @@ func scanCertificate(row rowScanner) (*core.Certificate, error) {
 	}
 	if err := json.Unmarshal([]byte(polJSON), &cert.Policies); err != nil {
 		return nil, fmt.Errorf("unmarshal policies: %w", err)
+	}
+	if payloadJSON != "" && payloadJSON != "{}" {
+		if err := json.Unmarshal([]byte(payloadJSON), &cert.Payload); err != nil {
+			return nil, fmt.Errorf("unmarshal payload: %w", err)
+		}
 	}
 	cert.CreatedAt, _ = time.Parse(rfc3339Nano, createdAt)
 	return cert, nil
