@@ -3,6 +3,7 @@ package signer
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -42,13 +43,15 @@ func TestLoadOrCreateLocal_GeneratesThenReuses(t *testing.T) {
 	if s1.KeyID() == "" || !strings.HasPrefix(s1.KeyID(), "local-ed25519:") {
 		t.Errorf("unexpected key id: %s", s1.KeyID())
 	}
-	// Private key file must exist and be 0600.
+	// Private key file must exist; on POSIX it should be 0600.
+	// Windows reports coarse-grained ACL-derived modes, so we only assert
+	// existence there.
 	privPath := filepath.Join(dir, "signing.ed25519.key")
 	info, err := os.Stat(privPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o600 {
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Errorf("private key perms: %v", info.Mode().Perm())
 	}
 

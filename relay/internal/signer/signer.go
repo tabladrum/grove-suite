@@ -31,9 +31,9 @@ type Signer interface {
 
 // LocalSigner holds an Ed25519 keypair stored under a directory.
 type LocalSigner struct {
-	keyID  string
-	pub    ed25519.PublicKey
-	priv   ed25519.PrivateKey
+	keyID string
+	pub   ed25519.PublicKey
+	priv  ed25519.PrivateKey
 }
 
 // LoadOrCreateLocal loads an Ed25519 keypair from dir; generates a fresh pair
