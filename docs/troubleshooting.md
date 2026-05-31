@@ -1,3 +1,11 @@
+---
+title: Troubleshooting
+layout: default
+nav_order: 11
+description: "Common issues across Grove, Prism, Fuse, and Relay — how to diagnose and fix them."
+permalink: /troubleshooting/
+---
+
 # Troubleshooting
 
 Common issues, how to diagnose, how to fix.

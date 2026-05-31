@@ -56,7 +56,7 @@ prism savings    # watch token savings accumulate
 - [**Comparisons**](/comparisons) — honest comparisons vs Copilot semantic search, Sourcegraph, AI merge tools, CodeRabbit, Sigstore, Devin
 - [**FAQ**](/faq) — top questions across technical, security, business, and audit perspectives
 - [**Troubleshooting**](/troubleshooting) — common issues, how to diagnose, how to fix
-- [**Documentation home**](/README) — the full doc map
+- [**Documentation home**](/docs/) — the full doc map
 
 ---
 

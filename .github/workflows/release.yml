@@ -14,7 +14,6 @@ permissions:
   contents: write
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   GO_VERSION: "1.26.3"
 
 jobs:
@@ -31,7 +30,7 @@ jobs:
         module: [grove, prism, fuse, relay]
         goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -73,7 +72,7 @@ jobs:
             ./cmd/${{ matrix.module }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.module }}-linux-${{ matrix.goarch }}
           path: dist/
@@ -92,7 +91,7 @@ jobs:
         module: [grove, prism, fuse, relay]
         goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -129,7 +128,7 @@ jobs:
             ./cmd/${{ matrix.module }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.module }}-darwin-${{ matrix.goarch }}
           path: dist/
@@ -147,7 +146,7 @@ jobs:
       matrix:
         module: [grove, prism, fuse, relay]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -184,7 +183,7 @@ jobs:
             ./cmd/${{ matrix.module }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.module }}-windows-amd64
           path: dist/
@@ -197,7 +196,7 @@ jobs:
     name: Build VS Code extension
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -213,7 +212,7 @@ jobs:
           npx @vscode/vsce package --no-dependencies
 
       - name: Upload VSIX artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: prism-vsix
           path: prism/vscode-extension/*.vsix
@@ -228,10 +227,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: dist/
           merge-multiple: true

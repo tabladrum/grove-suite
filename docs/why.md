@@ -1,3 +1,11 @@
+---
+title: Why Grove Suite
+layout: default
+nav_order: 2
+description: "The founder's note — why this exists, what problem it's solving, and what we deliberately didn't build."
+permalink: /why/
+---
+
 # Why Grove Suite
 
 *A founder's note on what we built, what we deliberately didn't build, and what we think you should do about it.*

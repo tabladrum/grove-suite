@@ -1,3 +1,11 @@
+---
+title: Comparisons
+layout: default
+nav_order: 9
+description: "Honest comparisons — Prism vs Copilot/Claude Code/Cursor, Grove vs Sourcegraph/LSP, Fuse vs AI merge tools, Relay vs CI/CodeRabbit/Sigstore."
+permalink: /comparisons/
+---
+
 # Comparisons
 
 *An honest look at how Grove Suite stacks up against the tools you might already be using or evaluating. We name names, we link to their docs, and we tell you where they are stronger than us.*

@@ -1,3 +1,11 @@
+---
+title: FAQ
+layout: default
+nav_order: 10
+description: "Frequently asked questions — technical, security, business, and audit perspectives."
+permalink: /faq/
+---
+
 # Grove Suite FAQ
 
 Top questions, grouped by who is asking them.
