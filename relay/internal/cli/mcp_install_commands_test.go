@@ -80,7 +80,7 @@ func TestInstallForIsIdempotent(t *testing.T) {
 // MCP server is not stomped by the relay install.
 func TestInstallForPreservesUnrelatedEntries(t *testing.T) {
 	home := withFakeHome(t)
-	configPath := filepath.Join(home, ".continue", "config.json")
+	configPath := filepath.Join(home, ".codeium", "windsurf", "mcp_config.json")
 	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestInstallForPreservesUnrelatedEntries(t *testing.T) {
 	if err := os.WriteFile(configPath, raw, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if code := cmdMCPInstallFor([]string{"--bin", "/usr/local/bin/relay", "continue"}); code != 0 {
+	if code := cmdMCPInstallFor([]string{"--bin", "/usr/local/bin/relay", "windsurf"}); code != 0 {
 		t.Fatalf("install-for exit = %d", code)
 	}
 	doc := readJSONDoc(t, configPath)
