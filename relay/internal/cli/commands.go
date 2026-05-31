@@ -41,6 +41,10 @@ func Run(args []string) int {
 	case "submit", "check", "init", "cert":
 		// Engine-mode (MVP-L1) commands.
 		return RunEngine(args)
+	case "tools":
+		return RunTools(args[1:])
+	case "import":
+		return RunImport(args[1:])
 	case "version", "--version", "-v":
 		fmt.Println("relay", version.Version)
 		return 0

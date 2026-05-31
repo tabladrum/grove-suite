@@ -1,0 +1,34 @@
+relay_version: "0.1"
+stack: python-service
+
+policies:
+  path:
+    enabled: true
+    options:
+      deny:
+        - ".git/"
+        - "__pycache__/"
+        - "venv/"
+        - ".venv/"
+        - "dist/"
+        - "build/"
+        - ".relay/"
+  size:
+    enabled: true
+    options:
+      max_files: 100
+      max_added_lines: 5000
+  secrets:
+    enabled: true
+  fileclass:
+    enabled: true
+    options:
+      deny_exts: [".pem", ".p12", ".pfx", ".key", ".env", ".pyc"]
+      deny_globs:
+        - "**/id_rsa"
+        - "**/credentials.json"
+        - "**/.aws/credentials"
+  deps:
+    enabled: true
+    options:
+      deny_high: false

@@ -32,6 +32,7 @@ import (
 	"github.com/tabladrum/grove-suite/relay/internal/policy/secrets"
 	"github.com/tabladrum/grove-suite/relay/internal/runner/gotest"
 	"github.com/tabladrum/grove-suite/relay/internal/signer"
+	"github.com/tabladrum/grove-suite/relay/internal/stacks"
 )
 
 // RunEngine dispatches the engine-mode subcommands. Returns an exit code.
@@ -60,8 +61,21 @@ func RunEngine(args []string) int {
 func cmdInit(args []string) int {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
 	dir := fs.String("dir", ".", "directory in which to create .relay/")
+	stack := fs.String("stack", "", "stack template to scaffold (go-microservice|node-api|python-service|java-spring)")
+	listStacks := fs.Bool("list-stacks", false, "print available stack templates and exit")
 	if err := fs.Parse(args); err != nil {
 		return 1
+	}
+	if *listStacks {
+		ks, err := stacks.Known()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+		for _, s := range ks {
+			fmt.Printf("  %-20s %s\n", s.Name, s.Description)
+		}
+		return 0
 	}
 	root, err := filepath.Abs(*dir)
 	if err != nil {
@@ -74,7 +88,24 @@ func cmdInit(args []string) int {
 		return 1
 	}
 	cfgPath := filepath.Join(relayDir, "relay.yaml")
-	if _, err := os.Stat(cfgPath); err == nil {
+
+	if *stack != "" {
+		if !stacks.IsKnown(*stack) {
+			fmt.Fprintf(os.Stderr, "unknown stack %q (try --list-stacks)\n", *stack)
+			return 1
+		}
+		written, skipped, err := stacks.Apply(*stack, relayDir)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "stack apply:", err)
+			return 1
+		}
+		for _, p := range written {
+			fmt.Printf("wrote .relay/%s\n", p)
+		}
+		for _, p := range skipped {
+			fmt.Printf("skipped (exists) .relay/%s\n", p)
+		}
+	} else if _, err := os.Stat(cfgPath); err == nil {
 		fmt.Fprintf(os.Stderr, "%s already exists, leaving untouched\n", cfgPath)
 	} else {
 		const tmpl = `relay_version: "0.1"

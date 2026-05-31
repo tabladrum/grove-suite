@@ -1,0 +1,35 @@
+relay_version: "0.1"
+stack: node-api
+
+# Node.js API defaults: Stage-1 build/test runner is left to the project
+# (Relay's gotest runner is Go-only until MVP-L7). Stage-2 gates are all
+# enabled; secrets + SAST + deps catch most agent-introduced issues.
+policies:
+  path:
+    enabled: true
+    options:
+      deny:
+        - ".git/"
+        - "node_modules/"
+        - "dist/"
+        - "build/"
+        - ".relay/"
+  size:
+    enabled: true
+    options:
+      max_files: 100
+      max_added_lines: 5000
+  secrets:
+    enabled: true
+  fileclass:
+    enabled: true
+    options:
+      deny_exts: [".pem", ".p12", ".pfx", ".key", ".env"]
+      deny_globs:
+        - "**/.npmrc"
+        - "**/id_rsa"
+        - "**/*.crt"
+  deps:
+    enabled: true
+    options:
+      deny_high: false

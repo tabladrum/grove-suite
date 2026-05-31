@@ -13,6 +13,7 @@ import (
 
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
+	"github.com/tabladrum/grove-suite/relay/internal/tools"
 )
 
 // Analyzer wraps `semgrep --json --config <Config>`.
@@ -29,8 +30,7 @@ func (*Analyzer) Name() string { return "semgrep" }
 
 // Available reports whether semgrep is in PATH.
 func (*Analyzer) Available() bool {
-	_, err := exec.LookPath("semgrep")
-	return err == nil
+	return tools.Available("semgrep")
 }
 
 // semgrepReport is a subset of semgrep's JSON schema.
@@ -55,7 +55,11 @@ func (a *Analyzer) Run(ctx context.Context, _ *core.ChangeSet, dir string) ([]ce
 	if cfg == "" {
 		cfg = "auto"
 	}
-	cmd := exec.CommandContext(ctx, "semgrep",
+	bin := tools.Locate("semgrep")
+	if bin == "" {
+		return nil, nil
+	}
+	cmd := exec.CommandContext(ctx, bin,
 		"--json",
 		"--quiet",
 		"--disable-version-check",

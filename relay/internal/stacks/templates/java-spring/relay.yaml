@@ -1,0 +1,32 @@
+relay_version: "0.1"
+stack: java-spring
+
+policies:
+  path:
+    enabled: true
+    options:
+      deny:
+        - ".git/"
+        - "target/"
+        - "build/"
+        - ".gradle/"
+        - ".relay/"
+  size:
+    enabled: true
+    options:
+      max_files: 100
+      max_added_lines: 5000
+  secrets:
+    enabled: true
+  fileclass:
+    enabled: true
+    options:
+      deny_exts: [".pem", ".p12", ".pfx", ".key", ".jks", ".keystore", ".class"]
+      deny_globs:
+        - "**/application-secrets.yml"
+        - "**/application-secrets.yaml"
+        - "**/id_rsa"
+  deps:
+    enabled: true
+    options:
+      deny_high: false

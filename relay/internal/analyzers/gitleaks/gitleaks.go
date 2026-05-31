@@ -11,6 +11,7 @@ import (
 
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
+	"github.com/tabladrum/grove-suite/relay/internal/tools"
 )
 
 // Analyzer wraps `gitleaks detect --no-banner --report-format=json --no-git`.
@@ -24,8 +25,7 @@ func (*Analyzer) Name() string { return "gitleaks" }
 
 // Available reports whether gitleaks is in PATH.
 func (*Analyzer) Available() bool {
-	_, err := exec.LookPath("gitleaks")
-	return err == nil
+	return tools.Available("gitleaks")
 }
 
 // gitleaksFinding is a subset of the gitleaks JSON schema.
@@ -44,7 +44,11 @@ func (a *Analyzer) Run(ctx context.Context, _ *core.ChangeSet, dir string) ([]ce
 	report := filepath.Join(os.TempDir(), "relay-gitleaks-report.json")
 	defer os.Remove(report)
 
-	cmd := exec.CommandContext(ctx, "gitleaks", "detect",
+	bin := tools.Locate("gitleaks")
+	if bin == "" {
+		return nil, nil
+	}
+	cmd := exec.CommandContext(ctx, bin, "detect",
 		"--no-banner",
 		"--no-git",
 		"--report-format=json",

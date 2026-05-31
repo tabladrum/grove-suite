@@ -15,6 +15,7 @@ import (
 
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
+	"github.com/tabladrum/grove-suite/relay/internal/tools"
 )
 
 // Analyzer wraps `govulncheck -json ./...`.
@@ -28,8 +29,7 @@ func (*Analyzer) Name() string { return "govulncheck" }
 
 // Available reports whether govulncheck is in PATH.
 func (*Analyzer) Available() bool {
-	_, err := exec.LookPath("govulncheck")
-	return err == nil
+	return tools.Available("govulncheck")
 }
 
 // govulncheckEvent is one stream event from `govulncheck -json`.
@@ -65,7 +65,11 @@ func (a *Analyzer) Run(ctx context.Context, _ *core.ChangeSet, dir string) ([]ce
 	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
 		return nil, nil // not a Go module: nothing to check
 	}
-	cmd := exec.CommandContext(ctx, "govulncheck", "-json", "./...")
+	bin := tools.Locate("govulncheck")
+	if bin == "" {
+		return nil, nil
+	}
+	cmd := exec.CommandContext(ctx, bin, "-json", "./...")
 	cmd.Dir = dir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

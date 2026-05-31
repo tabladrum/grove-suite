@@ -1,0 +1,39 @@
+relay_version: "0.1"
+stack: go-microservice
+
+# Go microservice defaults: full Stage-1 (build + go test -cover) plus all
+# Stage-2 gates. Coverage minimum is intentionally modest (60%); raise as the
+# team's habit matures. Use `// relay:no-test-required` on irreducible diffs.
+policies:
+  path:
+    enabled: true
+    options:
+      deny:
+        - ".git/"
+        - "vendor/"
+        - "node_modules/"
+        - ".relay/"
+  size:
+    enabled: true
+    options:
+      max_files: 100
+      max_added_lines: 5000
+  coverage:
+    enabled: true
+    options:
+      min_coverage: 60
+  secrets:
+    enabled: true
+  fileclass:
+    enabled: true
+    options:
+      deny_exts: [".pem", ".p12", ".pfx", ".key", ".pyc", ".class"]
+      deny_globs:
+        - "**/id_rsa"
+        - "**/id_ed25519"
+        - "**/*.crt"
+        - "**/credentials.json"
+  deps:
+    enabled: true
+    options:
+      deny_high: false
