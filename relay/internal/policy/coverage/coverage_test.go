@@ -1,5 +1,4 @@
 package coverage
-package coverage
 
 import (
 	"context"

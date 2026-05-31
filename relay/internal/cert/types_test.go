@@ -1,5 +1,4 @@
 package cert
-package cert
 
 import (
 	"testing"
