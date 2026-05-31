@@ -19,8 +19,8 @@ import (
 
 // Gate enforces vulnerability-severity thresholds from Stage 2.
 type Gate struct {
-	// Stage2 supplies the most recent Stage2Result.
-	Stage2 func() *cert.Stage2Result
+	// Analysis supplies the most recent AnalysisResult.
+	Analysis func() *cert.AnalysisResult
 }
 
 // Name implements policy.Gate.
@@ -30,12 +30,12 @@ func (g *Gate) Name() string { return "deps" }
 func (g *Gate) Evaluate(_ context.Context, _ *core.ChangeSet, opts map[string]any) core.PolicyResult {
 	res := core.PolicyResult{Gate: g.Name(), Verdict: core.VerdictAllow}
 
-	if g.Stage2 == nil || g.Stage2() == nil {
+	if g.Analysis == nil || g.Analysis() == nil {
 		res.Verdict = core.VerdictReviewRequired
-		res.Message = "deps gate: no Stage2 result available"
+		res.Message = "deps gate: no Analysis result available"
 		return res
 	}
-	s := g.Stage2()
+	s := g.Analysis()
 	if s.Skipped {
 		res.Message = "deps gate: Stage 2 skipped (" + s.SkipReason + ")"
 		return res

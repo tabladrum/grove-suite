@@ -73,15 +73,15 @@ func TestE2E_Stage1RejectsBrokenTestAdmitsPassingFix(t *testing.T) {
 			t.Fatalf("breaking submit should deny (exit 2), got %d\noutput=%s", code, "")
 		}
 	})
-	if !strings.Contains(out, "stage1") {
-		t.Errorf("expected stage1 in output, got:\n%s", out)
+	if !strings.Contains(out, "build") {
+		t.Errorf("expected build in output, got:\n%s", out)
 	}
 	if !strings.Contains(out, "verdict: DENY") {
 		t.Errorf("expected DENY, got:\n%s", out)
 	}
 
 	// 2. Passing diff: re-express the intent as a no-op edit (add a comment).
-	// Build still passes, TestAdd still passes, Stage1 admits.
+	// Build still passes, TestAdd still passes, Build admits.
 	writeRepoFile(t, repo, "lib.go", "package m\n\n// Add returns the sum of two ints.\nfunc Add(a, b int) int { return a + b }\n")
 	passingDiff := captureIn(t, repo, "git", "diff")
 	mustRunIn(t, repo, "git", "checkout", "--", "lib.go")
@@ -106,8 +106,8 @@ func TestE2E_Stage1RejectsBrokenTestAdmitsPassingFix(t *testing.T) {
 	if !strings.Contains(out2, "admitted: ") {
 		t.Errorf("expected admitted SHA, got:\n%s", out2)
 	}
-	if !strings.Contains(out2, "[stage1]") {
-		t.Errorf("expected stage1 policy in output, got:\n%s", out2)
+	if !strings.Contains(out2, "[build]") {
+		t.Errorf("expected build policy in output, got:\n%s", out2)
 	}
 }
 

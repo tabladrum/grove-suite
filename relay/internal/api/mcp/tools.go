@@ -8,7 +8,7 @@ func toolDescriptors() []map[string]any {
 	return []map[string]any{
 		{
 			"name":        "relay_check",
-			"description": "Run all policy gates (pre + Stage1 + Stage2) on a proposed diff without admitting. Args: diff or diff_path, intent, brief, author, model, repo. Returns engine.Result with allowed=true/false and per-policy verdicts.",
+			"description": "Run all policy gates (pre + Build + Analysis) on a proposed diff without admitting. Args: diff or diff_path, intent, brief, author, model, repo. Returns engine.Result with allowed=true/false and per-policy verdicts.",
 			"inputSchema": map[string]any{"type": "object", "additionalProperties": true},
 		},
 		{

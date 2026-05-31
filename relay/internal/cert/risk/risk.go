@@ -39,8 +39,8 @@ type Heatmap struct {
 // be left zero/nil; the model degrades gracefully.
 type Inputs struct {
 	ICR    core.ICR
-	Stage1 *cert.Stage1Result // nil if stage 1 was skipped
-	Stage2 *cert.Stage2Result // nil if stage 2 was skipped
+	Build *cert.BuildResult // nil if stage 1 was skipped
+	Analysis *cert.AnalysisResult // nil if stage 2 was skipped
 }
 
 // Compute returns a Heatmap for the changeset. The scoring is bounded
@@ -60,12 +60,12 @@ func Compute(in Inputs) Heatmap {
 		return Heatmap{ModelVersion: ModelVersion, Cells: []Cell{}}
 	}
 
-	findingsByFile := stage2FindingsByFile(in.Stage2)
+	findingsByFile := analysisFindingsByFile(in.Analysis)
 	touch := touchIntensity(files)
 
 	covDef := 0.0
-	if in.Stage1 != nil && in.Stage1.Tests.CoveragePct > 0 {
-		covDef = clamp01(1.0 - in.Stage1.Tests.CoveragePct/100.0)
+	if in.Build != nil && in.Build.Tests.CoveragePct > 0 {
+		covDef = clamp01(1.0 - in.Build.Tests.CoveragePct/100.0)
 	}
 
 	icrUnknown := clamp01(1.0 - in.ICR.Confidence)
@@ -73,11 +73,11 @@ func Compute(in Inputs) Heatmap {
 	cells := make([]Cell, 0, len(files))
 	overall := 0.0
 	for _, f := range files {
-		sev := stage2SeverityForFile(findingsByFile[f])
+		sev := analysisSeverityForFile(findingsByFile[f])
 		ti := touch[f]
 		comp := map[string]float64{
 			"icr_unknown":      icrUnknown,
-			"stage2_severity":  sev,
+			"analysis_severity":  sev,
 			"coverage_deficit": covDef,
 			"touch_intensity":  ti,
 		}
@@ -109,7 +109,7 @@ func uniqueFiles(in []string) []string {
 	return out
 }
 
-func stage2FindingsByFile(s2 *cert.Stage2Result) map[string][]cert.Finding {
+func analysisFindingsByFile(s2 *cert.AnalysisResult) map[string][]cert.Finding {
 	out := map[string][]cert.Finding{}
 	if s2 == nil {
 		return out
@@ -123,10 +123,10 @@ func stage2FindingsByFile(s2 *cert.Stage2Result) map[string][]cert.Finding {
 	return out
 }
 
-// stage2SeverityForFile collapses a slice of findings into a [0,1]
+// analysisSeverityForFile collapses a slice of findings into a [0,1]
 // severity for the file. critical = 1.0, high = 0.75, medium = 0.5,
 // low = 0.25. Worst finding wins.
-func stage2SeverityForFile(fs []cert.Finding) float64 {
+func analysisSeverityForFile(fs []cert.Finding) float64 {
 	worst := 0.0
 	for _, f := range fs {
 		var v float64

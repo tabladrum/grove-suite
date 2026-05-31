@@ -1,7 +1,7 @@
 // Package stage2 runs all configured static-analysis adapters in parallel
 // against an ephemeral worktree and aggregates their findings into a single
-// Stage2Result. The result feeds the secrets/fileclass/deps policy gates.
-package stage2
+// AnalysisResult. The result feeds the secrets/fileclass/deps policy gates.
+package analysis
 
 import (
 	"bytes"
@@ -19,8 +19,8 @@ import (
 	"github.com/tabladrum/grove-suite/relay/internal/core"
 )
 
-// Stage2 holds the configured analyzer adapters.
-type Stage2 struct {
+// Analysis holds the configured analyzer adapters.
+type Analysis struct {
 	Analyzers []analyzers.Analyzer
 	// MaxParallel caps concurrent analyzer execution. Zero means unbounded
 	// (one goroutine per analyzer).
@@ -34,31 +34,31 @@ type Stage2 struct {
 	// noisy linter can be muted to high-only without affecting others.
 	SeverityFloors map[string]cert.Severity
 	// ScopeOverrides maps analyzer name → per-analyzer ScanScope that
-	// overrides Stage2.Scope for that analyzer's findings only.
+	// overrides Analysis.Scope for that analyzer's findings only.
 	ScopeOverrides map[string]core.ScanScope
 }
 
-// New constructs a Stage2 with the given analyzers.
-func New(a ...analyzers.Analyzer) *Stage2 {
-	return &Stage2{Analyzers: a}
+// New constructs a Analysis with the given analyzers.
+func New(a ...analyzers.Analyzer) *Analysis {
+	return &Analysis{Analyzers: a}
 }
 
 // Run executes every available analyzer in parallel against cs's worktree
-// and returns the aggregated result. Like Stage1, it creates its own
+// and returns the aggregated result. Like Build, it creates its own
 // ephemeral `git worktree` so analyzers see the post-diff state without
 // touching the developer's checkout.
-func (s *Stage2) Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage2Result, error) {
+func (s *Analysis) Run(ctx context.Context, cs *core.ChangeSet) (cert.AnalysisResult, error) {
 	if cs == nil {
-		return cert.Stage2Result{}, fmt.Errorf("stage2: nil changeset")
+		return cert.AnalysisResult{}, fmt.Errorf("analysis: nil changeset")
 	}
 	if cs.RepoRoot == "" {
-		return cert.Stage2Result{}, fmt.Errorf("stage2: empty RepoRoot")
+		return cert.AnalysisResult{}, fmt.Errorf("analysis: empty RepoRoot")
 	}
 	if _, err := os.Stat(filepath.Join(cs.RepoRoot, ".git")); err != nil {
-		return cert.Stage2Result{}, fmt.Errorf("stage2: %s is not a git repo: %w", cs.RepoRoot, err)
+		return cert.AnalysisResult{}, fmt.Errorf("analysis: %s is not a git repo: %w", cs.RepoRoot, err)
 	}
 	if len(s.Analyzers) == 0 {
-		return cert.Stage2Result{
+		return cert.AnalysisResult{
 			Skipped:    true,
 			SkipReason: "no analyzers configured",
 			StartedAt:  time.Now().UTC(),
@@ -67,17 +67,17 @@ func (s *Stage2) Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage2Result
 
 	wt, cleanup, err := addWorktree(ctx, cs)
 	if err != nil {
-		return cert.Stage2Result{}, fmt.Errorf("stage2: add worktree: %w", err)
+		return cert.AnalysisResult{}, fmt.Errorf("analysis: add worktree: %w", err)
 	}
 	defer cleanup()
 
 	if strings.TrimSpace(cs.Diff) != "" {
 		if err := applyDiff(ctx, wt, cs.Diff); err != nil {
-			return cert.Stage2Result{}, fmt.Errorf("stage2: apply diff: %w", err)
+			return cert.AnalysisResult{}, fmt.Errorf("analysis: apply diff: %w", err)
 		}
 	}
 
-	res := cert.Stage2Result{StartedAt: time.Now().UTC()}
+	res := cert.AnalysisResult{StartedAt: time.Now().UTC()}
 	defer func() { res.Duration = time.Since(res.StartedAt) }()
 
 	type analyzerOut struct {
@@ -167,7 +167,7 @@ func (s *Stage2) Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage2Result
 }
 
 func addWorktree(ctx context.Context, cs *core.ChangeSet) (string, func(), error) {
-	tmp, err := os.MkdirTemp("", "relay-stage2-*")
+	tmp, err := os.MkdirTemp("", "relay-analysis-*")
 	if err != nil {
 		return "", nil, err
 	}

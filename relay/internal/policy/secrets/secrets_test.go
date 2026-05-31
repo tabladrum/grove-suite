@@ -10,8 +10,8 @@ import (
 )
 
 func TestGate_AllowsWhenNoSecrets(t *testing.T) {
-	g := &Gate{Stage2: func() *cert.Stage2Result {
-		return &cert.Stage2Result{}
+	g := &Gate{Analysis: func() *cert.AnalysisResult {
+		return &cert.AnalysisResult{}
 	}}
 	r := g.Evaluate(context.Background(), &core.ChangeSet{}, nil)
 	if r.Verdict != core.VerdictAllow {
@@ -20,8 +20,8 @@ func TestGate_AllowsWhenNoSecrets(t *testing.T) {
 }
 
 func TestGate_DeniesOnSecretFinding(t *testing.T) {
-	g := &Gate{Stage2: func() *cert.Stage2Result {
-		return &cert.Stage2Result{Findings: []cert.Finding{
+	g := &Gate{Analysis: func() *cert.AnalysisResult {
+		return &cert.AnalysisResult{Findings: []cert.Finding{
 			{Analyzer: "x", Category: cert.CategorySecret, RuleID: "aws", Path: "a.go", Line: 3, Severity: cert.SeverityCritical},
 		}}
 	}}
@@ -38,8 +38,8 @@ func TestGate_DeniesOnSecretFinding(t *testing.T) {
 }
 
 func TestGate_ReviewRequiredWhenStage2Skipped(t *testing.T) {
-	g := &Gate{Stage2: func() *cert.Stage2Result {
-		return &cert.Stage2Result{Skipped: true, SkipReason: "no analyzers"}
+	g := &Gate{Analysis: func() *cert.AnalysisResult {
+		return &cert.AnalysisResult{Skipped: true, SkipReason: "no analyzers"}
 	}}
 	r := g.Evaluate(context.Background(), &core.ChangeSet{}, nil)
 	if r.Verdict != core.VerdictReviewRequired {
@@ -48,7 +48,7 @@ func TestGate_ReviewRequiredWhenStage2Skipped(t *testing.T) {
 }
 
 func TestGate_ReviewRequiredWhenStage2Nil(t *testing.T) {
-	g := &Gate{Stage2: func() *cert.Stage2Result { return nil }}
+	g := &Gate{Analysis: func() *cert.AnalysisResult { return nil }}
 	r := g.Evaluate(context.Background(), &core.ChangeSet{}, nil)
 	if r.Verdict != core.VerdictReviewRequired {
 		t.Fatalf("verdict=%s want review_required", r.Verdict)

@@ -27,8 +27,8 @@ import (
 	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/semgrep"
 	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/sonar"
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
-	"github.com/tabladrum/grove-suite/relay/internal/cert/stage1"
-	"github.com/tabladrum/grove-suite/relay/internal/cert/stage2"
+	"github.com/tabladrum/grove-suite/relay/internal/cert/build"
+	"github.com/tabladrum/grove-suite/relay/internal/cert/analysis"
 	"github.com/tabladrum/grove-suite/relay/internal/config"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
 	"github.com/tabladrum/grove-suite/relay/internal/engine"
@@ -443,12 +443,12 @@ func BuildEngine(start string) (*engine.Engine, func(), error) {
 	reg.Register(policy.PathGate{})
 	reg.Register(policy.SizeGate{})
 	reg.Register(&fileclass.Gate{})
-	stage2Analyzers, err := buildStage2Analyzers(cfg)
+	analysisAnalyzers, err := buildAnalysisAnalyzers(cfg)
 	if err != nil {
 		_ = store.Close()
 		return nil, nil, fmt.Errorf("build analyzers: %w", err)
 	}
-	s2 := stage2.New(stage2Analyzers...)
+	s2 := analysis.New(analysisAnalyzers...)
 	s2.Scope = cfg.Scope.Normalize()
 	s2.SeverityFloors = severityFloors(cfg)
 	s2.ScopeOverrides = scopeOverrides(cfg)
@@ -459,35 +459,35 @@ func BuildEngine(start string) (*engine.Engine, func(), error) {
 	// callback below.
 	goRunner := gotest.New()
 	dispatcher := multilang.New(goRunner, pytest.New(), nodetest.New())
-	s1 := stage1.New(dispatcher)
+	s1 := build.New(dispatcher)
 	s1.Detector = func(dir string) (string, bool) {
 		name := dispatcher.MatchedName(dir)
 		return name, name != ""
 	}
 	// Builder runs only for Go projects; Python/Node runners produce
 	// build+test in a single invocation.
-	s1.Builder = goBuilderIfGo{goRunner: goRunner, fallback: stage1.GoBuilder{}}
+	s1.Builder = goBuilderIfGo{goRunner: goRunner, fallback: build.GoBuilder{}}
 	e := &engine.Engine{
 		Store:    store,
 		Policies: reg,
 		ICR:      engine.NoopICRProvider{},
 		Signer:   sgn,
 		Config:   cfg,
-		Stage1:   s1,
-		Stage2:   s2,
+		Build:   s1,
+		Analysis:   s2,
 	}
 	// Stage-aware gates read the cached results via closures.
-	reg.Register(&coverage.Gate{Stage1: e.Stage1Result})
-	reg.Register(&secrets.Gate{Stage2: e.Stage2Result})
-	reg.Register(&deps.Gate{Stage2: e.Stage2Result})
+	reg.Register(&coverage.Gate{Build: e.BuildResult})
+	reg.Register(&secrets.Gate{Analysis: e.AnalysisResult})
+	reg.Register(&deps.Gate{Analysis: e.AnalysisResult})
 	return e, func() { _ = store.Close() }, nil
 }
 
-// buildStage2Analyzers resolves the configured analyzer set against the
+// buildAnalysisAnalyzers resolves the configured analyzer set against the
 // factory registry. When cfg.Analyzers is empty (legacy configs that
 // predate the section), the historical built-in default is used so an
 // upgrade is a no-op for those repos.
-func buildStage2Analyzers(cfg *core.RelayConfig) ([]analyzers.Analyzer, error) {
+func buildAnalysisAnalyzers(cfg *core.RelayConfig) ([]analyzers.Analyzer, error) {
 	if cfg == nil || len(cfg.Analyzers) == 0 {
 		enabled := true
 		cfg = &core.RelayConfig{
@@ -539,7 +539,7 @@ func scopeOverrides(cfg *core.RelayConfig) map[string]core.ScanScope {
 // anything.
 type goBuilderIfGo struct {
 	goRunner *gotest.Runner
-	fallback stage1.GoBuilder
+	fallback build.GoBuilder
 }
 
 func (g goBuilderIfGo) Build(ctx context.Context, dir string) (string, error) {

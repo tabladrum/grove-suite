@@ -10,8 +10,8 @@ import (
 )
 
 func TestGate_AllowAboveThreshold(t *testing.T) {
-	s := &cert.Stage1Result{BuildOk: true, Tests: cert.TestRun{Passed: 1, CoveragePct: 80}}
-	g := &Gate{Stage1: func() *cert.Stage1Result { return s }}
+	s := &cert.BuildResult{BuildOk: true, Tests: cert.TestRun{Passed: 1, CoveragePct: 80}}
+	g := &Gate{Build: func() *cert.BuildResult { return s }}
 	res := g.Evaluate(context.Background(), &core.ChangeSet{Diff: "+++ b/foo.go\n"}, map[string]any{"min_coverage": 75.0})
 	if res.Verdict != core.VerdictAllow {
 		t.Errorf("verdict=%s msg=%s", res.Verdict, res.Message)
@@ -19,8 +19,8 @@ func TestGate_AllowAboveThreshold(t *testing.T) {
 }
 
 func TestGate_DenyBelowThreshold(t *testing.T) {
-	s := &cert.Stage1Result{Tests: cert.TestRun{Passed: 1, CoveragePct: 40}}
-	g := &Gate{Stage1: func() *cert.Stage1Result { return s }}
+	s := &cert.BuildResult{Tests: cert.TestRun{Passed: 1, CoveragePct: 40}}
+	g := &Gate{Build: func() *cert.BuildResult { return s }}
 	res := g.Evaluate(context.Background(), &core.ChangeSet{Diff: "+++ b/foo.go\n+a\n"}, map[string]any{"min_coverage": 80.0})
 	if res.Verdict != core.VerdictDeny {
 		t.Errorf("expected deny, got %s", res.Verdict)
@@ -31,8 +31,8 @@ func TestGate_DenyBelowThreshold(t *testing.T) {
 }
 
 func TestGate_EscapeHatchBypasses(t *testing.T) {
-	s := &cert.Stage1Result{Tests: cert.TestRun{Passed: 1, CoveragePct: 0}}
-	g := &Gate{Stage1: func() *cert.Stage1Result { return s }}
+	s := &cert.BuildResult{Tests: cert.TestRun{Passed: 1, CoveragePct: 0}}
+	g := &Gate{Build: func() *cert.BuildResult { return s }}
 	diff := "+++ b/foo.go\n+// " + EscapeHatchMarker + " — generated code\n"
 	res := g.Evaluate(context.Background(), &core.ChangeSet{Diff: diff}, map[string]any{"min_coverage": 100.0})
 	if res.Verdict != core.VerdictAllow {
@@ -41,8 +41,8 @@ func TestGate_EscapeHatchBypasses(t *testing.T) {
 }
 
 func TestGate_RemovedLineHatchIgnored(t *testing.T) {
-	s := &cert.Stage1Result{Tests: cert.TestRun{Passed: 1, CoveragePct: 0}}
-	g := &Gate{Stage1: func() *cert.Stage1Result { return s }}
+	s := &cert.BuildResult{Tests: cert.TestRun{Passed: 1, CoveragePct: 0}}
+	g := &Gate{Build: func() *cert.BuildResult { return s }}
 	// Marker only on a removed line: bypass must NOT apply.
 	diff := "+++ b/foo.go\n-// " + EscapeHatchMarker + "\n+a\n"
 	res := g.Evaluate(context.Background(), &core.ChangeSet{Diff: diff}, map[string]any{"min_coverage": 50.0})
@@ -52,7 +52,7 @@ func TestGate_RemovedLineHatchIgnored(t *testing.T) {
 }
 
 func TestGate_NoStage1FailsClosed(t *testing.T) {
-	g := &Gate{Stage1: func() *cert.Stage1Result { return nil }}
+	g := &Gate{Build: func() *cert.BuildResult { return nil }}
 	res := g.Evaluate(context.Background(), &core.ChangeSet{}, nil)
 	if res.Verdict != core.VerdictReviewRequired {
 		t.Errorf("expected review_required, got %s", res.Verdict)
@@ -68,8 +68,8 @@ func TestGate_NilHolderFailsClosed(t *testing.T) {
 }
 
 func TestGate_DefaultThresholdZeroAllows(t *testing.T) {
-	s := &cert.Stage1Result{Tests: cert.TestRun{Passed: 1, CoveragePct: 0}}
-	g := &Gate{Stage1: func() *cert.Stage1Result { return s }}
+	s := &cert.BuildResult{Tests: cert.TestRun{Passed: 1, CoveragePct: 0}}
+	g := &Gate{Build: func() *cert.BuildResult { return s }}
 	res := g.Evaluate(context.Background(), &core.ChangeSet{Diff: "+++ b/foo.go\n"}, nil)
 	if res.Verdict != core.VerdictAllow {
 		t.Errorf("expected allow with no threshold, got %s", res.Verdict)

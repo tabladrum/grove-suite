@@ -16,9 +16,9 @@ import (
 
 // Gate denies on any Category=secret finding produced by Stage 2.
 type Gate struct {
-	// Stage2 supplies the most recent Stage2Result; the engine sets it
+	// Analysis supplies the most recent AnalysisResult; the engine sets it
 	// before policy evaluation.
-	Stage2 func() *cert.Stage2Result
+	Analysis func() *cert.AnalysisResult
 }
 
 // Name implements policy.Gate.
@@ -28,12 +28,12 @@ func (g *Gate) Name() string { return "secrets" }
 func (g *Gate) Evaluate(_ context.Context, _ *core.ChangeSet, _ map[string]any) core.PolicyResult {
 	res := core.PolicyResult{Gate: g.Name(), Verdict: core.VerdictAllow}
 
-	if g.Stage2 == nil || g.Stage2() == nil {
+	if g.Analysis == nil || g.Analysis() == nil {
 		res.Verdict = core.VerdictReviewRequired
-		res.Message = "secrets gate: no Stage2 result available"
+		res.Message = "secrets gate: no Analysis result available"
 		return res
 	}
-	s := g.Stage2()
+	s := g.Analysis()
 	if s.Skipped {
 		res.Verdict = core.VerdictReviewRequired
 		res.Message = "secrets gate: Stage 2 skipped (" + s.SkipReason + ")"

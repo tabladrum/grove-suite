@@ -357,8 +357,8 @@ func (s *Server) runPolicy(args map[string]any) (any, error) {
 	return map[string]any{
 		"registered_gates": gates,
 		"enabled":          enabled,
-		"stage1_gates":     e.Stage1Gates,
-		"stage2_gates":     e.Stage2Gates,
+		"build_gates":     e.BuildGates,
+		"analysis_gates":     e.AnalysisGates,
 		"config_source":    "merged: defaults + .relay/relay.yaml",
 	}, nil
 }

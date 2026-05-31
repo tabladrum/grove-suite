@@ -22,11 +22,11 @@ import (
 // marker exempts the entire ChangeSet.
 const EscapeHatchMarker = "relay:no-test-required"
 
-// Gate enforces a minimum aggregate coverage from a Stage1Result.
+// Gate enforces a minimum aggregate coverage from a BuildResult.
 type Gate struct {
-	// Stage1 supplies the most recent Stage1Result; the engine sets it
+	// Build supplies the most recent BuildResult; the engine sets it
 	// before policy evaluation so the gate can read it without re-running.
-	Stage1 func() *cert.Stage1Result
+	Build func() *cert.BuildResult
 }
 
 // Name implements policy.Gate.
@@ -36,13 +36,13 @@ func (g *Gate) Name() string { return "coverage" }
 func (g *Gate) Evaluate(_ context.Context, cs *core.ChangeSet, opts map[string]any) core.PolicyResult {
 	res := core.PolicyResult{Gate: g.Name(), Verdict: core.VerdictAllow}
 
-	if g.Stage1 == nil || g.Stage1() == nil {
-		// No Stage1 result available — fail closed to avoid false positives.
+	if g.Build == nil || g.Build() == nil {
+		// No Build result available — fail closed to avoid false positives.
 		res.Verdict = core.VerdictReviewRequired
-		res.Message = "coverage gate: no Stage1 result available"
+		res.Message = "coverage gate: no Build result available"
 		return res
 	}
-	s := g.Stage1()
+	s := g.Build()
 
 	if s.Skipped {
 		res.Message = "coverage gate: skipped (" + s.SkipReason + ")"

@@ -19,8 +19,8 @@ func TestComputeFingerprint_Deterministic(t *testing.T) {
 	}
 }
 
-func TestStage2Result_FindingsByCategoryAndHighest(t *testing.T) {
-	s := Stage2Result{
+func TestAnalysisResult_FindingsByCategoryAndHighest(t *testing.T) {
+	s := AnalysisResult{
 		Findings: []Finding{
 			{Category: CategorySecret, Severity: SeverityCritical},
 			{Category: CategoryVuln, Severity: SeverityHigh},

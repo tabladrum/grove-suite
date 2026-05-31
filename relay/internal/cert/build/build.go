@@ -1,8 +1,8 @@
-package stage1
+package build
 
 // Package stage1 orchestrates the build + test stage of certification.
 // It applies a ChangeSet's diff into an ephemeral git worktree, runs the
-// project build, executes a language runner, and returns a Stage1Result.
+// project build, executes a language runner, and returns a BuildResult.
 
 import (
 	"bytes"
@@ -46,23 +46,23 @@ func (GoBuilder) Build(ctx context.Context, dir string) (string, error) {
 	return buf.String(), err
 }
 
-// Stage1 wires a Builder + Runner against an isolated copy of the repo.
-type Stage1 struct {
+// Build wires a Builder + Runner against an isolated copy of the repo.
+type Build struct {
 	Builder Builder
 	Runner  Runner
 	// Detector, when set, decides whether the worktree has an applicable
 	// language runner. It returns (matched-name, true) when something is
-	// detected, or ("", false) to short-circuit Stage1 as Skipped. When
-	// nil, Stage1 falls back to "does go.mod exist?" for backward
+	// detected, or ("", false) to short-circuit Build as Skipped. When
+	// nil, Build falls back to "does go.mod exist?" for backward
 	// compatibility with single-runner gotest wiring.
 	Detector func(dir string) (string, bool)
 	// MaxOutputBytes truncates BuildOutput. Defaults to 64 KiB if zero.
 	MaxOutputBytes int
 }
 
-// New returns a Stage1 wired with GoBuilder + the given runner.
-func New(runner Runner) *Stage1 {
-	return &Stage1{
+// New returns a Build wired with GoBuilder + the given runner.
+func New(runner Runner) *Build {
+	return &Build{
 		Builder:        GoBuilder{},
 		Runner:         runner,
 		MaxOutputBytes: 64 << 10,
@@ -72,54 +72,54 @@ func New(runner Runner) *Stage1 {
 // Run executes the stage against cs: clones cs.RepoRoot into an ephemeral
 // worktree, applies cs.Diff there, runs build then tests, and returns the
 // aggregated result. The worktree is removed before Run returns.
-func (s *Stage1) Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage1Result, error) {
+func (s *Build) Run(ctx context.Context, cs *core.ChangeSet) (cert.BuildResult, error) {
 	if cs == nil {
-		return cert.Stage1Result{}, fmt.Errorf("stage1: nil changeset")
+		return cert.BuildResult{}, fmt.Errorf("build: nil changeset")
 	}
 	if cs.RepoRoot == "" {
-		return cert.Stage1Result{}, fmt.Errorf("stage1: empty RepoRoot")
+		return cert.BuildResult{}, fmt.Errorf("build: empty RepoRoot")
 	}
 	if _, err := os.Stat(filepath.Join(cs.RepoRoot, ".git")); err != nil {
-		return cert.Stage1Result{}, fmt.Errorf("stage1: %s is not a git repo: %w", cs.RepoRoot, err)
+		return cert.BuildResult{}, fmt.Errorf("build: %s is not a git repo: %w", cs.RepoRoot, err)
 	}
 
 	wt, cleanup, err := addWorktree(ctx, cs)
 	if err != nil {
-		return cert.Stage1Result{}, fmt.Errorf("stage1: add worktree: %w", err)
+		return cert.BuildResult{}, fmt.Errorf("build: add worktree: %w", err)
 	}
 	defer cleanup()
 
 	if strings.TrimSpace(cs.Diff) != "" {
 		if err := applyDiff(ctx, wt, cs.Diff); err != nil {
-			return cert.Stage1Result{}, fmt.Errorf("stage1: apply diff: %w", err)
+			return cert.BuildResult{}, fmt.Errorf("build: apply diff: %w", err)
 		}
 	}
 
 	// Detection: skip cleanly when no language runner detects the worktree.
 	// A Detector callback (set by multilang dispatcher consumers) is the
 	// primary signal. Legacy go.mod fallback is kept for direct
-	// stage1.New(gotest.New()) users.
+	// build.New(gotest.New()) users.
 	if s.Detector != nil {
 		if name, ok := s.Detector(wt); !ok {
 			reason := "no language detected; Stage 1 has no applicable runner"
 			if name != "" {
 				reason = "detector returned no match (" + name + ")"
 			}
-			return cert.Stage1Result{
+			return cert.BuildResult{
 				Skipped:    true,
 				SkipReason: reason,
 				BuildOk:    true,
 			}, nil
 		}
 	} else if _, err := os.Stat(filepath.Join(wt, "go.mod")); err != nil {
-		return cert.Stage1Result{
+		return cert.BuildResult{
 			Skipped:    true,
 			SkipReason: "no go.mod found; Stage 1 has no applicable runner",
 			BuildOk:    true,
 		}, nil
 	}
 
-	res := cert.Stage1Result{}
+	res := cert.BuildResult{}
 
 	if s.Builder != nil {
 		bStart := time.Now()
@@ -139,7 +139,7 @@ func (s *Stage1) Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage1Result
 
 	tr, terr := s.Runner.Run(ctx, wt)
 	if terr != nil {
-		return res, fmt.Errorf("stage1: runner: %w", terr)
+		return res, fmt.Errorf("build: runner: %w", terr)
 	}
 	res.Tests = tr
 	return res, nil
@@ -148,7 +148,7 @@ func (s *Stage1) Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage1Result
 // addWorktree creates a temporary git worktree of cs.RepoRoot at cs.BaseSHA
 // (or HEAD if BaseSHA is empty) and returns its path plus a cleanup func.
 func addWorktree(ctx context.Context, cs *core.ChangeSet) (string, func(), error) {
-	tmp, err := os.MkdirTemp("", "relay-stage1-*")
+	tmp, err := os.MkdirTemp("", "relay-build-*")
 	if err != nil {
 		return "", nil, err
 	}

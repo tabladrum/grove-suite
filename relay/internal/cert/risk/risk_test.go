@@ -26,8 +26,8 @@ func TestCompute_BlendsAllSignals(t *testing.T) {
 			Files:      []string{"a.go", "b.go", "a.go"}, // dup deduped
 			Confidence: 0.8,                              // -> icr_unknown = 0.2
 		},
-		Stage1: &cert.Stage1Result{Tests: cert.TestRun{CoveragePct: 60}}, // covDef = 0.4
-		Stage2: &cert.Stage2Result{Findings: []cert.Finding{
+		Build: &cert.BuildResult{Tests: cert.TestRun{CoveragePct: 60}}, // covDef = 0.4
+		Analysis: &cert.AnalysisResult{Findings: []cert.Finding{
 			{Path: "a.go", Severity: cert.Severity("critical")},
 			{Path: "a.go", Severity: cert.Severity("low")},
 			{Path: "b.go", Severity: cert.Severity("medium")},
@@ -51,18 +51,18 @@ func TestCompute_BlendsAllSignals(t *testing.T) {
 		t.Fatalf("overall != hottest cell: %v vs %v", h.Overall, h.Cells[0].Score)
 	}
 	// Components present.
-	for _, key := range []string{"icr_unknown", "stage2_severity", "coverage_deficit", "touch_intensity"} {
+	for _, key := range []string{"icr_unknown", "analysis_severity", "coverage_deficit", "touch_intensity"} {
 		if _, ok := h.Cells[0].Components[key]; !ok {
 			t.Fatalf("missing component %q", key)
 		}
 	}
 	// a.go has a critical finding -> stage2_severity = 1.0.
-	if h.Cells[0].Components["stage2_severity"] != 1.0 {
-		t.Fatalf("a.go severity: %v want 1.0", h.Cells[0].Components["stage2_severity"])
+	if h.Cells[0].Components["analysis_severity"] != 1.0 {
+		t.Fatalf("a.go severity: %v want 1.0", h.Cells[0].Components["analysis_severity"])
 	}
 	// b.go has medium -> 0.5.
-	if h.Cells[1].Components["stage2_severity"] != 0.5 {
-		t.Fatalf("b.go severity: %v want 0.5", h.Cells[1].Components["stage2_severity"])
+	if h.Cells[1].Components["analysis_severity"] != 0.5 {
+		t.Fatalf("b.go severity: %v want 0.5", h.Cells[1].Components["analysis_severity"])
 	}
 }
 
@@ -73,8 +73,8 @@ func TestCompute_ScoreBoundedZeroToOne(t *testing.T) {
 	}
 	in := Inputs{
 		ICR:    core.ICR{Files: files, Confidence: 0},
-		Stage1: &cert.Stage1Result{Tests: cert.TestRun{CoveragePct: 0}},
-		Stage2: &cert.Stage2Result{},
+		Build: &cert.BuildResult{Tests: cert.TestRun{CoveragePct: 0}},
+		Analysis: &cert.AnalysisResult{},
 	}
 	h := Compute(in)
 	for _, c := range h.Cells {
@@ -88,7 +88,7 @@ func TestCompute_ScoreBoundedZeroToOne(t *testing.T) {
 }
 
 func TestStage2SeverityForFile_WorstWins(t *testing.T) {
-	got := stage2SeverityForFile([]cert.Finding{
+	got := analysisSeverityForFile([]cert.Finding{
 		{Severity: cert.Severity("low")},
 		{Severity: cert.Severity("high")},
 		{Severity: cert.Severity("medium")},
@@ -99,7 +99,7 @@ func TestStage2SeverityForFile_WorstWins(t *testing.T) {
 }
 
 func TestStage2SeverityForFile_UnknownIsZero(t *testing.T) {
-	got := stage2SeverityForFile([]cert.Finding{{Severity: cert.Severity("mysterious")}})
+	got := analysisSeverityForFile([]cert.Finding{{Severity: cert.Severity("mysterious")}})
 	if got != 0 {
 		t.Fatalf("got %v want 0", got)
 	}

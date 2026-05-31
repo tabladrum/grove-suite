@@ -61,8 +61,8 @@ func buildFakeEngine(g *fakeGate) EngineBuilder {
 			Policies:    reg,
 			Config:      cfg,
 			Signer:      sgnr,
-			Stage1Gates: []string{"coverage"},
-			Stage2Gates: []string{"secrets", "deps"},
+			BuildGates: []string{"coverage"},
+			AnalysisGates: []string{"secrets", "deps"},
 		}
 		cleanup := func() {
 			_ = store.Close()

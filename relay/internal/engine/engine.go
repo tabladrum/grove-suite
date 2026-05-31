@@ -30,16 +30,16 @@ type ICRProvider interface {
 	ComputeICR(ctx context.Context, cs *core.ChangeSet) (core.ICR, error)
 }
 
-// Stage1Runner executes the build + test stage in an isolated worktree.
+// BuildRunner executes the build + test stage in an isolated worktree.
 // MVP-L2 ships a gotest runner; future stacks (node, python) plug in here.
-type Stage1Runner interface {
-	Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage1Result, error)
+type BuildRunner interface {
+	Run(ctx context.Context, cs *core.ChangeSet) (cert.BuildResult, error)
 }
 
-// Stage2Runner executes the standalone static-analysis stage (secrets, SAST,
+// AnalysisRunner executes the standalone static-analysis stage (secrets, SAST,
 // vulnerable-deps) in an isolated worktree and aggregates findings.
-type Stage2Runner interface {
-	Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage2Result, error)
+type AnalysisRunner interface {
+	Run(ctx context.Context, cs *core.ChangeSet) (cert.AnalysisResult, error)
 }
 
 // Admitter applies a certified changeset to the repo and returns the resulting
@@ -56,25 +56,25 @@ type Engine struct {
 	Signer   signer.Signer
 	Admit    Admitter
 	Config   *core.RelayConfig
-	// Stage1 is optional; when nil the build+test stage is skipped entirely
-	// (laptop bootstrap mode). Stage1Gates still run with nil Stage1Result
+	// Build is optional; when nil the build+test stage is skipped entirely
+	// (laptop bootstrap mode). BuildGates still run with nil BuildResult
 	// so the coverage gate yields ReviewRequired in that case.
-	Stage1 Stage1Runner
-	// Stage1Gates is the set of gate names that depend on Stage1Result and
-	// therefore run *after* Stage1. Defaults to ["coverage"].
-	Stage1Gates []string
-	// Stage2 is optional; when nil the static-analysis stage is skipped and
-	// Stage2-dependent gates (secrets, fileclass, deps) yield ReviewRequired.
-	Stage2 Stage2Runner
-	// Stage2Gates is the set of gate names that depend on Stage2Result and
-	// therefore run *after* Stage2. Defaults to ["secrets","fileclass","deps"].
-	Stage2Gates []string
+	Build BuildRunner
+	// BuildGates is the set of gate names that depend on BuildResult and
+	// therefore run *after* Build. Defaults to ["coverage"].
+	BuildGates []string
+	// Analysis is optional; when nil the static-analysis stage is skipped and
+	// Analysis-dependent gates (secrets, fileclass, deps) yield ReviewRequired.
+	Analysis AnalysisRunner
+	// AnalysisGates is the set of gate names that depend on AnalysisResult and
+	// therefore run *after* Analysis. Defaults to ["secrets","fileclass","deps"].
+	AnalysisGates []string
 	Now         func() time.Time // injectable clock; defaults to time.Now
 
-	stage1Mu     sync.Mutex
-	stage1Result *cert.Stage1Result
-	stage2Mu     sync.Mutex
-	stage2Result *cert.Stage2Result
+	buildMu     sync.Mutex
+	buildResult *cert.BuildResult
+	analysisMu     sync.Mutex
+	analysisResult *cert.AnalysisResult
 }
 
 // Result is the structured outcome of a Check or Submit call.
@@ -82,29 +82,29 @@ type Result struct {
 	ChangeSet   *core.ChangeSet
 	Policies    []core.PolicyResult
 	ICR         core.ICR
-	Stage1      *cert.Stage1Result // nil if Stage1 was not run
-	Stage2      *cert.Stage2Result // nil if Stage2 was not run
+	Build      *cert.BuildResult // nil if Build was not run
+	Analysis      *cert.AnalysisResult // nil if Analysis was not run
 	Certificate *core.Certificate  // populated by Certify and Submit
 	CommitSHA   string             // populated by Submit
 	Allowed     bool               // true when no gate blocks
 }
 
-// Stage1Result returns the most recent Stage1 result captured during Certify
+// BuildResult returns the most recent Build result captured during Certify
 // or Submit. Used by gates (e.g. coverage) that need test evidence.
-func (e *Engine) Stage1Result() *cert.Stage1Result {
-	e.stage1Mu.Lock()
-	defer e.stage1Mu.Unlock()
-	return e.stage1Result
+func (e *Engine) BuildResult() *cert.BuildResult {
+	e.buildMu.Lock()
+	defer e.buildMu.Unlock()
+	return e.buildResult
 }
 
-func (e *Engine) setStage1Result(r *cert.Stage1Result) {
-	e.stage1Mu.Lock()
-	e.stage1Result = r
-	e.stage1Mu.Unlock()
+func (e *Engine) setBuildResult(r *cert.BuildResult) {
+	e.buildMu.Lock()
+	e.buildResult = r
+	e.buildMu.Unlock()
 }
 
-func (e *Engine) stage1GateSet() map[string]bool {
-	names := e.Stage1Gates
+func (e *Engine) buildGateSet() map[string]bool {
+	names := e.BuildGates
 	if names == nil {
 		names = []string{"coverage"}
 	}
@@ -115,22 +115,22 @@ func (e *Engine) stage1GateSet() map[string]bool {
 	return m
 }
 
-// Stage2Result returns the most recent Stage2 result captured during Certify
+// AnalysisResult returns the most recent Analysis result captured during Certify
 // or Submit. Used by gates (secrets, deps) that consume static-analysis findings.
-func (e *Engine) Stage2Result() *cert.Stage2Result {
-	e.stage2Mu.Lock()
-	defer e.stage2Mu.Unlock()
-	return e.stage2Result
+func (e *Engine) AnalysisResult() *cert.AnalysisResult {
+	e.analysisMu.Lock()
+	defer e.analysisMu.Unlock()
+	return e.analysisResult
 }
 
-func (e *Engine) setStage2Result(r *cert.Stage2Result) {
-	e.stage2Mu.Lock()
-	e.stage2Result = r
-	e.stage2Mu.Unlock()
+func (e *Engine) setAnalysisResult(r *cert.AnalysisResult) {
+	e.analysisMu.Lock()
+	e.analysisResult = r
+	e.analysisMu.Unlock()
 }
 
-func (e *Engine) stage2GateSet() map[string]bool {
-	names := e.Stage2Gates
+func (e *Engine) analysisGateSet() map[string]bool {
+	names := e.AnalysisGates
 	if names == nil {
 		names = []string{"secrets", "fileclass", "deps"}
 	}
@@ -141,18 +141,18 @@ func (e *Engine) stage2GateSet() map[string]bool {
 	return m
 }
 
-// postStageGateSet is the union of Stage1 and Stage2 gates; these run after
+// postStageGateSet is the union of Build and Analysis gates; these run after
 // both stages have produced their results.
 func (e *Engine) postStageGateSet() map[string]bool {
-	m := e.stage1GateSet()
-	for n := range e.stage2GateSet() {
+	m := e.buildGateSet()
+	for n := range e.analysisGateSet() {
 		m[n] = true
 	}
 	return m
 }
 
-// Check runs the pre-Stage1 policy gates only. Cheap, no build/test.
-// Stage1-dependent gates (coverage) are deferred to Certify.
+// Check runs the pre-Build policy gates only. Cheap, no build/test.
+// Build-dependent gates (coverage) are deferred to Certify.
 func (e *Engine) Check(ctx context.Context, cs *core.ChangeSet) (*Result, error) {
 	if e.Config == nil {
 		return nil, errors.New("engine: Config is nil")
@@ -166,8 +166,8 @@ func (e *Engine) Check(ctx context.Context, cs *core.ChangeSet) (*Result, error)
 	}, nil
 }
 
-// Certify runs Check, the Stage1 build+test stage (if configured), the
-// Stage1-dependent gates (coverage), then computes ICR and produces a signed
+// Certify runs Check, the Build build+test stage (if configured), the
+// Build-dependent gates (coverage), then computes ICR and produces a signed
 // (but not admitted) Certificate. Returns Allowed=false if any gate blocks.
 func (e *Engine) Certify(ctx context.Context, cs *core.ChangeSet) (*Result, error) {
 	res, err := e.Check(ctx, cs)
@@ -179,35 +179,35 @@ func (e *Engine) Certify(ctx context.Context, cs *core.ChangeSet) (*Result, erro
 	}
 
 	// Stage 1: build + test in an isolated worktree.
-	e.setStage1Result(nil)
-	if e.Stage1 != nil {
-		s1, err := e.Stage1.Run(ctx, cs)
+	e.setBuildResult(nil)
+	if e.Build != nil {
+		s1, err := e.Build.Run(ctx, cs)
 		if err != nil {
-			return res, fmt.Errorf("stage1: %w", err)
+			return res, fmt.Errorf("build: %w", err)
 		}
-		res.Stage1 = &s1
-		e.setStage1Result(&s1)
+		res.Build = &s1
+		e.setBuildResult(&s1)
 		if !s1.Ok() {
-			res.Policies = append(res.Policies, stage1PolicyResult(&s1))
+			res.Policies = append(res.Policies, buildPolicyResult(&s1))
 			res.Allowed = false
 			return res, nil
 		}
-		res.Policies = append(res.Policies, stage1PolicyResult(&s1))
+		res.Policies = append(res.Policies, buildPolicyResult(&s1))
 	}
 
 	// Stage 2: standalone static analysis (secrets, SAST, vulnerable deps).
-	e.setStage2Result(nil)
-	if e.Stage2 != nil {
-		s2, err := e.Stage2.Run(ctx, cs)
+	e.setAnalysisResult(nil)
+	if e.Analysis != nil {
+		s2, err := e.Analysis.Run(ctx, cs)
 		if err != nil {
-			return res, fmt.Errorf("stage2: %w", err)
+			return res, fmt.Errorf("analysis: %w", err)
 		}
-		res.Stage2 = &s2
-		e.setStage2Result(&s2)
-		res.Policies = append(res.Policies, stage2PolicyResult(&s2))
+		res.Analysis = &s2
+		e.setAnalysisResult(&s2)
+		res.Policies = append(res.Policies, analysisPolicyResult(&s2))
 	}
 
-	// Post-stage gates: Stage1 (coverage) and Stage2 (secrets, fileclass, deps).
+	// Post-stage gates: Build (coverage) and Analysis (secrets, fileclass, deps).
 	postSet := e.postStageGateSet()
 	postResults := evaluateFiltered(ctx, e.Policies, cs, e.Config, func(n string) bool { return postSet[n] })
 	res.Policies = append(res.Policies, postResults...)
@@ -241,8 +241,8 @@ func (e *Engine) Certify(ctx context.Context, cs *core.ChangeSet) (*Result, erro
 	crt.Payload = map[string]any{
 		"risk_heatmap": risk.Compute(risk.Inputs{
 			ICR:    icr,
-			Stage1: res.Stage1,
-			Stage2: res.Stage2,
+			Build: res.Build,
+			Analysis: res.Analysis,
 		}),
 		"risk_model_version": risk.ModelVersion,
 	}
@@ -328,26 +328,26 @@ func evaluateFiltered(ctx context.Context, reg *policy.Registry, cs *core.Change
 	return out
 }
 
-// stage1PolicyResult folds a Stage1Result into a synthetic PolicyResult that
+// buildPolicyResult folds a BuildResult into a synthetic PolicyResult that
 // is appended to res.Policies (and persisted on the certificate). Verdict is
 // allow when both build and tests pass, deny otherwise.
-func stage1PolicyResult(s *cert.Stage1Result) core.PolicyResult {
+func buildPolicyResult(s *cert.BuildResult) core.PolicyResult {
 	if s.Skipped {
 		return core.PolicyResult{
-			Gate:    "stage1",
+			Gate: "build",
 			Verdict: core.VerdictAllow,
-			Message: "stage1 skipped: " + s.SkipReason,
+			Message: "build skipped: " + s.SkipReason,
 		}
 	}
 	if s.Ok() {
 		return core.PolicyResult{
-			Gate:    "stage1",
+			Gate: "build",
 			Verdict: core.VerdictAllow,
 			Message: fmt.Sprintf("build ok, %d passed / %d failed / %d skipped, coverage %.1f%%",
 				s.Tests.Passed, s.Tests.Failed, s.Tests.Skipped, s.Tests.CoveragePct),
 		}
 	}
-	msg := "stage1 failed"
+	msg := "build failed"
 	if !s.BuildOk {
 		msg = "build failed"
 	} else if s.Tests.Failed > 0 {
@@ -356,23 +356,23 @@ func stage1PolicyResult(s *cert.Stage1Result) core.PolicyResult {
 		msg = "no tests executed"
 	}
 	return core.PolicyResult{
-		Gate:       "stage1",
+		Gate: "build",
 		Verdict:    core.VerdictDeny,
 		Message:    msg,
 		NextAction: "fix build or test failures and re-submit",
 	}
 }
 
-// stage2PolicyResult folds a Stage2Result into a synthetic PolicyResult that
+// analysisPolicyResult folds a AnalysisResult into a synthetic PolicyResult that
 // records which analyzers ran and how many findings each produced. The
 // verdict is informational (allow) — the secrets/fileclass/deps gates apply
 // the actual blocking semantics on the findings.
-func stage2PolicyResult(s *cert.Stage2Result) core.PolicyResult {
+func analysisPolicyResult(s *cert.AnalysisResult) core.PolicyResult {
 	if s.Skipped {
 		return core.PolicyResult{
-			Gate:    "stage2",
+			Gate: "analysis",
 			Verdict: core.VerdictAllow,
-			Message: "stage2 skipped: " + s.SkipReason,
+			Message: "analysis skipped: " + s.SkipReason,
 		}
 	}
 	available, unavailable, totalFindings := 0, 0, 0
@@ -385,9 +385,9 @@ func stage2PolicyResult(s *cert.Stage2Result) core.PolicyResult {
 		}
 	}
 	return core.PolicyResult{
-		Gate:    "stage2",
+		Gate: "analysis",
 		Verdict: core.VerdictAllow,
-		Message: fmt.Sprintf("stage2: %d analyzer(s) ran, %d unavailable, %d total finding(s)",
+		Message: fmt.Sprintf("analysis: %d analyzer(s) ran, %d unavailable, %d total finding(s)",
 			available, unavailable, totalFindings),
 		Details: map[string]any{
 			"runs":           s.Runs,

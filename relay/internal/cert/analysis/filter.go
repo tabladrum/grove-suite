@@ -1,4 +1,4 @@
-package stage2
+package analysis
 
 import (
 	"github.com/tabladrum/grove-suite/relay/internal/cert"

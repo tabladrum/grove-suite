@@ -26,16 +26,16 @@ func TestTestRunOk(t *testing.T) {
 	}
 }
 
-func TestStage1ResultOk(t *testing.T) {
+func TestBuildResultOk(t *testing.T) {
 	cases := []struct {
 		name string
-		r    Stage1Result
+		r    BuildResult
 		want bool
 	}{
-		{"build fail", Stage1Result{BuildOk: false, Tests: TestRun{Passed: 1}}, false},
-		{"tests fail", Stage1Result{BuildOk: true, Tests: TestRun{Failed: 1}}, false},
-		{"all ok", Stage1Result{BuildOk: true, Tests: TestRun{Passed: 2}}, true},
-		{"no tests", Stage1Result{BuildOk: true, Tests: TestRun{}}, false},
+		{"build fail", BuildResult{BuildOk: false, Tests: TestRun{Passed: 1}}, false},
+		{"tests fail", BuildResult{BuildOk: true, Tests: TestRun{Failed: 1}}, false},
+		{"all ok", BuildResult{BuildOk: true, Tests: TestRun{Passed: 2}}, true},
+		{"no tests", BuildResult{BuildOk: true, Tests: TestRun{}}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

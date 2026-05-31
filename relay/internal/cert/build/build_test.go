@@ -1,4 +1,4 @@
-package stage1
+package build
 
 import (
 	"bytes"
@@ -94,7 +94,7 @@ func TestStage1_BreakingDiff(t *testing.T) {
 		t.Errorf("expected test failure, got tests=%+v", res.Tests)
 	}
 	if res.Ok() {
-		t.Error("Stage1Result.Ok() should be false")
+		t.Error("BuildResult.Ok() should be false")
 	}
 }
 

@@ -130,8 +130,8 @@ type AnalyzerRun struct {
 	NumFindings int           `json:"num_findings"`
 }
 
-// Stage2Result aggregates the output of all analyzers that ran in Stage 2.
-type Stage2Result struct {
+// AnalysisResult aggregates the output of all analyzers that ran in Stage 2.
+type AnalysisResult struct {
 	StartedAt time.Time     `json:"started_at"`
 	Duration  time.Duration `json:"duration_ns"`
 	Runs      []AnalyzerRun `json:"runs"`
@@ -142,7 +142,7 @@ type Stage2Result struct {
 }
 
 // FindingsByCategory groups findings into a map for fast lookup by gates.
-func (s Stage2Result) FindingsByCategory() map[Category][]Finding {
+func (s AnalysisResult) FindingsByCategory() map[Category][]Finding {
 	out := map[Category][]Finding{}
 	for _, f := range s.Findings {
 		out[f.Category] = append(out[f.Category], f)
@@ -152,7 +152,7 @@ func (s Stage2Result) FindingsByCategory() map[Category][]Finding {
 
 // HighestSeverity returns the most severe finding's severity, or empty
 // string when there are no findings.
-func (s Stage2Result) HighestSeverity() Severity {
+func (s AnalysisResult) HighestSeverity() Severity {
 	rank := map[Severity]int{
 		SeverityInfo: 1, SeverityLow: 2, SeverityMedium: 3,
 		SeverityHigh: 4, SeverityCritical: 5,

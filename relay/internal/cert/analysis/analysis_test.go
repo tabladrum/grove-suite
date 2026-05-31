@@ -1,4 +1,4 @@
-package stage2
+package analysis
 
 import (
 	"context"
@@ -142,7 +142,7 @@ func TestStage2_NoAnalyzersConfigured(t *testing.T) {
 	}
 }
 
-func s2Run(t *testing.T, s *Stage2, cs *core.ChangeSet) (cert.Stage2Result, error) {
+func s2Run(t *testing.T, s *Analysis, cs *core.ChangeSet) (cert.AnalysisResult, error) {
 	t.Helper()
 	return s.Run(context.Background(), cs)
 }

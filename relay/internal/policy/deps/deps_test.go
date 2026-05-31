@@ -9,7 +9,7 @@ import (
 )
 
 func TestGate_AllowsWhenNoVulns(t *testing.T) {
-	g := &Gate{Stage2: func() *cert.Stage2Result { return &cert.Stage2Result{} }}
+	g := &Gate{Analysis: func() *cert.AnalysisResult { return &cert.AnalysisResult{} }}
 	r := g.Evaluate(context.Background(), &core.ChangeSet{}, nil)
 	if r.Verdict != core.VerdictAllow {
 		t.Fatalf("verdict=%s want allow", r.Verdict)
@@ -17,8 +17,8 @@ func TestGate_AllowsWhenNoVulns(t *testing.T) {
 }
 
 func TestGate_CriticalDenies(t *testing.T) {
-	g := &Gate{Stage2: func() *cert.Stage2Result {
-		return &cert.Stage2Result{Findings: []cert.Finding{
+	g := &Gate{Analysis: func() *cert.AnalysisResult {
+		return &cert.AnalysisResult{Findings: []cert.Finding{
 			{Analyzer: "govulncheck", Category: cert.CategoryVuln, RuleID: "GO-1", Severity: cert.SeverityCritical},
 		}}
 	}}
@@ -29,8 +29,8 @@ func TestGate_CriticalDenies(t *testing.T) {
 }
 
 func TestGate_HighIsReviewRequiredByDefault(t *testing.T) {
-	g := &Gate{Stage2: func() *cert.Stage2Result {
-		return &cert.Stage2Result{Findings: []cert.Finding{
+	g := &Gate{Analysis: func() *cert.AnalysisResult {
+		return &cert.AnalysisResult{Findings: []cert.Finding{
 			{Analyzer: "govulncheck", Category: cert.CategoryVuln, RuleID: "GO-2", Severity: cert.SeverityHigh},
 		}}
 	}}
@@ -41,8 +41,8 @@ func TestGate_HighIsReviewRequiredByDefault(t *testing.T) {
 }
 
 func TestGate_HighDeniesWhenConfigured(t *testing.T) {
-	g := &Gate{Stage2: func() *cert.Stage2Result {
-		return &cert.Stage2Result{Findings: []cert.Finding{
+	g := &Gate{Analysis: func() *cert.AnalysisResult {
+		return &cert.AnalysisResult{Findings: []cert.Finding{
 			{Analyzer: "govulncheck", Category: cert.CategoryVuln, RuleID: "GO-2", Severity: cert.SeverityHigh},
 		}}
 	}}
@@ -53,7 +53,7 @@ func TestGate_HighDeniesWhenConfigured(t *testing.T) {
 }
 
 func TestGate_Stage2NilFailsClosed(t *testing.T) {
-	g := &Gate{Stage2: func() *cert.Stage2Result { return nil }}
+	g := &Gate{Analysis: func() *cert.AnalysisResult { return nil }}
 	r := g.Evaluate(context.Background(), &core.ChangeSet{}, nil)
 	if r.Verdict != core.VerdictReviewRequired {
 		t.Fatalf("verdict=%s want review_required", r.Verdict)

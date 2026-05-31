@@ -10,21 +10,21 @@ import (
 	"github.com/tabladrum/grove-suite/relay/internal/policy"
 )
 
-// fakeStage1 is a Stage1Runner for tests.
+// fakeStage1 is a BuildRunner for tests.
 type fakeStage1 struct {
-	result cert.Stage1Result
+	result cert.BuildResult
 	err    error
 	called int
 }
 
-func (f *fakeStage1) Run(_ context.Context, _ *core.ChangeSet) (cert.Stage1Result, error) {
+func (f *fakeStage1) Run(_ context.Context, _ *core.ChangeSet) (cert.BuildResult, error) {
 	f.called++
 	return f.result, f.err
 }
 
 func TestCertify_Stage1PassAttachesAllowResult(t *testing.T) {
 	e := newTestEngine(t, &fakeAdmitter{sha: "sha1"})
-	e.Stage1 = &fakeStage1{result: cert.Stage1Result{
+	e.Build = &fakeStage1{result: cert.BuildResult{
 		BuildOk: true,
 		Tests:   cert.TestRun{Passed: 5, CoveragePct: 90},
 	}}
@@ -38,12 +38,12 @@ func TestCertify_Stage1PassAttachesAllowResult(t *testing.T) {
 	if res.Certificate == nil {
 		t.Fatal("expected cert")
 	}
-	if res.Stage1 == nil || !res.Stage1.Ok() {
-		t.Errorf("expected ok stage1, got %+v", res.Stage1)
+	if res.Build == nil || !res.Build.Ok() {
+		t.Errorf("expected ok stage1, got %+v", res.Build)
 	}
 	found := false
 	for _, p := range res.Policies {
-		if p.Gate == "stage1" && p.Verdict == core.VerdictAllow {
+		if p.Gate == "build" && p.Verdict == core.VerdictAllow {
 			found = true
 		}
 	}
@@ -54,7 +54,7 @@ func TestCertify_Stage1PassAttachesAllowResult(t *testing.T) {
 
 func TestCertify_Stage1FailBlocksCertificate(t *testing.T) {
 	e := newTestEngine(t, &fakeAdmitter{sha: "sha1"})
-	e.Stage1 = &fakeStage1{result: cert.Stage1Result{
+	e.Build = &fakeStage1{result: cert.BuildResult{
 		BuildOk: true,
 		Tests:   cert.TestRun{Passed: 2, Failed: 1},
 	}}
@@ -71,7 +71,7 @@ func TestCertify_Stage1FailBlocksCertificate(t *testing.T) {
 	// stage1 deny result must be present.
 	hasDeny := false
 	for _, p := range res.Policies {
-		if p.Gate == "stage1" && p.Verdict == core.VerdictDeny {
+		if p.Gate == "build" && p.Verdict == core.VerdictDeny {
 			hasDeny = true
 		}
 	}
@@ -82,12 +82,12 @@ func TestCertify_Stage1FailBlocksCertificate(t *testing.T) {
 
 func TestCertify_Stage1BuildFailNextActionSet(t *testing.T) {
 	e := newTestEngine(t, &fakeAdmitter{sha: "sha1"})
-	e.Stage1 = &fakeStage1{result: cert.Stage1Result{BuildOk: false}}
+	e.Build = &fakeStage1{result: cert.BuildResult{BuildOk: false}}
 	res, _ := e.Certify(context.Background(), sampleChangeSet())
 	for _, p := range res.Policies {
-		if p.Gate == "stage1" {
+		if p.Gate == "build" {
 			if p.NextAction == "" {
-				t.Error("expected NextAction on stage1 failure")
+				t.Error("expected NextAction on build failure")
 			}
 			if p.Message != "build failed" {
 				t.Errorf("expected build failed message, got %q", p.Message)
@@ -98,7 +98,7 @@ func TestCertify_Stage1BuildFailNextActionSet(t *testing.T) {
 
 func TestCertify_Stage1SkippedAllows(t *testing.T) {
 	e := newTestEngine(t, &fakeAdmitter{sha: "sha1"})
-	e.Stage1 = &fakeStage1{result: cert.Stage1Result{
+	e.Build = &fakeStage1{result: cert.BuildResult{
 		Skipped: true, SkipReason: "no go.mod", BuildOk: true,
 	}}
 	res, err := e.Certify(context.Background(), sampleChangeSet())
@@ -113,30 +113,30 @@ func TestCertify_Stage1SkippedAllows(t *testing.T) {
 	}
 }
 
-func TestCertify_Stage1RunnerErrorPropagates(t *testing.T) {
+func TestCertify_BuildRunnerErrorPropagates(t *testing.T) {
 	e := newTestEngine(t, &fakeAdmitter{sha: "sha1"})
-	e.Stage1 = &fakeStage1{err: errors.New("boom")}
+	e.Build = &fakeStage1{err: errors.New("boom")}
 	_, err := e.Certify(context.Background(), sampleChangeSet())
 	if err == nil {
 		t.Error("expected error")
 	}
 }
 
-func TestStage1Result_AccessorIsConcurrencySafe(t *testing.T) {
+func TestBuildResult_AccessorIsConcurrencySafe(t *testing.T) {
 	e := &Engine{}
-	if e.Stage1Result() != nil {
+	if e.BuildResult() != nil {
 		t.Error("initially nil")
 	}
-	want := &cert.Stage1Result{BuildOk: true}
-	e.setStage1Result(want)
-	if got := e.Stage1Result(); got != want {
+	want := &cert.BuildResult{BuildOk: true}
+	e.setBuildResult(want)
+	if got := e.BuildResult(); got != want {
 		t.Errorf("got %p want %p", got, want)
 	}
 }
 
 func TestStage1GateSet_Default(t *testing.T) {
 	e := &Engine{}
-	s := e.stage1GateSet()
+	s := e.buildGateSet()
 	if !s["coverage"] {
 		t.Error("default should include coverage")
 	}
@@ -146,8 +146,8 @@ func TestStage1GateSet_Default(t *testing.T) {
 }
 
 func TestStage1GateSet_Custom(t *testing.T) {
-	e := &Engine{Stage1Gates: []string{"custom"}}
-	s := e.stage1GateSet()
+	e := &Engine{BuildGates: []string{"custom"}}
+	s := e.buildGateSet()
 	if !s["custom"] {
 		t.Error("custom not in set")
 	}
@@ -156,11 +156,11 @@ func TestStage1GateSet_Custom(t *testing.T) {
 	}
 }
 
-// coverageHolderGate is a minimal Gate that reads from a Stage1 holder.
-// Used to prove the engine flushes stage1Result before post-stage gates fire.
+// coverageHolderGate is a minimal Gate that reads from a Build holder.
+// Used to prove the engine flushes buildResult before post-stage gates fire.
 type coverageHolderGate struct {
-	get func() *cert.Stage1Result
-	saw *cert.Stage1Result
+	get func() *cert.BuildResult
+	saw *cert.BuildResult
 }
 
 func (g *coverageHolderGate) Name() string { return "coverage" }
@@ -169,12 +169,12 @@ func (g *coverageHolderGate) Evaluate(_ context.Context, _ *core.ChangeSet, _ ma
 	return core.PolicyResult{Gate: "coverage", Verdict: core.VerdictAllow}
 }
 
-func TestCertify_StageOrdering_PostGateSeesStage1Result(t *testing.T) {
+func TestCertify_StageOrdering_PostGateSeesBuildResult(t *testing.T) {
 	e := newTestEngine(t, &fakeAdmitter{sha: "sha1"})
-	s1 := cert.Stage1Result{BuildOk: true, Tests: cert.TestRun{Passed: 1, CoveragePct: 100}}
-	e.Stage1 = &fakeStage1{result: s1}
+	s1 := cert.BuildResult{BuildOk: true, Tests: cert.TestRun{Passed: 1, CoveragePct: 100}}
+	e.Build = &fakeStage1{result: s1}
 
-	g := &coverageHolderGate{get: e.Stage1Result}
+	g := &coverageHolderGate{get: e.BuildResult}
 	e.Policies.Register(g)
 	// Enable coverage gate in config.
 	e.Config.Policies["coverage"] = core.PolicyBlock{Enabled: true}
@@ -187,9 +187,9 @@ func TestCertify_StageOrdering_PostGateSeesStage1Result(t *testing.T) {
 	}
 }
 
-func TestCheck_DoesNotRunStage1Gates(t *testing.T) {
+func TestCheck_DoesNotRunBuildGates(t *testing.T) {
 	e := newTestEngine(t, &fakeAdmitter{sha: "sha1"})
-	g := &coverageHolderGate{get: e.Stage1Result}
+	g := &coverageHolderGate{get: e.BuildResult}
 	e.Policies.Register(g)
 	e.Config.Policies["coverage"] = core.PolicyBlock{Enabled: true}
 

@@ -29,7 +29,7 @@ func New(runners ...LangRunner) *Runner { return &Runner{Runners: runners} }
 
 // Run finds the first LangRunner whose Detect returns true and delegates.
 // If nothing matches, returns an empty TestRun with Runner="multilang"
-// — the caller (stage1.Stage1) interprets that as "no applicable runner".
+// — the caller (stage1.Build) interprets that as "no applicable runner".
 func (r *Runner) Run(ctx context.Context, dir string) (cert.TestRun, error) {
 	for _, lr := range r.Runners {
 		if lr.Detect(dir) {

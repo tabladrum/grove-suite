@@ -51,8 +51,8 @@ func (r TestRun) Ok() bool {
 	return r.Failed == 0 && r.Passed > 0
 }
 
-// Stage1Result is the output of the build + test stage.
-type Stage1Result struct {
+// BuildResult is the output of the build + test stage.
+type BuildResult struct {
 	// Skipped is set when no applicable runner matched the project (e.g. no
 	// go.mod for the Go runner). SkipReason explains why. A skipped result
 	// is treated as non-blocking by the engine.
@@ -66,7 +66,7 @@ type Stage1Result struct {
 
 // Ok reports whether both build and tests succeeded, or the stage was skipped
 // for a structural reason (no applicable runner).
-func (s Stage1Result) Ok() bool {
+func (s BuildResult) Ok() bool {
 	if s.Skipped {
 		return true
 	}

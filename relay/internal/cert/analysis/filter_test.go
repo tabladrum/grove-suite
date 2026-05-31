@@ -1,4 +1,4 @@
-package stage2
+package analysis
 
 import (
 	"testing"
