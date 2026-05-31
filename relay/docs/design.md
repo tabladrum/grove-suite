@@ -349,11 +349,13 @@ CREATE TABLE certifications (
 CREATE INDEX ON certifications (changeset_id, stage);
 ```
 
-### 7.6 Stage 2: Static Analysis Suite
+### 7.6 Stage 2: Static Analysis Suite (Hybrid — Lean Default + Opt-In SonarLint)
 
 Stage 2 is fully self-contained — no external server required at runtime. All tools run as subprocesses against the ChangeSet's changed files only. Relay owns the quality gate decision: it aggregates findings from all tools, applies per-severity thresholds from project policy, and produces a single pass/fail verdict with a structured finding list.
 
 The "new code only" scoping is natural here — Relay already knows the changed file set from the ChangeSet diff and passes it explicitly to each tool (via `--include` flags or an explicit file list).
+
+#### 7.6.1 Lean default tool surface (Phase 2A, ~50MB no JRE)
 
 **Security analysis tools:**
 
@@ -365,7 +367,7 @@ The "new code only" scoping is natural here — Relay already knows the changed 
 | `npm audit` | Node dependency CVEs | `npm audit --json` |
 | `pip-audit` | Python dependency CVEs | `pip-audit --format=json` |
 
-Default semgrep rulesets: `[p/security-audit, p/owasp-top-ten]`. The `p/sonarqube` ruleset is available when a SonarQube profile is imported (see §7.7).
+Default semgrep rulesets: `[p/security-audit, p/owasp-top-ten]`, plus language-specific packs.
 
 **Code quality tools (language-specific):**
 
@@ -376,68 +378,92 @@ Default semgrep rulesets: `[p/security-audit, p/owasp-top-ten]`. The `p/sonarqub
 | Python | `ruff` | bugs, style, complexity, import hygiene |
 | Java | `checkstyle` + `pmd` | style, design issues, duplicate code |
 
-Each tool runs only against files touched by the ChangeSet. Results from all tools are merged into a unified findings list with normalized severity: `error | warning | info`.
+Each tool runs only against files touched by the ChangeSet. Results are merged into a unified findings list with normalized severity: `error | warning | info`.
 
-**Quality gate logic (Relay-owned):**
+Tool versions are pinned in the Relay binary release's tool-set manifest. `relay tools install` fetches the manifest's versions. Deviations are recorded in the certificate trailer as `Toolchain-Image-Drift: true`.
+
+#### 7.6.2 Opt-in SonarLint Core engine (Phase 2B, ~200–400MB +JRE)
+
+For teams that want actual SonarQube-rule fidelity locally — not semgrep's reimplementations — `relay tools install --with-sonar` adds the SonarLint Core stack:
+
+- Eclipse Temurin JRE 21 (bundled per platform: macOS Intel/ARM, Linux x86_64/ARM64)
+- SonarLint Core library (LGPL-3.0) + analyzer JARs for the project's declared languages (also LGPL-3.0)
+- `relay-sonar.jar` — a thin Java wrapper around `StandaloneSonarLintEngine`, released by Relay's Goreleaser pipeline (sibling repo `grove-suite/relay-sonar`, LGPL-3.0)
+
+Invocation flow at analyze time:
+
+```
+relay engine
+   ├─ semgrep scan ... → findings.semgrep.json
+   └─ java -jar relay-sonar.jar \
+          --profile <.relay/rulesets/acme-java.xml> \
+          --files <changed-files> \
+          --out findings.sonar.json
+relay engine aggregates + de-duplicates overlapping rules
+```
+
+Certificate trailer records `Sonar-Engine: sonarlint-core@<version>` or `none` (Phase 2A, semgrep only). The presence of the engine is auditable.
+
+**Known limitations** (LGPL Community Edition, not Relay-imposed; documented in `getting-started.md`):
+- No taint / injection vulnerability analysis (requires SonarQube Server Enterprise Edition).
+- No COBOL, Apex, PL/SQL, T-SQL (commercial editions only).
+- No cross-project dashboards / PR decoration (those are server-side SonarQube products, not analyzers).
+
+Per-language host requirements inherited from SonarLint: Node.js for JS/TS, `compile_commands.json` for C/C++, .NET SDK for C#.
+
+Rationale and architecture: [`sonarqube-no-server-investigation.md`](sonarqube-no-server-investigation.md).
+
+#### 7.6.3 Quality gate logic (Relay-owned, engine-agnostic)
 
 ```
 deny if: count(findings where severity >= deny_severity) > deny_on_findings_above
 ```
 
-Defaults: `deny_severity: error`, `deny_on_findings_above: 0`. Zero new `error`-level findings in changed code is the bar.
+Defaults: `deny_severity: error`, `deny_on_findings_above: 0`. Zero new `error`-level findings in changed code is the bar. The gate decision is the same regardless of which engine produced the findings.
 
-**SonarQube server as optional enrichment:** enterprises that already run SonarQube can configure Relay to submit analysis results to it for historical tracking and the SonarQube dashboard. This is enrichment only — the gate decision always belongs to Relay.
+#### 7.6.4 Optional: enrichment via existing SonarQube server
 
-### 7.7 SonarQube Profile Import
+Enterprises that already run SonarQube can configure Relay to submit analysis results to their server for historical tracking and the SonarQube dashboard. This is enrichment only — the gate decision always belongs to Relay, and the analysis still runs locally (no round-trip to the server for the verdict).
 
-Teams with customized SonarQube quality profiles (tuned rules, severity overrides, custom quality gates) can import their profile so Relay enforces the same rules during certification. This ensures the shift-left gate matches what the SonarQube server would evaluate, eliminating divergence between Relay admission and a downstream SonarQube check.
+### 7.7 SonarQube Profile Import (Hybrid — Surface in 2A, Engine in 2B)
 
-**CLI command:**
+Teams with customized SonarQube quality profiles (tuned rules, severity overrides, custom quality gates) can import their profile so Relay enforces the same rules during local certification. This eliminates divergence between Relay admission and any downstream SonarQube check.
+
+**Phase 2A ships the importer surface**: lands the profile XML into `.relay/rulesets/` and registers it in `.relay/relay.yaml`. **Phase 2B ships the engine** that evaluates the imported profile via SonarLint Core + bundled JRE + analyzer JARs (see §7.6.2 and [`sonarqube-no-server-investigation.md`](sonarqube-no-server-investigation.md)).
+
+The earlier draft proposed an SQ-key → semgrep-rule-ID mapping table. **That approach is abandoned** — it is lossy (semgrep covers ~2,400 community rules vs SonarQube's ~6,500) and brittle. The new approach preserves the SonarLint-native XML verbatim for the Phase 2B engine to consume directly.
+
+**CLI command (Phase 2A):**
 
 ```bash
 relay import sonarqube-profile ./acme-java-profile.xml \
-  --output platform-config/policies/rulesets/acme-java.yaml
+  [--output .relay/rulesets/acme-java.xml] \
+  [--name acme-java]
 ```
 
 Export the profile XML from SonarQube via:
 `GET /api/qualityprofiles/export?language=java&qualityProfile=Acme+Java`
+or via the UI's "Back up" action on the quality profile.
 
-**Import process:**
+**Import process (Phase 2A — surface only):**
 
-1. Parse the quality profile XML — extract enabled rules (keys like `java:S1764`), severity overrides, and rule parameters.
-2. Walk a bundled SQ-key → semgrep-rule-ID mapping table (covers the `p/sonarqube` ruleset).
-3. For matched rules: generate a semgrep rules file containing only those rules with correct severities applied.
-4. For unmatched rules: emit a coverage gap list — rule keys with no semgrep equivalent, flagged for manual review.
-5. Import quality gate conditions (e.g., "0 blocker issues on new code") as Relay gate thresholds.
-6. Write the generated Relay ruleset YAML + gap report to `--output`.
+1. Validate the XML is a recognized SonarQube backup format (top-level `<profile>` element, language attribute, rule list).
+2. Write the XML **verbatim** to `.relay/rulesets/<name>.xml`. The repo now owns it; PR review applies. The file travels with the code.
+3. Update `.relay/relay.yaml` to reference the imported ruleset:
+   ```yaml
+   sonar:
+     profile: rulesets/acme-java.xml
+     # engine_pin: sonarlint-core@10.x   # filled in by `relay tools install --with-sonar`
+   ```
+4. Print one of two messages:
+   - If `--with-sonar` is already installed (Phase 2B available locally): "Profile imported. Will be applied on next `relay check` / `relay certify`."
+   - If `--with-sonar` is not installed: "Profile imported. Run `relay tools install --with-sonar` to enable evaluation."
 
-**Output format:**
+The `.relay/rulesets/acme-java.xml` file is the canonical home for imported profiles — committed to the repo, identical on laptop and team server, replayable in the audit trail via `Effective-Config-Hash`.
 
-```yaml
-# platform-config/policies/rulesets/acme-java.yaml
-# Generated by: relay import sonarqube-profile acme-java-profile.xml
-# Source profile: Acme Java / sonarqube.acme.com / exported 2026-05-30
-# Rule coverage: 142/168 rules mapped (84.5%)
-schema: relay.ruleset/v1
-source:
-  type: sonarqube_profile
-  profile_name: "Acme Java"
-  language: java
-  exported_at: "2026-05-30T09:00:00Z"
-semgrep_rules:
-  - id: java.lang.security.audit.cbc-padding-oracle
-    severity: error   # maps SQ rule java:S5542
-  # ... 141 more
-quality_gate:
-  deny_severity: error
-  max_warnings: 0
-coverage_gaps:
-  - sq_rule: java:S6437    # no semgrep equivalent; consider manual review
-  - sq_rule: java:S4830
-  # ... 24 more
-```
+**Phase 2B activation:** once `relay tools install --with-sonar` is run, the engine path picks up the profile from `.relay/rulesets/<name>.xml` and SonarLint Core evaluates it at analyze time. No further import step is required.
 
-The generated file lives in `platform-config` (version-controlled alongside policies). Re-run the import command when the quality profile changes on the SonarQube server. The coverage gap list is how teams track which SonarQube rules have no Relay equivalent and decide whether those gaps are acceptable.
+Re-run `relay import sonarqube-profile` when the upstream profile changes on the SonarQube server — Relay overwrites the local `.xml` and updates the file's `Effective-Config-Hash` contribution.
 
 ---
 
@@ -585,6 +611,7 @@ Each gate lives under `internal/policy/<gate>/`. The Engine is constructed once 
 #### Gate 6 — Test Coverage (intra-certification)
 - See §7.2. Inputs are the changed symbol set and the TestRun's passed-tests list.
 - Project policy controls `coverage_threshold` and whether `// relay:no-test-required` exemption is allowed.
+- **Mode-defaulted behavior** (per the laptop-MVP audit): on laptop, the coverage gate defaults to `mode: warn` because Grove's `tests`-edge inference may be sparse on a freshly-indexed TypeScript or Python repo and risks false-positive denies. On team mode, the gate defaults to `mode: enforce`. Both modes are overridden by an explicit `.relay/policies/coverage.yaml`.
 
 ### 10.3 Project Policy Config
 
@@ -607,7 +634,7 @@ projects:
         config:     { paths: ["config/**.yaml"] }
       deps:        { action: review_required }
       size:        { max_added_lines: 1000, max_files: 50, max_lines_single_file: 500 }
-      coverage:    { threshold: 1.00, allow_no_test_required_annotation: true }
+      coverage:    { mode: warn, threshold: 1.00, allow_no_test_required_annotation: true }   # mode default: warn on laptop, enforce on team
 
     certification:
       stages: [build_test, static_analysis]
@@ -627,7 +654,9 @@ projects:
         tools: [golangci_lint, eslint, ruff]
         deny_on_findings_above: 0    # zero new issues in changed code
         deny_severity: error
-        # ruleset: platform-config/policies/rulesets/acme-java.yaml  # sonarqube profile import (optional)
+      sonar:
+        # profile: rulesets/acme-java.xml   # set by `relay import sonarqube-profile` (Phase 2A surface)
+        # engine_pin: sonarlint-core@10.x   # set by `relay tools install --with-sonar` (Phase 2B)
 
     icr:
       min_confidence_auto: 0.85
@@ -663,31 +692,47 @@ Policy version is captured in every certificate so the exact policy snapshot is 
 
 Relay ships as a single binary that runs in three modes. Mode is selected by configuration, not by build.
 
-### 12.5.1 Laptop mode
+### 12.5.1 Laptop mode (full Relay server, single user)
 
 ```yaml
 # ~/.relay/config.yaml
 mode: laptop
+daemon:
+  socket: ~/.relay/daemon.sock     # Unix domain socket; auto-started, persists as launchd / systemd --user
+  daemon_state: ~/.relay/daemon.sqlite
 store:
   type: sqlite
-  path: ~/.relay/relay.db
+  per_repo_path: .relay/.cache/state.sqlite   # gitignored
 intent_store:
   type: local_git
   path: ~/.relay/intent-store
 grove:
-  url: http://localhost:7777    # auto-started if unreachable
+  url: http://localhost:7777        # auto-started if unreachable
 tools:
-  fetch_on_demand: true          # download missing tools on first use
+  manifest_pin: ${RELAY_VERSION}    # tool-set manifest pinned to the binary release
+  with_sonar: false                 # Phase 2B: set to true via `relay tools install --with-sonar`
 signer:
   type: local
-  key_path: ~/.relay/signer.ed25519
+  key_path: ~/.relay/keys/admission.ed25519   # mode 0600
+admission:
+  default_target: current_branch    # team mode default: relay-main
+telemetry:
+  otel_enabled: false               # laptop default: off; opt-in by setting an endpoint
+  phone_home: false                 # never on laptop
 ```
 
-- Operational state in embedded SQLite (`modernc.org/sqlite`, pure Go — no CGO conflict with Grove's tree-sitter).
+**The laptop binary is the full Relay server, running for a single user.** Pipeline (ingest → ICR → policy → certification → admission → signing → intent-store → audit) is identical to team mode. The substitutions:
+
+- Embedded SQLite (`modernc.org/sqlite`, pure Go — no CGO conflict with Grove's tree-sitter). Per-repo operational state at `.relay/.cache/state.sqlite` (gitignored); daemon-level coordination at `~/.relay/daemon.sqlite`.
+- Long-running `relay daemon` owns SQLite, the local Grove client, the intent-store git repo, and the signer key. MCP stdio shims (per IDE), CLI calls, and the git pre-push hook all proxy to the daemon over the Unix socket — single writer guarantee under concurrent invocations.
+- No Redis. The daemon is the only writer; ICR locks are irrelevant in the single-agent case.
 - Intent-store is a local bare git repo at `~/.relay/intent-store/`. Certificates committed there.
-- No Redis (single-agent, ICR locks not needed in the critical path).
-- Cert signing uses a locally generated Ed25519 key. Trust model: the developer trusts their own key.
-- Bundled tool binaries: shipped in the install tarball or fetched on first run from a content-addressed mirror.
+- Cert signing uses a locally generated Ed25519 key at `~/.relay/keys/admission.ed25519` (mode 0600). `relay keys gen` is invoked by `relay init`. `relay keys export` / `relay keys import` for cross-machine portability. Trust model: the developer trusts their own key (TOFU); when they upgrade to team mode, the team key registry replaces TOFU.
+- Default admission target = current branch (not `relay-main`). A solo dev's `relay certify` commits to the branch they're on.
+- Bundled tool binaries (lean default): shipped in the install tarball or fetched on first run from a content-addressed mirror at `~/.relay/tools/<version>/`. Tool-set manifest pinned to the Relay release.
+- `relay tools install --with-sonar` (Phase 2B) additionally fetches Eclipse Temurin JRE 21 + SonarLint Core + analyzer JARs + the `relay-sonar.jar` wrapper to `~/.relay/tools/sonar/<version>/`.
+- Telemetry off by default. No phone-home. Documented in `getting-started.md`.
+- Cross-platform support in Phase 2A: macOS Intel + ARM, Linux x86_64 + ARM64. macOS binary is Developer-ID signed and notarized. Windows = WSL.
 
 ### 12.5.2 Team mode
 
@@ -868,7 +913,7 @@ Relay exposes the certification engine as an MCP server. This is the **primary i
 
 ### 13.1 Transport
 
-- **Laptop mode:** stdio (Relay runs as a child process of the IDE/agent). Zero network setup.
+- **Laptop mode:** stdio shim per IDE → Unix domain socket → long-running `relay daemon` (single writer). Zero network setup. MCP client auto-registration via `relay mcp install-for {claude-code,cursor,continue,windsurf}`.
 - **Team / company mode:** HTTP+SSE on the shared server. Multiple agents from multiple developers connect concurrently.
 
 ### 13.2 Tool Definitions
@@ -993,21 +1038,117 @@ Runs the full certification pipeline AND emits a signed certificate. Side-effect
 
 **Result:** markdown explanation, rule documentation link, suggested remediation.
 
-### 13.3 Recommended Agent System-Prompt Pattern
+#### Auto-Intent Capture tools (Phase 2A, new) — `relay_intent_open` / `_update` / `_close` / `_list`
 
-Bundled with the Relay install is a system-prompt fragment for agents:
+These four tools turn the user's natural-language prompt into a first-class artifact committed alongside the code. See §17 (Auto-Intent Capture) for the full flow.
 
-```text
-This project is governed by Relay. Before reporting code changes complete:
-
-1. Call relay_policy at session start to load the active rules.
-2. After making changes, call relay_check.
-3. If findings are returned, fix them and re-check. Do not report success while
-   relay_check returns error-severity findings.
-4. When ready to commit, call relay_certify (laptop) or relay_submit (team/company).
+```jsonc
+{
+  "name": "relay_intent_open",
+  "description": "Draft an Intent from the user's prompt BEFORE making code changes. Stores a draft YAML at .relay/.cache/intents/INT-{id}.draft.yaml. Returns the intent ID. The recommended agent system prompt instructs calling this tool first whenever a user requests a code change.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "title":        { "type": "string", "description": "Short title from the user's request (≤80 chars)." },
+      "description":  { "type": "string", "description": "The verbatim user prompt. The most important field." },
+      "originated_from": {
+        "type": "object",
+        "properties": {
+          "agent":            { "type": "string", "description": "e.g., claude-code:1.4.2" },
+          "model":            { "type": "string", "description": "e.g., claude-sonnet-4-6:2026-04-15" },
+          "conversation_ts":  { "type": "string", "format": "date-time" }
+        }
+      },
+      "allowed_paths_hint": { "type": "array", "items": {"type": "string"} },
+      "acceptance_criteria_hint": { "type": "array", "items": {"type": "string"} }
+    },
+    "required": ["title", "description"]
+  }
+}
 ```
 
-This is what makes Relay an agent *companion* rather than an agent *gate*. The agent self-corrects in-loop; humans only see code that has already passed the engine.
+**Result:** `{ "intent_id": "INT-2026-05-30-rate-limiting", "draft_path": ".relay/.cache/intents/INT-2026-05-30-rate-limiting.draft.yaml" }`
+
+```jsonc
+{
+  "name": "relay_intent_update",
+  "description": "Refine title / description / acceptance criteria mid-session on an open intent draft.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "intent_id": { "type": "string" },
+      "patch":     { "type": "object", "description": "Partial Intent YAML fields to merge into the draft." }
+    },
+    "required": ["intent_id", "patch"]
+  }
+}
+```
+
+**Result:** updated draft path.
+
+```jsonc
+{
+  "name": "relay_intent_close",
+  "description": "Promote the intent draft to .relay/intents/{id}.yaml (committed). Called when the agent reports complete. Emits the commit-trailer block for the eventual relay_certify commit.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "intent_id": { "type": "string" }
+    },
+    "required": ["intent_id"]
+  }
+}
+```
+
+**Result:** `{ "committed_path": ".relay/intents/INT-2026-05-30-rate-limiting.yaml", "intent_hash": "sha256:...", "trailer_block": "Intent-ID: INT-2026-05-30-rate-limiting\nIntent-Hash: sha256:..." }`
+
+```jsonc
+{
+  "name": "relay_intent_list",
+  "description": "List open and committed intents for this repo.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "status": { "type": "string", "enum": ["draft", "committed", "all"], "default": "all" }
+    }
+  }
+}
+```
+
+**Result:** `[{ "id": "...", "title": "...", "status": "draft|committed", "created_at": "...", "file_path": "..." }, ...]`
+
+### 13.3 Recommended Agent System-Prompt Pattern
+
+Bundled with the Relay install (`docs/agent-prompt.md`) is a system-prompt fragment for agents:
+
+```text
+This project is governed by Relay.
+
+When the user asks for a code change:
+
+1. BEFORE writing any code, call relay_intent_open with:
+     - title: a short version of the user's request
+     - description: the verbatim user prompt
+     - originated_from: { agent, model, conversation_ts }
+   Save the returned intent_id.
+
+2. Call relay_policy once at session start to load the active rules.
+
+3. Make code changes, then call relay_check.
+
+4. If relay_check returns findings:
+     - If finding.class == "infrastructure_error": surface to the user.
+       Do NOT auto-fix (it is a Relay/Grove/tool problem, not a code problem).
+     - Otherwise, fix the findings and re-call relay_check. Loop until clean.
+       Do not report success while error-severity findings remain.
+
+5. When the implementation is complete:
+     - Call relay_intent_close with the intent_id (promotes the draft for commit).
+     - Call relay_certify --intent <intent_id> (laptop) or
+       relay_submit (team/company) to produce the signed certificate.
+```
+
+This is what makes Relay an agent *companion* rather than an agent *gate*. The agent self-corrects in-loop; the user's original prompt becomes a committed artifact; humans only see code that has already passed the engine.
 
 ### 13.4 Engine Isomorphism
 
@@ -1034,8 +1175,21 @@ Adding a gate to `internal/engine` adds it to all three surfaces simultaneously.
 
 ```
 # Mode bootstrap
-relay init [--mode laptop|team|company]   # writes ~/.relay/config.yaml
-relay mcp serve [--stdio|--http]          # start MCP server (default stdio in laptop)
+relay init [--stack=go-microservice|node-api|python-service|java-spring]
+           [--profile=<marketplace-profile>]
+           [--mode laptop|team|company]      # writes ~/.relay/config.yaml, scaffolds .relay/,
+                                             # generates Ed25519 key (laptop), starts daemon
+
+# Daemon control (laptop)
+relay daemon start | stop | restart | status
+                                             # long-running local daemon; auto-started by `relay init`
+                                             # and by first MCP/CLI/hook invocation; persists as
+                                             # launchd (macOS) / systemd --user (Linux)
+
+# MCP client registration (laptop)
+relay mcp install-for {claude-code|cursor|continue|windsurf}     # idempotent
+relay mcp install-for {claude-code|cursor|continue|windsurf} --uninstall
+relay mcp serve [--stdio|--http]             # advanced: start MCP server manually
 
 # Tenant / project lifecycle (team / company mode)
 relay tenant init <name>
@@ -1043,39 +1197,52 @@ relay repo add <project> --url <git-url>
 relay project add <name> --repo <repo> --path <subdir>
 
 # Engine commands (same engine as MCP tools)
-relay check [--diff <file>] [--base <sha>] [--gates <list>]   # = relay_check
-relay certify --intent <id>                                    # = relay_certify
+relay check [--diff <file>] [--base <sha>] [--gates <list>]   # = relay_check (fast in-loop)
+relay certify [--intent <id>]                                  # = relay_certify (full pipeline)
 relay submit                                                   # extract diff + submit (= relay_submit)
 relay submit --diff <file> --base <sha>
 relay policy show [--project <name>]                           # = relay_policy
 relay explain --rule <rule-id>                                 # = relay_explain
 
-# Intent + cert browsing
+# Auto-Intent Capture (mirrors the MCP tools for human/scripting use)
+relay intent open --title <t> --description <d>                # = relay_intent_open
+relay intent update <id> --patch <yaml-fragment>               # = relay_intent_update
+relay intent close <id>                                        # = relay_intent_close (promote draft → committed)
 relay intent get <id>
-relay intent list --state <state>
-relay cert show <cert-id>
+relay intent list [--status draft|committed|all]               # = relay_intent_list
+
+# Cert + audit
+relay cert show <cert-id-or-ref>                               # human-readable AI Code Passport
 relay cert verify <cert-id>                                    # offline verify against trusted key bundle
+relay cert replay <cert-id> [--out <report.json>]              # byte-reproducible audit replay
 relay audit query --since <ts> --agent <name>
 
+# Key management (laptop)
+relay keys gen                                                  # generate ~/.relay/keys/admission.ed25519 (mode 0600)
+relay keys export [--out <bundle.tgz>] [--passphrase]           # portable export for cross-machine use
+relay keys import <bundle.tgz> [--passphrase]
+relay keys fingerprint                                          # print fingerprint for trust establishment
+
 # Tooling + profile import
-relay tools install                                             # download bundled toolset
-relay tools status                                              # show installed versions
-relay import sonarqube-profile <profile.xml> [--output <rulesets/path.yaml>]
+relay tools install                                             # lean default: semgrep, gitleaks, etc. (~50MB, no JRE)
+relay tools install --with-sonar                                # Phase 2B: JRE 21 + SonarLint Core + analyzer JARs (~+300MB)
+relay tools status                                              # show installed versions + drift from manifest
+relay import sonarqube-profile <profile.xml>                    # writes .relay/rulesets/<name>.xml (verbatim);
+                                                                # auto-suggests --with-sonar if engine not installed
+                                                                # [--output .relay/rulesets/<name>.xml] [--name <name>]
 
 # Git hook installation
-relay hook install [--pre-push]                                 # writes .git/hooks/pre-push
+relay hook install [--pre-push]                                 # writes .git/hooks/pre-push (proxies to daemon on laptop)
 relay hook uninstall
 
 # State migration
 relay migrate sqlite-to-postgres --dsn <postgres-dsn>           # laptop → team upgrade
+                                                                # `.relay/` is unchanged across the upgrade
 
 # Signature capabilities
-relay cert show <ref>                                           # human-readable Passport for any commit/cert
-relay cert replay <cert-id> [--out <report.json>]               # byte-reproducible audit replay
 relay revert --intent <intent-id> [--dry-run]                   # symbol-scoped surgical revert (Phase 2B)
 relay scorecard --agent <name> [--since <ts>] [--format csv]    # agent/model performance report (Phase 2B+)
 relay marketplace search <query>                                # community .relay/ profile lookup
-relay init --profile=<profile-name>                             # scaffold from marketplace profile
 ```
 
 ---
@@ -1277,3 +1444,131 @@ locks:
 `relay init --profile=soc2-go-api` fetches the profile, verifies the signature, lays the files into `.relay/`, and records the profile + version in `.relay/relay.yaml` under `profiles: [...]`. Subsequent `relay update profiles` upgrades pinned profiles to the latest compatible version with a diff preview.
 
 The marketplace itself is just a git repo (initially `grove-suite/relay-profiles`). No new service.
+
+---
+
+## 17. Auto-Intent Capture (Phase 2A)
+
+The most consequential new capability falling out of the laptop-MVP audit ([`laptop-mvp-audit.md`](laptop-mvp-audit.md)). Today, every coding agent treats the user's natural-language prompt as ephemeral — it dies with the agent session, never reaches the PR, never reaches the audit trail. Reviewers and auditors see only the resulting diff and have to reverse-engineer the intent.
+
+Relay captures the prompt as a YAML committed alongside the code. The user types nothing extra; the agent does the bookkeeping via four MCP tools.
+
+### 17.1 End-to-end flow
+
+```
+1. User → Claude Code: "Add rate limiting to /api/auth/* endpoints, 100 req/min per IP"
+
+2. Claude Code (with the Relay system-prompt fragment from §13.3):
+   relay_intent_open(
+     title:        "Add rate limiting to /api/auth/* endpoints",
+     description:  <verbatim user prompt>,
+     originated_from: {
+       agent:           "claude-code:1.4.2",
+       model:           "claude-sonnet-4-6:2026-04-15",
+       conversation_ts: "2026-05-30T14:33:09Z"
+     }
+   )
+   → intent_id: "INT-2026-05-30-rate-limiting"
+   → draft written to .relay/.cache/intents/INT-*.draft.yaml (gitignored)
+
+3. Claude Code writes the code. Each pass calls relay_check (fast in-loop):
+   - If findings: fix and re-check.
+   - If `class: infrastructure_error`: surface to user, do NOT auto-fix.
+   - Loop until clean.
+
+4. Claude Code calls relay_intent_close(intent_id).
+   → draft promoted to .relay/intents/INT-2026-05-30-rate-limiting.yaml (committed)
+   → returns commit-trailer block: "Intent-ID: ...", "Intent-Hash: sha256:..."
+
+5. relay_certify --intent INT-... runs the full pipeline and writes the commit
+   with the trailer set (incl. Intent-ID and Intent-Hash).
+
+6. On push to GitHub: PR shows the .relay/intents/INT-*.yaml file in the diff.
+   Reviewers see what the agent was ASKED to do, alongside what it DID.
+
+7. Server-side admission (team mode) re-validates the diff against the intent's
+   allowed_paths and acceptance_criteria before signing the team-mode cert.
+```
+
+### 17.2 Intent YAML v2 schema (Auto-Intent additions)
+
+```yaml
+schema: relay.intent/v2
+id: INT-2026-05-30-rate-limiting          # globally unique; date-sortable slug
+status: committed                          # draft | committed
+title: "Add rate limiting to /api/auth/* endpoints"
+description: |
+  <verbatim user prompt>
+
+originated_from:                           # NEW in v2 (Auto-Intent Capture)
+  agent: claude-code:1.4.2
+  model: claude-sonnet-4-6:2026-04-15
+  conversation_ts: "2026-05-30T14:33:09Z"
+  prompt_hash: sha256:abc...               # hash of `description` for integrity
+
+domain: auth
+capability: rate_limiting
+
+allowed_paths:   ["internal/auth/**", "tests/auth/**"]
+forbidden_paths: ["services/payments/**", "migrations/**"]
+acceptance_criteria:
+  - "POST /api/auth/login returns 429 after 100 requests from the same IP in a 60-second window"
+  - "Rate-limit state survives single-pod restart"
+
+verification_plan:
+  must_pass_tests: ["auth_test.go::TestRateLimiter*"]
+  must_run_sast: true
+  must_check_secrets: true
+
+ambiguity_policy: fail_with_questions      # or proceed_with_default
+affected_interfaces: ["POST /api/auth/login", "POST /api/auth/refresh"]
+rollback_plan: "revert single commit; rate limiting is feature-flagged off by default"
+feature_flag: "rate_limiting_enabled"
+observability_expectations:
+  - "rate_limit.allowed counter increments"
+  - "rate_limit.denied counter increments on 429"
+security_considerations: "must not log raw IPs in production"
+risk_level: low                             # low|medium|high|critical
+related_artifacts:
+  - type: adr
+    url: "platform-config/adrs/0042-rate-limiting.md"
+
+# Filled in by relay_intent_close:
+committed_at: "2026-05-30T14:51:22Z"
+committed_by_agent: claude-code:1.4.2
+```
+
+### 17.3 Storage discipline
+
+| Stage | Path | Git status |
+|-------|------|-----------|
+| Draft (during agent session) | `.relay/.cache/intents/INT-*.draft.yaml` | **Gitignored.** Machine-local. |
+| Committed (after `relay_intent_close`) | `.relay/intents/INT-*.yaml` | **Committed.** Travels with the repo. PR-reviewable. |
+
+The promotion from draft to committed is atomic: `relay_intent_close` writes the final YAML, computes its SHA-256 (`Intent-Hash`), removes the draft, and returns the commit-trailer block for the eventual `relay_certify` invocation.
+
+### 17.4 Cross-validation against the ChangeSet
+
+At `relay_certify` / `relay_submit` time, the engine cross-validates:
+
+| Check | Pass condition |
+|-------|---------------|
+| `allowed_paths` | Every file in the diff matches at least one `allowed_paths` glob, or `ambiguity_policy: proceed_with_default` is set. |
+| `forbidden_paths` | No file in the diff matches any `forbidden_paths` glob. Hard fail; not overridable by ambiguity policy. |
+| `acceptance_criteria` | If `verification_plan.must_pass_tests` is set, the TestRun includes those tests and they all pass. |
+| `intent_hash` | The committed YAML's SHA-256 matches `Intent-Hash` in the trailer. Replay-safe. |
+
+If any check fails, `relay_certify` returns a structured finding `class: intent_violation` rather than producing a certificate. The agent's loop then sees the violation and can adjust the diff or call `relay_intent_update` to refine the criteria (with the user's awareness, since this is no longer "do what the prompt said").
+
+### 17.5 Why this is a signature capability
+
+| Existing artifact | What gets persisted about the change |
+|-------------------|--------------------------------------|
+| Git commit message | What the dev decides to summarize |
+| GitHub PR description | Same, manual, often empty |
+| Claude Code / Cursor session | Lost on session close |
+| Conventional Commits | A type prefix, no semantic content |
+| Devin session replay | Vendor-locked URL on Cognition's servers |
+| **Relay Intent (`.relay/intents/INT-*.yaml`)** | **The user's actual prompt + agent identity + model + acceptance criteria + originating conversation timestamp — committed in the repo as YAML, PR-reviewable, replayable, auditable forever** |
+
+This is the capability that turns Relay from "another linter / admission gate" into "the canonical record of why each AI-generated commit exists." It is the *prompt-as-artifact* tier in a market that has so far thrown the prompt away.

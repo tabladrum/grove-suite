@@ -23,10 +23,12 @@
 package sonarqube
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 )
 
@@ -132,3 +134,52 @@ func lookupKey(r ProfileRule) string {
 	}
 	return r.RepositoryKey + ":" + r.Key
 }
+
+// VerbatimSummary describes the result of a verbatim XML import (the
+// Phase 2A surface). The XML payload is preserved byte-for-byte at
+// DestinationPath; only a validation parse runs in-process. The actual
+// rule evaluation happens at Stage 2 via the SonarLint Core engine, which
+// reads the same XML directly (Phase 2B).
+type VerbatimSummary struct {
+	SourcePath      string `json:"source_path"`
+	DestinationPath string `json:"destination_path"`
+	Name            string `json:"profile_name"`
+	Language        string `json:"language"`
+	RuleCount       int    `json:"rule_count"`
+}
+
+// ImportVerbatim is the Phase 2A SonarQube import path. It validates the XML
+// is a recognized SonarQube profile backup, writes the XML *verbatim* to
+// destPath (typically `.relay/rulesets/<name>.xml` in the repo), and returns
+// a summary the CLI uses to print a "next step" hint.
+//
+// Verbatim preservation is the contract that lets the Phase 2B SonarLint
+// Core engine consume the same XML SonarQube Server itself produces, without
+// Relay imposing a lossy SQ-key → semgrep mapping in between.
+func ImportVerbatim(srcPath, destPath string) (*VerbatimSummary, error) {
+	raw, err := os.ReadFile(srcPath)
+	if err != nil {
+		return nil, fmt.Errorf("read source xml: %w", err)
+	}
+	// Validate parse so we fail before writing junk into .relay/rulesets/.
+	p, err := Parse(stringsReader(raw))
+	if err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(filepathDir(destPath), 0o755); err != nil {
+		return nil, fmt.Errorf("mkdir dest: %w", err)
+	}
+	if err := os.WriteFile(destPath, raw, 0o644); err != nil {
+		return nil, fmt.Errorf("write verbatim xml: %w", err)
+	}
+	return &VerbatimSummary{
+		SourcePath:      srcPath,
+		DestinationPath: destPath,
+		Name:            p.Name,
+		Language:        p.Language,
+		RuleCount:       len(p.Rules.Rules),
+	}, nil
+}
+
+func stringsReader(b []byte) io.Reader { return bytes.NewReader(b) }
+func filepathDir(p string) string      { return filepath.Dir(p) }

@@ -31,5 +31,40 @@ func toolDescriptors() []map[string]any {
 			"description": "Return a long-form explanation of a policy gate or specific rule key. Args: gate (required), rule (optional).",
 			"inputSchema": map[string]any{"type": "object", "additionalProperties": true},
 		},
+		// ── Auto-Intent Capture ─────────────────────────────────────────
+		{
+			"name": "relay_intent_open",
+			"description": "Draft an Intent from the user's prompt BEFORE making code changes. " +
+				"Stores a draft YAML at .relay/.cache/intents/INT-{id}.draft.yaml. " +
+				"Returns the intent_id. The recommended agent system prompt instructs " +
+				"calling this tool first whenever a user requests a code change.\n" +
+				"Args: title (required, ≤80 chars summary of the user's request), " +
+				"description (required, the verbatim user prompt), " +
+				"agent (e.g. claude-code:1.4.2), model (e.g. claude-sonnet-4-6:2026-04-15), " +
+				"conversation_ts (ISO8601), repo (optional).",
+			"inputSchema": map[string]any{"type": "object", "additionalProperties": true},
+		},
+		{
+			"name": "relay_intent_update",
+			"description": "Refine an open intent draft. Args: intent_id (required), patch (map " +
+				"of fields to merge: title, description, allowed_paths, forbidden_paths, " +
+				"acceptance_criteria, domain, capability, ambiguity_policy, risk_level).",
+			"inputSchema": map[string]any{"type": "object", "additionalProperties": true},
+		},
+		{
+			"name": "relay_intent_close",
+			"description": "Promote the intent draft to .relay/intents/{id}.yaml (committed). " +
+				"Called when the agent reports complete. Returns the committed file path, " +
+				"intent_hash, and a commit-trailer block to attach to the eventual " +
+				"relay_certify or relay_submit commit.\n" +
+				"Args: intent_id (required), agent (optional, identifies the closing agent).",
+			"inputSchema": map[string]any{"type": "object", "additionalProperties": true},
+		},
+		{
+			"name": "relay_intent_list",
+			"description": "List intents in this repo. Args: status (\"draft\"|\"committed\"|\"all\"; " +
+				"default \"all\"), repo (optional).",
+			"inputSchema": map[string]any{"type": "object", "additionalProperties": true},
+		},
 	}
 }

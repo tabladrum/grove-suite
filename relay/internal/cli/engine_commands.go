@@ -175,6 +175,30 @@ policies:
 		fmt.Fprintln(os.Stderr, "mkdir keys:", err)
 		return 1
 	}
+	// .relay/intents/ — committed intent YAMLs (Auto-Intent Capture promotion target).
+	if err := os.MkdirAll(filepath.Join(relayDir, "intents"), 0o755); err != nil {
+		fmt.Fprintln(os.Stderr, "mkdir intents:", err)
+		return 1
+	}
+	// .relay/.cache/ — gitignored mutable state owned by the daemon (SQLite, intent drafts, indexer caches).
+	if err := os.MkdirAll(filepath.Join(relayDir, ".cache", "intents"), 0o755); err != nil {
+		fmt.Fprintln(os.Stderr, "mkdir cache:", err)
+		return 1
+	}
+	// Write .relay/.gitignore so .cache/, transient state, and local keys never get committed.
+	gitignorePath := filepath.Join(relayDir, ".gitignore")
+	if _, err := os.Stat(gitignorePath); os.IsNotExist(err) {
+		const gi = `# Written by ` + "`relay init`" + `. Mutable state owned by the laptop daemon.
+.cache/
+keys/
+*.local.yaml
+`
+		if err := os.WriteFile(gitignorePath, []byte(gi), 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, "write .gitignore:", err)
+			return 1
+		}
+		fmt.Println("wrote .relay/.gitignore")
+	}
 	fmt.Printf("relay initialized at %s\n", relayDir)
 	return 0
 }

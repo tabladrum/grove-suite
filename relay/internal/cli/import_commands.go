@@ -28,30 +28,83 @@ func RunImport(args []string) int {
 	}
 }
 
+// cmdImportSonarQube implements `relay import sonarqube-profile <path.xml>`.
+//
+// The Phase 2A surface preserves the SonarQube quality-profile XML verbatim
+// at .relay/rulesets/<name>.xml so the Phase 2B SonarLint Core engine can
+// consume it unchanged (see docs/sonarqube-no-server-investigation.md). The
+// older lossy SQ-key → semgrep-rule-ID mapping is no longer the default; pass
+// --legacy-mapping to fall back to it for migrations from the pre-audit flow.
 func cmdImportSonarQube(args []string) int {
 	fs := flag.NewFlagSet("import sonarqube-profile", flag.ContinueOnError)
-	out := fs.String("out", ".relay/rulesets", "output directory for the imported ruleset")
-	quiet := fs.Bool("quiet", false, "suppress per-rule logging")
+	outDir := fs.String("out", ".relay/rulesets", "output directory for the imported XML")
+	name := fs.String("name", "", "destination filename stem (defaults to slugified profile name)")
+	quiet := fs.Bool("quiet", false, "suppress informational output")
+	legacy := fs.Bool("legacy-mapping", false, "use the pre-audit lossy SQ→semgrep mapping (deprecated)")
+	withSonar := fs.Bool("with-sonar-installed", false, "skip the install hint (declare the engine is available)")
 	if err := fs.Parse(args); err != nil {
 		return 1
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: relay import sonarqube-profile [--out=dir] <path.xml>")
+		fmt.Fprintln(os.Stderr, "usage: relay import sonarqube-profile [--out=dir] [--name=stem] [--legacy-mapping] <path.xml>")
 		return 1
 	}
 	src := fs.Arg(0)
+
+	if *legacy {
+		// Legacy path retained for back-compat; emit a one-line deprecation notice.
+		fmt.Fprintln(os.Stderr, "warning: --legacy-mapping is deprecated; preserves the lossy SQ-key → semgrep mapping. See docs/sonarqube-no-server-investigation.md.")
+		profile, err := sonarqube.ParseFile(src)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+		rs := sonarqube.Import(profile, src)
+		if err := writeRuleset(rs, *outDir); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+		if !*quiet {
+			printImportSummary(os.Stdout, rs)
+		}
+		return 0
+	}
+
+	// Verbatim path (the Phase 2A default).
 	profile, err := sonarqube.ParseFile(src)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	rs := sonarqube.Import(profile, src)
-	if err := writeRuleset(rs, *out); err != nil {
+	stem := *name
+	if stem == "" {
+		stem = sanitize(profile.Name)
+	}
+	if stem == "" {
+		stem = "profile"
+	}
+	destPath := filepath.Join(*outDir, stem+".xml")
+	summary, err := sonarqube.ImportVerbatim(src, destPath)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
 	if !*quiet {
-		printImportSummary(os.Stdout, rs)
+		fmt.Printf("imported sonarqube profile %q (lang=%s, %d rules)\n",
+			summary.Name, summary.Language, summary.RuleCount)
+		fmt.Printf("  written verbatim to %s (travels with the repo)\n", summary.DestinationPath)
+		// Print the install hint unless the caller declared --with-sonar-installed.
+		// The engine integration ships in Phase 2B; until then the file is durable
+		// and the importer is enough for the audit/admission story.
+		if !*withSonar {
+			fmt.Println()
+			fmt.Println("next: run `relay tools install --with-sonar` (Phase 2B) to enable")
+			fmt.Println("      evaluation of this profile against your code at relay_check time.")
+		}
+		fmt.Println()
+		fmt.Println("Add this to .relay/relay.yaml so it's picked up on every invocation:")
+		fmt.Println("  sonar:")
+		fmt.Printf("    profile: rulesets/%s.xml\n", stem)
 	}
 	return 0
 }

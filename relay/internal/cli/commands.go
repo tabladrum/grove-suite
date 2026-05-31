@@ -37,6 +37,11 @@ func Run(args []string) int {
 	case "project":
 		return cmdProject(args[1:])
 	case "intent":
+		// Auto-Intent Capture subcommands (open/update/close/list-captured/get-captured)
+		// short-circuit; otherwise fall through to the Phase 1 intent commands.
+		if handled, exit := RunIntentCapture(args[1:]); handled {
+			return exit
+		}
 		return cmdIntent(args[1:])
 	case "submit", "check", "init", "cert":
 		// Engine-mode (MVP-L1) commands.
@@ -51,6 +56,10 @@ func Run(args []string) int {
 		return RunHook(args[1:])
 	case "outbox":
 		return RunOutbox(args[1:])
+	case "keys":
+		return RunKeys(args[1:])
+	case "daemon":
+		return RunDaemon(args[1:])
 	case "version", "--version", "-v":
 		fmt.Println("relay", version.Version)
 		return 0

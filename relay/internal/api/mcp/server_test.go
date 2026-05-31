@@ -140,16 +140,22 @@ func TestInitializeReturnsServerInfo(t *testing.T) {
 	}
 }
 
-// TestToolsListAdvertisesFive ensures all 5 MCP tools are advertised.
-func TestToolsListAdvertisesFive(t *testing.T) {
+// TestToolsListAdvertisesAll ensures all MCP tools — the 5 core engine tools
+// and the 4 Auto-Intent Capture tools — are advertised.
+func TestToolsListAdvertisesAll(t *testing.T) {
 	s := NewServer("", buildFakeEngine(&fakeGate{name: "x", verdict: core.VerdictAllow}))
 	frames := serveOnce(t, s, framedRequest(t, 1, "tools/list", map[string]any{}))
 	result, _ := frames[0]["result"].(map[string]any)
 	tools, _ := result["tools"].([]any)
-	if len(tools) != 5 {
-		t.Fatalf("want 5 tools, got %d", len(tools))
+	want := map[string]bool{
+		"relay_check": true, "relay_certify": true, "relay_submit": true,
+		"relay_policy": true, "relay_explain": true,
+		"relay_intent_open": true, "relay_intent_update": true,
+		"relay_intent_close": true, "relay_intent_list": true,
 	}
-	want := map[string]bool{"relay_check": true, "relay_certify": true, "relay_submit": true, "relay_policy": true, "relay_explain": true}
+	if len(tools) != len(want) {
+		t.Fatalf("want %d tools, got %d", len(want), len(tools))
+	}
 	for _, raw := range tools {
 		m, _ := raw.(map[string]any)
 		delete(want, m["name"].(string))

@@ -8,18 +8,21 @@ The product thesis: AI-generated code volume has already overrun human PR review
 
 ## What Relay Does
 
-- **Pre-flight certification (MCP-first)**: the agent calls `relay_check` after writing code; structured findings (file, line, rule, severity, fix-hint) flow back so the agent self-corrects in-loop before any human sees the diff
-- **Same engine on three surfaces**: MCP server (for agents), CLI (for humans), git pre-push hook (backstop) — all run identical gates and emit identical certificates
-- **Three deployment modes**: laptop (single binary + SQLite, zero config), team (Postgres + Redis, shared intent-store), company (multi-tenant, multi-region — Phase 4)
-- **Configuration in the repo (`.relay/`)**: per-repo Relay config is source-controlled alongside the code (`relay.yaml`, policies, rulesets, intent templates). Same `.relay/` produces identical results in every deployment mode. Effective config hash recorded in every certificate, so audit replay is byte-reproducible
-- **Batteries-included tooling**: ships with semgrep, gitleaks, govulncheck, golangci-lint, eslint, ruff, checkstyle, pmd. Zero CI configuration to get value
-- **Intake**: accepts intents from Jira, GitHub Issues, CLI, MCP, or direct API; validates scope via two-stage granularity scoring (heuristic + Grove ICR symbol count)
-- **Impact analysis**: uses Grove's `/icr`, `/impact`, `/deps` to compute the affected symbol set and blast radius
-- **Policy gating**: six gates — path policy, secret scanner, special file class, dependency change, size limit, test coverage of changed symbols
-- **Certification**: build + full test suite (selective opt-in for monorepos) + coverage-of-changed-symbols + standalone static-analysis suite. No external SonarQube/CI server required
-- **SonarQube profile import**: bring your existing quality profile (`relay import sonarqube-profile`)
-- **Admission**: linear commit to a designated branch with full trailer metadata (intent ID, certificate ID, agent identity, model version, ICR hash)
-- **Audit in every mode**: signed certificates emitted in laptop mode too; intent-store git repo accumulates an append-only AI-code provenance trail, exportable for EU AI Act / SOC 2
+- **Pre-flight certification (MCP-first)**: the agent calls `relay_check` after writing code; structured findings (file, line, rule, severity, fix-hint, `class`) flow back so the agent self-corrects in-loop before any human sees the diff. Sub-10-second target on typical change. `relay_certify` runs the full admission pipeline at commit time.
+- **Auto-Intent Capture (the prompt IS the intent)**: the agent calls `relay_intent_open` with the user's natural-language request before coding; Relay drafts an intent YAML and promotes it to `.relay/intents/INT-*.yaml` (committed) on `relay_intent_close`. The prompt becomes a first-class, PR-reviewable artifact stored alongside the code — auditable forever, not lost with the session.
+- **Same engine on three surfaces**: MCP server (for agents), CLI (for humans), git pre-push hook (backstop) — all run identical gates and emit identical certificates. On laptop, all three transports proxy to a long-running `relay daemon` (single writer guarantee).
+- **Three deployment modes — laptop = full Relay server, single user**: laptop (single binary + SQLite + `relay daemon` + local Ed25519 key + local intent-store git, zero config), team (Postgres + Redis + KMS + shared intent-store), company (multi-tenant, multi-region — Phase 4). Same binary, configuration-driven. Cross-platform in Phase 2A: macOS Intel/ARM and Linux x86_64/ARM64; Windows = WSL.
+- **MCP client auto-registration**: `relay mcp install-for {claude-code,cursor,continue,windsurf}` — one command per IDE, no hand-editing.
+- **Configuration in the repo (`.relay/`)**: per-repo Relay config is source-controlled alongside the code (`relay.yaml`, `policies/`, `rulesets/`, `intents/`, `templates/`). Mutable state lives in `.relay/.cache/` (gitignored, written by `relay init`). Same `.relay/` produces identical results in every deployment mode. Effective config hash recorded in every certificate, so audit replay is byte-reproducible.
+- **Batteries-included tooling — lean default**: ships with semgrep, gitleaks, govulncheck, golangci-lint, eslint, ruff, checkstyle, pmd (~50MB, no JRE). Tool versions pinned per Relay release; drift recorded in certificate trailer.
+- **SonarQube without a server (hybrid)**: `relay import sonarqube-profile` ships in Phase 2A and lands quality profile XML into `.relay/rulesets/` (committed, travels with the repo). The SonarLint Core engine + bundled Eclipse Temurin JRE 21 that actually run those rules locally ship in Phase 2B via `relay tools install --with-sonar` — same approach as the VS Code "SonarQube for IDE" extension. See [`docs/sonarqube-no-server-investigation.md`](docs/sonarqube-no-server-investigation.md).
+- **Intake**: accepts intents from Jira, GitHub Issues, CLI, MCP, or direct API; validates scope via two-stage granularity scoring (heuristic + Grove ICR symbol count).
+- **Impact analysis**: uses Grove's `/icr`, `/impact`, `/deps` to compute the affected symbol set and blast radius.
+- **Policy gating**: six gates — path policy, secret scanner, special file class, dependency change, size limit, test coverage of changed symbols (warn by default on laptop, enforce on team).
+- **Certification**: build + full test suite (selective opt-in for monorepos) + coverage-of-changed-symbols + standalone static-analysis suite. No external SonarQube/CI server required.
+- **Admission**: linear commit to a configurable target branch (default = current branch on laptop, `relay-main` on team) with full trailer metadata (Intent-ID, Intent-Hash, certificate ID, agent identity, model version, ICR hash, Sonar engine, toolchain drift).
+- **Audit in every mode**: signed certificates emitted in laptop mode too — local Ed25519 key at `~/.relay/keys/admission.ed25519`. Intent-store git repo accumulates an append-only AI-code provenance trail, exportable for EU AI Act / SOC 2. A solo dev's cert history is the seed of the team's audit corpus on upgrade — never reset to zero.
+- **Privacy by default**: laptop mode does not phone home. OpenTelemetry traces default off. Documented in `getting-started.md`.
 
 Relay is designed to work *alongside* GitHub today. As confidence in agent output and graph isolation grows, it removes the need for branches for approved classes of agent-delivered work.
 
@@ -127,20 +130,24 @@ Each source repo carries its own Relay configuration in `.relay/`, committed alo
 ```
 my-repo/
 ├── .relay/
-│   ├── relay.yaml              # version pin, gates enabled, runners, cert stages
+│   ├── relay.yaml              # version pin, gates enabled, runners, cert stages, admission_target
+│   ├── .gitignore              # written by `relay init`; covers .relay/.cache/
 │   ├── policies/               # per-gate detail (path, secrets, fileclass, deps, size, coverage)
-│   ├── rulesets/               # custom rule bundles + imported SonarQube profiles
-│   ├── intents/                # source-controlled intents (optional)
-│   └── templates/              # intent templates for the team
+│   ├── rulesets/               # custom rule bundles + imported SonarQube profile XML (verbatim)
+│   ├── intents/                # COMMITTED intents — Auto-Intent Capture lands them here
+│   ├── templates/              # intent templates for the team
+│   └── .cache/                 # GITIGNORED — daemon state, intent drafts, indexer caches
 ├── src/
 └── tests/
 ```
 
-Bootstrap:
+Bootstrap (laptop):
 
 ```bash
 cd my-repo
-relay init --stack=go-microservice    # scaffolds .relay/ with stack defaults
+relay init --stack=go-microservice    # scaffolds .relay/, writes .relay/.gitignore,
+                                      # generates local Ed25519 key, starts relay daemon,
+                                      # registers MCP with installed IDEs
 git add .relay/ && git commit -m "Add Relay configuration"
 ```
 
@@ -149,6 +156,8 @@ Configuration layering (resolved at every invocation): built-in defaults ⨁ org
 `relay_check`, `relay check`, and the git pre-push hook walk upward from the working directory to find the nearest `.relay/relay.yaml` — same discovery pattern as git, npm, eslint. Monorepos can have nested `.relay/` directories; the deepest match wins.
 
 The effective merged config is hashed and recorded in every certificate as `Effective-Config-Hash` so audit replay is byte-reproducible.
+
+The `.relay/intents/` directory is where Auto-Intent Capture commits the prompt-derived intent YAML for each AI-assisted change. The commit's `Intent-ID:` trailer points back to the file; reviewers see the prompt alongside the diff on the GitHub PR.
 
 ---
 

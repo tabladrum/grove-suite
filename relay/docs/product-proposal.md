@@ -220,73 +220,108 @@ That comparison is winnable.
 
 We do not start by replacing GitHub. We do not start with branchless main. We start narrow — but the narrow product has five properties that determine whether the platform gets adopted.
 
-### 6.1 The five MVP properties
+### 6.1 The seven MVP properties
 
-**Property 1 — One binary, three deployment modes.**
-
-```
-Laptop mode (solo dev)   →  Team mode (small team)   →  Company mode (enterprise)
-─────────────────────       ─────────────────────       ──────────────────────────
-Single binary               Same binary                  Same binary
-Embedded SQLite             Postgres + Redis             Multi-tenant Postgres,
-No server                   One VM + shared dashboard    Redis Cluster, HA, multi-region
-Zero config to start        Team-shared intent-store     SSO, RBAC, audit aggregator
-$0                          Cheap                        Enterprise tier
-```
-
-Transition between modes is configuration only. No rewrite. This is the Vercel / Supabase / Sentry adoption ramp: trivial to start, scales without leaving.
-
-**Property 2 — Agent-in-loop integration via MCP.**
-
-Relay exposes itself as an MCP server. Claude Code, Cursor, Continue, Windsurf, and every other MCP-aware client invokes Relay as native tools:
+**Property 1 — One binary, three deployment modes. Laptop = full Relay server, single user.**
 
 ```
-relay_check    → run cert pipeline on uncommitted changes; return structured findings
-relay_certify  → full certification + signed certificate (commit-ready)
-relay_submit   → submit ChangeSet to admission queue (team/company mode)
-relay_policy   → fetch active policy so agent knows the rules upfront
-relay_explain  → human-readable explanation of a specific finding
+Laptop mode (solo dev)        Team mode (small team)         Company mode (enterprise)
+FULL RELAY SERVER, 1 USER     SAME SERVER, SHARED            SAME SERVER, MULTI-TENANT
+─────────────────────────     ─────────────────────────      ──────────────────────────
+Single binary                 Same binary                    Same binary
+Long-running `relay daemon`   Multi-process control plane    Multi-tenant control plane
+Embedded SQLite               Postgres                       Multi-tenant Postgres
+No Redis (single writer)      Redis (ICR locks)              Redis Cluster
+Local Ed25519 signer          KMS-backed signer              KMS, per-tenant keys
+Local intent-store git        Shared intent-store git        Sharded intent-stores
+Default admission target:     Default admission target:      Default admission target:
+  current branch                relay-main                     relay-main
+Zero config to start          One VM + shared dashboard      HA, multi-region, audit aggregator
+$0                            Cheap                          Enterprise tier
 ```
+
+**The laptop binary IS the full Relay server, running for one user.** The pipeline (ingest → ICR → policy → certification → admission → signing → intent-store → audit) is identical to team mode. The substitutions are: SQLite for Postgres, no Redis (the long-running `relay daemon` is the single writer; ICR locks are irrelevant for one agent), local Ed25519 key for KMS, local intent-store git for shared intent-store, current branch as the default admission target. A solo developer produces signed, audit-trail-attached certs from day one — those certs are the seed of the team's audit corpus on team-mode upgrade, never reset to zero.
+
+Transition between modes is configuration only, plus a one-time `relay migrate sqlite-to-postgres` for the operational state. `.relay/` is unchanged across the upgrade. No rewrite. This is the Vercel / Supabase / Sentry adoption ramp: trivial to start, scales without leaving.
+
+Cross-platform in Phase 2A: macOS (Intel + ARM) and Linux (x86_64 + ARM64). Windows = WSL. macOS binary is Developer-ID-signed and notarized.
+
+**Property 2 — Agent-in-loop integration via MCP, with a cost contract.**
+
+Relay exposes itself as an MCP server. Claude Code, Cursor, Continue, Windsurf, and every other MCP-aware client invokes Relay as native tools (9 in Phase 2A):
+
+```
+# Core
+relay_check          → fast in-loop pre-flight (changed-files SAST + Grove-affected
+                       unit tests; sub-10s target); structured findings, incl.
+                       `infrastructure_error` class for non-actionable failures
+relay_certify        → full certification + signed certificate (commit-ready)
+relay_submit         → submit ChangeSet to admission queue (team/company mode)
+relay_policy         → fetch active policy + Effective-Config-Hash
+relay_explain        → human-readable explanation of a specific finding
+
+# Auto-Intent Capture (Property 7)
+relay_intent_open    → draft an Intent from the user's prompt (call BEFORE coding)
+relay_intent_update  → refine title / description / acceptance criteria mid-session
+relay_intent_close   → promote the draft to .relay/intents/ for commit
+relay_intent_list    → list open and committed intents for this repo
+```
+
+The cost contract is what makes the in-loop pattern viable: `relay_check` is fast (sub-10-second), `relay_certify` runs the full pipeline. The agent iterates with `relay_check` and only invokes `relay_certify` at commit time.
 
 The agent loop becomes:
 
 ```
-1. Claude Code writes code
-2. Claude Code calls relay_check
-3. Findings come back as structured tool result (file, line, rule, severity, fix-hint)
-4. Claude Code fixes the findings
-5. Loop until relay_check returns clean
-6. Push / submit
+1. User prompts Claude Code: "Add rate limiting to /api/auth/*"
+2. Claude Code calls relay_intent_open (captures the prompt as a draft intent)
+3. Claude Code writes code
+4. Claude Code calls relay_check
+5. Findings come back as structured tool result (file, line, rule, severity, fix-hint)
+6. Claude Code fixes the findings
+7. Loop 3–6 until relay_check returns clean
+8. Claude Code calls relay_intent_close (promotes the intent to .relay/intents/)
+9. relay_certify writes the commit with `Intent-ID:` trailer
+10. Push to GitHub — PR shows the intent YAML in the diff
 ```
 
-This is the actual differentiator. Today's agents produce code; *something else* tells them it's broken (CI, the reviewer). Relay closes the loop inside the agent's own iteration. The agent never produces a PR that fails policy because it can't get past `relay_check`. Relay becomes the agent's *companion*, not the agent's *gate*.
+MCP client auto-registration is handled by `relay mcp install-for {claude-code,cursor,continue,windsurf}` — no hand-editing IDE config per machine.
 
-**Property 3 — Batteries-included tooling.**
+This is the actual differentiator. Today's agents produce code; *something else* tells them it's broken (CI, the reviewer). Relay closes the loop inside the agent's own iteration. The agent never produces a PR that fails policy because it can't get past `relay_check`. Relay becomes the agent's *companion*, not the agent's *gate*. And the user's prompt becomes a durable artifact, not a session ghost.
 
-`brew install relay` (or `curl | sh`, or single Docker image) ships with:
+**Property 3 — Batteries-included tooling. Lean default, opt-in SonarLint.**
 
-- semgrep + ruleset bundles (security-audit, owasp-top-ten, optionally `p/sonarqube` via profile import)
+`brew install relay` (or `curl | sh`) ships with the lean default (~50MB compressed; no JRE):
+
+- semgrep + ruleset bundles (security-audit, owasp-top-ten, language-specific packs)
 - gitleaks
 - govulncheck, npm audit, pip-audit
 - golangci-lint, eslint, ruff, checkstyle, pmd
 - Default policy templates (`relay init --stack=go-microservice` / `node-api` / `python-service` / `java-spring`)
-- SonarQube quality profile importer (`relay import sonarqube-profile`)
+- SonarQube quality profile **importer surface** (`relay import sonarqube-profile`) — writes the profile XML into `.relay/rulesets/` (committed, travels with the repo)
+
+**SonarQube parity (the full thing) is opt-in.** `relay tools install --with-sonar` fetches Eclipse Temurin JRE 21 + SonarLint Core + analyzer JARs for the project's languages + a thin `relay-sonar.jar` wrapper around `StandaloneSonarLintEngine`. Cert trailer records `Sonar-Engine: sonarlint-core@X.Y` or `none`. The engine itself ships in Phase 2B; the importer surface that lands quality-profile XML into `.relay/rulesets/` ships in Phase 2A. Modeled on how the VS Code "SonarQube for IDE" extension already runs Sonar analyzers locally — no server needed. Limitations (no taint analysis / COBOL / Apex / PL/SQL / T-SQL — those require commercial SonarQube Server) are documented up front. Full analysis in [`docs/sonarqube-no-server-investigation.md`](sonarqube-no-server-investigation.md).
+
+Tool-set manifest pinned per Relay release; drift from the manifest is recorded in the certificate trailer.
 
 No CI yak-shaving. No "install these 12 tools and write a workflow." It works the moment you run it. This is the single biggest adoption lever because it removes the most common reason engineers give up: tooling configuration.
 
-**Property 4 — Three surfaces, one engine.**
+**Property 4 — Three surfaces, one engine, single writer on laptop.**
 
 The same Relay engine is callable via:
 
 - **MCP (primary — for agents)** — structured tool results agents natively consume
-- **CLI (`relay check`, `relay submit`)** — for humans, scripts, and CI integration
+- **CLI (`relay check`, `relay certify`, `relay submit`)** — for humans, scripts, and CI integration
 - **Git hook (pre-push)** — backstop for unmanaged agents and humans, runs same gates
 
 All three return the same findings, apply the same policies, and emit the same certificate format. The agent, the developer, and the git hook see the same truth.
 
+On laptop, all three transports proxy over a Unix domain socket to the long-running `relay daemon` that owns SQLite, the local Grove client, the intent-store git repo, and the signer key. This guarantees a single writer to shared state even when multiple IDEs and terminals invoke Relay concurrently against the same repo.
+
 **Property 5 — Audit trail in every mode.**
 
-Even laptop mode emits signed commit trailers (Intent-ID, Agent, Model, Policy-Version, ICR-Hash, Test-Plan-Hash). The audit trail is a property of the engine, not a feature of a paid tier. Enterprises get aggregation, federation, and compliance export on top — but a solo developer running laptop mode still produces auditable, signed commits.
+Even laptop mode emits signed commit trailers (Intent-ID, Intent-Hash, Agent, Model, Policy-Version, ICR-Hash, Test-Plan-Hash, Effective-Config-Hash, Sonar-Engine, Toolchain-Image-Drift). The audit trail is a property of the engine, not a feature of a paid tier. Enterprises get aggregation, federation, and compliance export on top — but a solo developer running laptop mode still produces auditable, signed commits.
+
+Privacy by default: laptop mode does not phone home. OpenTelemetry traces default off. Agent identity, prompt hash, intent content, cert data never leave the machine unless the developer explicitly enables sync to a team server.
 
 This is what makes the value transferable across modes: a team's audit trail accumulates from day one, regardless of whether they ever upgrade to team or company mode.
 
@@ -297,11 +332,14 @@ The repo's Relay configuration is committed to the repo, alongside the code it g
 ```
 my-repo/
 ├── .relay/
-│   ├── relay.yaml              # version pin, gate config, runners, cert stages
-│   ├── policies/               # per-gate detail
-│   ├── rulesets/               # custom rules + imported SonarQube profiles
-│   ├── intents/                # source-controlled intents (optional)
-│   └── templates/              # intent templates
+│   ├── relay.yaml              # version pin, gate config, runners, cert stages, admission target
+│   ├── .gitignore              # written by `relay init`; covers .relay/.cache/
+│   ├── policies/               # per-gate detail (defaults vary by mode — coverage: warn on
+│   │                           # laptop, enforce on team)
+│   ├── rulesets/               # custom rules + imported SonarQube profile XML (verbatim)
+│   ├── intents/                # COMMITTED intents — Auto-Intent Capture lands them here
+│   ├── templates/              # intent templates
+│   └── .cache/                 # GITIGNORED — daemon state, intent drafts, indexer caches
 ├── src/
 └── tests/
 ```
@@ -323,21 +361,74 @@ The org baseline can mark fields locked (e.g., "secret scanning cannot be disabl
 
 The merged effective config is hashed and recorded in every certificate as `Effective-Config-Hash`, so audit replay is byte-reproducible.
 
+**Property 7 — Auto-Intent Capture: the prompt IS the intent.**
+
+The most consequential capability falling out of the laptop-MVP audit. Today, every coding agent (Claude Code, Cursor, Devin, Copilot Workspace, Blitzy) treats the user's natural-language prompt as ephemeral — it dies with the agent session, never reaches the PR, never reaches the audit trail. Reviewers and auditors see only the resulting diff and have to reverse-engineer the intent.
+
+Relay captures it.
+
+```
+1. User prompts Claude Code:
+   "Add rate limiting to /api/auth/* endpoints, 100 req/min per IP"
+
+2. Claude Code's system prompt (shipped by Relay) instructs:
+   "Before making code changes, call relay_intent_open with the user's
+    request as title and description."
+
+3. Claude Code calls relay_intent_open. Relay drafts:
+   .relay/.cache/intents/INT-2026-05-30-rate-limiting.draft.yaml
+   - id, title, description (verbatim prompt)
+   - originated_from: {agent: claude-code:1.4.2, model: claude-sonnet-4-6:..., conversation_ts: ...}
+   - allowed_paths (inferred from prompt + .relay/templates)
+   - acceptance_criteria (drafted from prompt; agent can refine)
+
+4. Claude Code writes code, runs the relay_check loop until clean.
+
+5. Claude Code calls relay_intent_close. Relay promotes:
+   .relay/.cache/intents/INT-*.draft.yaml
+     → .relay/intents/INT-2026-05-30-rate-limiting.yaml   (committed)
+
+6. relay_certify writes the commit with trailer:
+   Intent-ID: INT-2026-05-30-rate-limiting
+   Intent-Hash: sha256:abcd...
+
+7. On `git push`, the GitHub PR shows the intent YAML in the diff.
+   Reviewers see what the agent was ASKED to do, alongside what it DID.
+   Server-side admission (team mode) cross-validates the diff against
+   the intent's `allowed_paths` and `acceptance_criteria` before signing.
+```
+
+The user types nothing extra. They prompt the agent like they already do. The agent does the bookkeeping. The intent lands in the repo as YAML next to the code, becomes PR-reviewable, and stays auditable forever.
+
+**Why this is genuinely new:**
+
+| Tool | What gets persisted about the change |
+|------|--------------------------------------|
+| Git commit message | What the dev decides to summarize |
+| GitHub PR description | Same, manual, often empty |
+| Claude Code / Cursor session | Lost on session close |
+| Conventional Commits | A type prefix, no semantic content |
+| Devin session replay | Vendor-locked URL on Cognition's servers |
+| **Relay Intent** | **The user's actual prompt + agent's model/version + acceptance criteria, committed alongside the code as YAML — portable, auditable, PR-reviewable forever** |
+
+This is the capability that turns Relay from "another linter" into "the canonical record of why each AI-generated commit exists." It is the prompt-as-artifact tier in a market that has so far thrown the prompt away.
+
 ### 6.2 What the wedge does
 
 **Product name (working):** Relay Certified Merge
 
 A single binary that:
 
-1. **Runs in any mode (§6.1 Property 1).** Laptop / team / company — same binary, configuration-driven.
-2. **Integrates with any agent via MCP, CLI, or git hook (§6.1 Properties 2, 4).** Claude Code on a developer's laptop, a Cursor Background Agent in a cloud VM, Devin, GitHub Copilot Workspace, Blitzy's batch output, internal scripts — anything that produces a unified diff plus metadata.
-3. **Ships with the static-analysis stack pre-bundled (§6.1 Property 3).** semgrep, gitleaks, govulncheck/npm audit, golangci-lint/eslint/ruff. Zero CI setup.
-4. **Runs Grove-driven certification.** Build, unit tests, integration tests (full suite by default; selective opt-in for monorepos), coverage-of-changed-symbols gate against Grove's `tests` edges, SAST, dependency policy, restricted-path enforcement.
-5. **Resolves conflicts via Fuse** if multiple ChangeSets land against the same base.
-6. **Admits to a designated branch** (initially: a `relay-main` branch parallel to the team's `main`) with a **cryptographic certificate** as a commit trailer (§6.1 Property 5). The certificate records: agent identity, model version, prompt template hash, ICR hash, base commit, test selection, certification stages run, policy version.
-7. **Records an audit trail** in a dedicated `intent-store` git repo for governance export.
+1. **Runs in any mode (§6.1 Property 1).** Laptop = full Relay server, single user. Team = same binary on a shared VM. Company = same binary, multi-tenant.
+2. **Integrates with any agent via MCP, CLI, or git hook (§6.1 Properties 2, 4).** Claude Code on a developer's laptop, a Cursor Background Agent in a cloud VM, Devin, GitHub Copilot Workspace, Blitzy's batch output, internal scripts — anything that produces a unified diff plus metadata. On laptop, all surfaces proxy to a long-running `relay daemon` (single writer). MCP client auto-registration is one command per IDE.
+3. **Ships with the static-analysis stack pre-bundled (§6.1 Property 3).** Lean default: semgrep, gitleaks, govulncheck/npm audit, golangci-lint/eslint/ruff. Zero CI setup. SonarQube parity is opt-in via `relay tools install --with-sonar` (Phase 2B); the importer surface for quality profiles ships in 2A.
+4. **Runs Grove-driven certification with a cost contract.** `relay_check` (fast, in-loop): changed-files SAST + Grove-affected unit tests; sub-10-second target. `relay_certify` (commit-ready): full build, full unit/integration tests (selective opt-in for monorepos), coverage-of-changed-symbols gate (warn by default on laptop, enforce on team), SAST, dependency policy, restricted-path enforcement.
+5. **Captures the prompt as the intent (§6.1 Property 7).** Auto-Intent Capture turns the user's natural-language request into a `.relay/intents/INT-*.yaml` committed alongside the code. The commit trailer carries `Intent-ID:` linking back to the file. Reviewers and auditors see the prompt next to the diff, forever.
+6. **Resolves conflicts via Fuse** if multiple ChangeSets land against the same base.
+7. **Admits to a configurable target branch** — current branch on laptop, `relay-main` on team — with a **cryptographic certificate** as a commit trailer (§6.1 Property 5). The certificate records: agent identity, model version, prompt template hash, ICR hash, base commit, test selection, certification stages run, policy version, intent hash, Sonar engine, toolchain drift.
+8. **Records an audit trail** in a local `intent-store` git repo on laptop (`~/.relay/intent-store/`) or a shared one in team mode. Same format. Solo dev's history becomes the team's audit corpus on upgrade.
 
-It runs alongside GitHub. Teams keep their existing PR workflow for non-agent code. Relay handles the agent-generated PRs.
+It runs alongside GitHub. Teams keep their existing PR workflow for non-agent code. Relay handles the agent-generated PRs. A solo developer using Relay on a laptop produces signed, intent-tagged, replayable commits from day one — no server, no service to run, no remote dependencies (Grove auto-starts locally).
 
 ### 6.2 Why this wedge specifically
 
@@ -349,13 +440,15 @@ It runs alongside GitHub. Teams keep their existing PR workflow for non-agent co
 
 ### 6.3 What we explicitly DO NOT build in the wedge
 
-Both reviews converged here, and they are correct:
+Both reviews converged here, and the laptop-MVP audit ([`docs/laptop-mvp-audit.md`](laptop-mvp-audit.md)) confirmed them:
 
 - **No parallel decomposition.** Phase 3.
 - **No intent groups.** Phase 3.
 - **No canary deployment.** Phase 3 (or never — we may decide it's better left to Argo Rollouts, Flagger, etc.).
 - **No multi-provider agent routing.** Claude only. Decide later.
 - **No branchless main as a marketing claim.** The reviews are right — "ICR isolation replaces branches" is overpromising. We re-position it as "Relay makes branches unnecessary for approved classes of agent-delivered work."
+- **No SonarLint Core engine integration in 2A.** The importer that lands SonarQube quality profile XML into `.relay/rulesets/` ships in Phase 2A. The Eclipse Temurin JRE + SonarLint Core + analyzer-JAR runtime that actually evaluates those profiles ships in Phase 2B via `relay tools install --with-sonar`. Rationale: [`docs/sonarqube-no-server-investigation.md`](sonarqube-no-server-investigation.md).
+- **No Windows native support in 2A.** macOS (Intel + ARM) and Linux (x86_64 + ARM64) only; Windows via WSL.
 
 ---
 
@@ -365,17 +458,19 @@ The most important test of any product proposal is: can you describe what a real
 
 ### 7.1 Solo developer using Claude Code
 
-**Day 1.** Developer installs Relay locally. Registers their existing GitHub repo: `relay repo add backend --url git@github.com:me/backend`. Creates a project: `relay project add api --repo backend --path /`.
+**Day 1.** Developer runs `brew install relay-suite` (Relay binary + Grove auto-bundled). In their repo: `relay init --stack=go-microservice`. This scaffolds `.relay/` (committed) and `.relay/.cache/` (gitignored), generates the local Ed25519 admission key, starts `relay daemon` as a user-level service, registers Relay with their installed IDE via `relay mcp install-for claude-code`, and kicks off background Grove indexing. `git add .relay/ && git commit -m "Add Relay configuration"`.
 
 **Day 2 — first agent change.**
 - Developer asks Claude Code: "add rate limiting to the /api/auth/* endpoints, 100 req/min per IP."
-- Claude Code produces a diff in the working tree.
-- Developer runs `relay submit` instead of `git commit && git push`.
-- Relay extracts the ChangeSet, calls Grove `/impact` and `/tests`, runs the selected test slice (say, 23 tests instead of the full 800), runs SAST, validates path restrictions (only `internal/auth/**` was touched — matches the intent's `allowed_paths`).
-- All green. Relay writes the commit with trailers (`Intent-ID`, `Agent`, `Model`, `Certificate`, `ICR-Hash`, `Test-Plan`), pushes to a `relay-main` branch.
-- Developer opens GitHub. There's a clean, certified commit on `relay-main`. No PR drama. They merge `relay-main` into `main` with a fast-forward.
+- Claude Code (with Relay's shipped system-prompt fragment) calls `relay_intent_open` first. Relay drafts `.relay/.cache/intents/INT-2026-05-30-rate-limiting.draft.yaml` capturing the verbatim prompt, agent identity, and inferred `allowed_paths: ["internal/auth/**", "tests/auth/**"]`.
+- Claude Code writes the code.
+- Claude Code calls `relay_check` after each edit pass. Relay returns structured findings: a missing test for the rate-limit denial path, a gitleaks finding on a hardcoded fallback secret. Claude Code fixes both and re-runs. `relay_check` returns clean in ~6 seconds.
+- Claude Code calls `relay_intent_close`. Relay promotes the draft to `.relay/intents/INT-2026-05-30-rate-limiting.yaml`.
+- Developer reviews the proposed commit. They run `relay certify`. Relay extracts the ChangeSet, calls Grove `/impact` and `/tests`, runs the full selected test slice (23 tests instead of the full 800), full SAST, validates path restrictions, computes ICR confidence, signs the certificate with the local Ed25519 key.
+- Relay writes a single commit on the **current branch** (not `relay-main` — that's team-mode default) with the full trailer set including `Intent-ID: INT-2026-05-30-rate-limiting`.
+- Developer pushes to GitHub. The PR shows the intent YAML and the code change side-by-side. Anyone reviewing sees what the agent was asked to do.
 
-**Value:** Tests ran in 8 seconds instead of 4 minutes. Audit trail exists. If they ever have to prove "an AI wrote this" for compliance, they can.
+**Value:** Tests ran in 8 seconds instead of 4 minutes. The prompt is preserved in the repo as a first-class artifact, not lost in a chat history. Audit trail exists locally from day one — signed commits ready to hand to a future team or auditor. If they ever have to prove "an AI wrote this and was asked to do exactly that" for compliance, they can. No server. No subscription. No network call.
 
 ### 7.2 10-person team with shared codebase
 

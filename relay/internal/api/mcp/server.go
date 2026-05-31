@@ -22,9 +22,12 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
 	"github.com/tabladrum/grove-suite/relay/internal/admission"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
 	"github.com/tabladrum/grove-suite/relay/internal/engine"
+	"github.com/tabladrum/grove-suite/relay/internal/intent"
 	"github.com/tabladrum/grove-suite/relay/internal/version"
 )
 
@@ -127,9 +130,136 @@ func (s *Server) callTool(name string, args map[string]any) (any, error) {
 		return s.runPolicy(args)
 	case "relay_explain":
 		return s.runExplain(args)
+	case "relay_intent_open":
+		return s.runIntentOpen(args)
+	case "relay_intent_update":
+		return s.runIntentUpdate(args)
+	case "relay_intent_close":
+		return s.runIntentClose(args)
+	case "relay_intent_list":
+		return s.runIntentList(args)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", name)
 	}
+}
+
+// resolveRepo returns the absolute repo root, defaulting to the server's
+// configured default or the current working directory.
+func (s *Server) resolveRepo(args map[string]any) (string, error) {
+	root := stringArg(args, "repo", s.defaultRoot)
+	if root == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
+		root = wd
+	}
+	return filepath.Abs(root)
+}
+
+func (s *Server) runIntentOpen(args map[string]any) (any, error) {
+	title := stringArg(args, "title", "")
+	if title == "" {
+		return nil, errors.New("`title` is required")
+	}
+	description := stringArg(args, "description", "")
+	if description == "" {
+		return nil, errors.New("`description` is required")
+	}
+	root, err := s.resolveRepo(args)
+	if err != nil {
+		return nil, err
+	}
+	from := intent.OriginatedFrom{
+		Agent: stringArg(args, "agent", ""),
+		Model: stringArg(args, "model", ""),
+	}
+	if ts := stringArg(args, "conversation_ts", ""); ts != "" {
+		if t, err := time.Parse(time.RFC3339, ts); err == nil {
+			from.ConversationTS = t
+		}
+	}
+	svc := intent.New(root)
+	i, path, err := svc.Open(title, description, from)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"intent_id":  i.ID,
+		"draft_path": path,
+		"schema":     i.Schema,
+		"status":     string(i.Status),
+		"originated_from": map[string]any{
+			"agent":           i.OriginatedFrom.Agent,
+			"model":           i.OriginatedFrom.Model,
+			"prompt_hash":     i.OriginatedFrom.PromptHash,
+			"conversation_ts": i.OriginatedFrom.ConversationTS,
+		},
+	}, nil
+}
+
+func (s *Server) runIntentUpdate(args map[string]any) (any, error) {
+	id := stringArg(args, "intent_id", "")
+	if id == "" {
+		return nil, errors.New("`intent_id` is required")
+	}
+	patch, _ := args["patch"].(map[string]any)
+	if patch == nil {
+		return nil, errors.New("`patch` (object) is required")
+	}
+	root, err := s.resolveRepo(args)
+	if err != nil {
+		return nil, err
+	}
+	svc := intent.New(root)
+	i, err := svc.Update(id, patch)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"intent_id":  i.ID,
+		"draft_path": filepath.Join(root, ".relay", ".cache", "intents", id+".draft.yaml"),
+		"title":      i.Title,
+		"status":     string(i.Status),
+	}, nil
+}
+
+func (s *Server) runIntentClose(args map[string]any) (any, error) {
+	id := stringArg(args, "intent_id", "")
+	if id == "" {
+		return nil, errors.New("`intent_id` is required")
+	}
+	root, err := s.resolveRepo(args)
+	if err != nil {
+		return nil, err
+	}
+	agentIdent := stringArg(args, "agent", "")
+	svc := intent.New(root)
+	committedPath, hash, trailer, err := svc.Close(id, agentIdent)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"intent_id":      id,
+		"committed_path": committedPath,
+		"intent_hash":    "sha256:" + hash,
+		"trailer_block":  trailer,
+		"next_action":    "Run `relay certify --intent " + id + "` (laptop) or `relay submit` (team) to produce the signed commit.",
+	}, nil
+}
+
+func (s *Server) runIntentList(args map[string]any) (any, error) {
+	root, err := s.resolveRepo(args)
+	if err != nil {
+		return nil, err
+	}
+	status := stringArg(args, "status", "all")
+	svc := intent.New(root)
+	entries, err := svc.List(status)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"intents": entries}, nil
 }
 
 // changeSetFromArgs assembles a *core.ChangeSet from the call arguments.

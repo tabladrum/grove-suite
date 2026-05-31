@@ -42,7 +42,46 @@ const (
 	CategoryVuln Category = "vuln"
 	// CategoryFileClass is a forbidden file-type/path classification hit.
 	CategoryFileClass Category = "fileclass"
+	// CategoryInfrastructureError is a Relay/Grove/tool failure — NOT a code
+	// problem the agent should try to "fix." Agents are instructed (via the
+	// shipped system-prompt fragment) to surface infrastructure_error findings
+	// to the user instead of attempting auto-correction. Examples: Grove
+	// unreachable, required analyzer binary missing, .relay/relay.yaml not
+	// found, the laptop daemon socket is gone.
+	CategoryInfrastructureError Category = "infrastructure_error"
 )
+
+// IsActionable reports whether the finding represents a code problem the
+// agent should try to fix. Returns false for infrastructure errors — those
+// are surfaced to the user and require operator intervention.
+func (f Finding) IsActionable() bool {
+	return f.Category != CategoryInfrastructureError
+}
+
+// NewInfrastructureError constructs an unactionable Finding describing a
+// Relay/Grove/tool failure. `cause` is a short machine-readable token
+// (e.g. "grove_unreachable", "tool_missing:semgrep", "config_not_found").
+// `remediation` is a human-readable next step for the operator.
+func NewInfrastructureError(cause, remediation string) Finding {
+	msg := remediation
+	if msg == "" {
+		msg = "Relay infrastructure error: " + cause
+	}
+	return Finding{
+		Schema:      FindingsSchemaVersion,
+		Analyzer:    "relay",
+		Category:    CategoryInfrastructureError,
+		RuleID:      cause,
+		Severity:    SeverityHigh,
+		Message:     msg,
+		NextAction:  "surface to user; do not auto-fix",
+		Fingerprint: ComputeFingerprint("relay", cause, "", 0, msg),
+		Extra: map[string]any{
+			"is_actionable": false,
+			"cause":         cause,
+		},
+	}
+}
 
 // Finding is one normalized result from one analyzer. The schema is stable
 // and versioned via FindingsSchemaVersion. Multiple analyzers may produce

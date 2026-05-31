@@ -11,12 +11,14 @@ import (
 // RunMCP dispatches `relay mcp <subcommand>`.
 func RunMCP(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: relay mcp <serve>")
+		fmt.Fprintln(os.Stderr, "usage: relay mcp <serve|install-for>")
 		return 1
 	}
 	switch args[0] {
 	case "serve":
 		return cmdMCPServe(args[1:])
+	case "install-for":
+		return cmdMCPInstallFor(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "unknown mcp subcommand: %s\n", args[0])
 		return 1
