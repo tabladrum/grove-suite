@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -25,7 +26,7 @@ func chdirKeys(t *testing.T, dir string) {
 // dir, `keys gen` produces signing.ed25519.{key,pub} with the right perms.
 func TestKeysGenCreatesKey(t *testing.T) {
 	dir := t.TempDir()
-	chdirKeys(t,dir)
+	chdirKeys(t, dir)
 	if code := RunKeys([]string{"gen"}); code != 0 {
 		t.Fatalf("keys gen exit = %d", code)
 	}
@@ -34,8 +35,8 @@ func TestKeysGenCreatesKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("priv key missing: %v", err)
 	}
-	// 0600 on POSIX; tolerant of platforms that report differently.
-	if info.Mode().Perm()&0o077 != 0 {
+	// 0600 on POSIX. Windows does not honour chmod so skip the check there.
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
 		t.Errorf("priv key mode %v is too permissive", info.Mode().Perm())
 	}
 	pub := filepath.Join(dir, ".relay", "keys", "signing.ed25519.pub")
@@ -48,7 +49,7 @@ func TestKeysGenCreatesKey(t *testing.T) {
 // regenerating a key (which would invalidate all prior cert signatures).
 func TestKeysGenFailsIfExists(t *testing.T) {
 	dir := t.TempDir()
-	chdirKeys(t,dir)
+	chdirKeys(t, dir)
 	if code := RunKeys([]string{"gen"}); code != 0 {
 		t.Fatalf("first gen exit = %d", code)
 	}
@@ -65,7 +66,7 @@ func TestKeysGenFailsIfExists(t *testing.T) {
 // is identical.
 func TestKeysExportImportRoundTrip(t *testing.T) {
 	dir1 := t.TempDir()
-	chdirKeys(t,dir1)
+	chdirKeys(t, dir1)
 	if code := RunKeys([]string{"gen"}); code != 0 {
 		t.Fatalf("gen exit = %d", code)
 	}
@@ -79,7 +80,7 @@ func TestKeysExportImportRoundTrip(t *testing.T) {
 
 	// Simulate "new machine" by switching to a fresh repo dir.
 	dir2 := t.TempDir()
-	chdirKeys(t,dir2)
+	chdirKeys(t, dir2)
 	if code := RunKeys([]string{"import", bundlePath}); code != 0 {
 		t.Fatalf("import exit = %d", code)
 	}

@@ -7,12 +7,15 @@ import (
 	"testing"
 )
 
-// withFakeHome redirects HOME to a temp dir so install-for writes into a
-// sandbox instead of clobbering the developer's real IDE config.
+// withFakeHome redirects HOME (and USERPROFILE on Windows) to a temp dir so
+// install-for writes into a sandbox instead of clobbering the developer's
+// real IDE config. os.UserHomeDir() reads USERPROFILE on Windows, HOME on
+// Unix — both must be set for the redirect to work cross-platform.
 func withFakeHome(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	return home
 }
 
