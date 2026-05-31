@@ -54,7 +54,7 @@ func (g *Gate) Evaluate(_ context.Context, cs *core.ChangeSet, opts map[string]a
 		return res
 	}
 
-	min := floatOption(opts, "min_coverage", 0)
+	min := floatOption(opts, "min_coverage", 80)
 	if s.Tests.CoveragePct < min {
 		res.Verdict = core.VerdictDeny
 		res.Message = fmt.Sprintf(

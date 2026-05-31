@@ -23,7 +23,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -50,10 +49,10 @@ const (
 // OriginatedFrom records who/what produced the intent. Populated by the
 // agent at relay_intent_open time; immutable after promotion.
 type OriginatedFrom struct {
-	Agent           string    `yaml:"agent,omitempty" json:"agent,omitempty"`
-	Model           string    `yaml:"model,omitempty" json:"model,omitempty"`
-	ConversationTS  time.Time `yaml:"conversation_ts,omitempty" json:"conversation_ts,omitempty"`
-	PromptHash      string    `yaml:"prompt_hash,omitempty" json:"prompt_hash,omitempty"`
+	Agent          string    `yaml:"agent,omitempty" json:"agent,omitempty"`
+	Model          string    `yaml:"model,omitempty" json:"model,omitempty"`
+	ConversationTS time.Time `yaml:"conversation_ts,omitempty" json:"conversation_ts,omitempty"`
+	PromptHash     string    `yaml:"prompt_hash,omitempty" json:"prompt_hash,omitempty"`
 }
 
 // Intent is the Auto-Intent Capture artifact. Stored as YAML in
@@ -392,9 +391,6 @@ func (s *Service) scan(dir string, status Status, suffix string) ([]Entry, error
 	}
 	return out, nil
 }
-
-// idSuffixRe matches a trailing -<digit>+ that came from a uniqueID retry.
-var idSuffixRe = regexp.MustCompile(`-\d+$`)
 
 func (s *Service) uniqueID(now time.Time, title string) string {
 	base := NewID(now, title)

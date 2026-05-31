@@ -2,8 +2,8 @@ relay_version: "0.1"
 stack: go-microservice
 
 # Go microservice defaults: full Stage-1 (build + go test -cover) plus all
-# Stage-2 gates. Coverage minimum is intentionally modest (60%); raise as the
-# team's habit matures. Use `// relay:no-test-required` on irreducible diffs.
+# Stage-2 gates. Coverage minimum defaults to 80%; raise further as habits
+# mature. Use `// relay:no-test-required` on irreducible diffs.
 policies:
   path:
     enabled: true
@@ -21,7 +21,7 @@ policies:
   coverage:
     enabled: true
     options:
-      min_coverage: 60
+      min_coverage: 80  # Default: 80. Set to 0 to disable. Override per environment.
   secrets:
     enabled: true
   fileclass:

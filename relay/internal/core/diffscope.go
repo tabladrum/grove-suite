@@ -164,8 +164,6 @@ func mergeRanges(in []LineRange) []LineRange {
 
 func normalizePath(p string) string {
 	p = strings.TrimSpace(p)
-	if strings.HasPrefix(p, "./") {
-		p = p[2:]
-	}
+	p = strings.TrimPrefix(p, "./")
 	return p
 }

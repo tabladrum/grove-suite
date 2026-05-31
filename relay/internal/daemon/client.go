@@ -108,9 +108,7 @@ func IsRunning(socketPath string) bool {
 	defer c.Close()
 	// Give the daemon up to one second to respond before treating it as dead.
 	deadline := time.Now().Add(time.Second)
-	if d, ok := c.conn.(net.Conn); ok {
-		_ = d.SetDeadline(deadline)
-	}
+	_ = c.conn.SetDeadline(deadline)
 	return c.Ping() == nil
 }
 

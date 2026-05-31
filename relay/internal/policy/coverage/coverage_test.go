@@ -67,12 +67,23 @@ func TestGate_NilHolderFailsClosed(t *testing.T) {
 	}
 }
 
-func TestGate_DefaultThresholdZeroAllows(t *testing.T) {
+func TestGate_DefaultThresholdDeniesBelow80(t *testing.T) {
+	// Default threshold is 80%; coverage of 0% should deny.
 	s := &cert.BuildResult{Tests: cert.TestRun{Passed: 1, CoveragePct: 0}}
 	g := &Gate{Build: func() *cert.BuildResult { return s }}
 	res := g.Evaluate(context.Background(), &core.ChangeSet{Diff: "+++ b/foo.go\n"}, nil)
+	if res.Verdict != core.VerdictDeny {
+		t.Errorf("expected deny with 0%% coverage against 80%% default, got %s", res.Verdict)
+	}
+}
+
+func TestGate_DefaultThresholdAllowsAt80(t *testing.T) {
+	// Coverage exactly at the default (80%) should allow.
+	s := &cert.BuildResult{Tests: cert.TestRun{Passed: 1, CoveragePct: 80}}
+	g := &Gate{Build: func() *cert.BuildResult { return s }}
+	res := g.Evaluate(context.Background(), &core.ChangeSet{Diff: "+++ b/foo.go\n"}, nil)
 	if res.Verdict != core.VerdictAllow {
-		t.Errorf("expected allow with no threshold, got %s", res.Verdict)
+		t.Errorf("expected allow with 80%% coverage at 80%% default, got %s", res.Verdict)
 	}
 }
 

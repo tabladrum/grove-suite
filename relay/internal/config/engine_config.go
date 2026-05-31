@@ -79,7 +79,7 @@ func defaultRelayConfig() *core.RelayConfig {
 				"max_added_lines": 5000,
 			}},
 			"coverage": {Enabled: true, Options: map[string]any{
-				"min_coverage": 0,
+				"min_coverage": 80,
 			}},
 			"secrets": {Enabled: true},
 			"fileclass": {Enabled: true, Options: map[string]any{

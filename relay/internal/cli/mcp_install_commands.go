@@ -18,20 +18,18 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strings"
 )
 
 // clientSpec describes one supported MCP client and where its config lives.
 // macOS paths are the primary target (Phase 2A); Linux paths are mirrored
 // where each client exists there. Windows is WSL — same Linux paths apply.
 type clientSpec struct {
-	id     string // canonical id, also the flag value
-	label  string // human-readable label
-	pathFn func(home string) (string, error)
-}
-
-func macOSAppSupport(home, sub string) string {
-	return filepath.Join(home, "Library", "Application Support", sub)
+	id        string // canonical id, also the flag value
+	label     string // human-readable label
+	serverKey string // JSON key holding MCP servers (default "mcpServers"; "servers" for VS Code)
+	arrayFmt  bool   // true if the servers list is a JSON array, not object (e.g. Continue)
+	tomlFmt   bool   // true if the config file is TOML, not JSON (e.g. Codex CLI)
+	pathFn    func(home, repo string) (string, error)
 }
 
 // supportedClients returns the static client list. Each spec resolves to a
@@ -41,7 +39,7 @@ func supportedClients() []clientSpec {
 		{
 			id:    "claude-code",
 			label: "Claude Code",
-			pathFn: func(home string) (string, error) {
+			pathFn: func(home, _ string) (string, error) {
 				// Claude Code stores per-user MCP servers at ~/.claude.json
 				// (cross-platform).
 				return filepath.Join(home, ".claude.json"), nil
@@ -50,15 +48,16 @@ func supportedClients() []clientSpec {
 		{
 			id:    "cursor",
 			label: "Cursor",
-			pathFn: func(home string) (string, error) {
+			pathFn: func(home, _ string) (string, error) {
 				// Cursor reads MCP server config from ~/.cursor/mcp.json.
 				return filepath.Join(home, ".cursor", "mcp.json"), nil
 			},
 		},
 		{
-			id:    "continue",
-			label: "Continue",
-			pathFn: func(home string) (string, error) {
+			id:       "continue",
+			label:    "Continue",
+			arrayFmt: true, // Continue uses [{name, command, args}] not {name: {command, args}}
+			pathFn: func(home, _ string) (string, error) {
 				// Continue stores config in ~/.continue/config.json.
 				return filepath.Join(home, ".continue", "config.json"), nil
 			},
@@ -66,9 +65,88 @@ func supportedClients() []clientSpec {
 		{
 			id:    "windsurf",
 			label: "Windsurf",
-			pathFn: func(home string) (string, error) {
+			pathFn: func(home, _ string) (string, error) {
 				// Windsurf (Codeium) stores MCP at ~/.codeium/windsurf/mcp_config.json.
 				return filepath.Join(home, ".codeium", "windsurf", "mcp_config.json"), nil
+			},
+		},
+		{
+			id:    "claude-desktop",
+			label: "Claude Desktop",
+			pathFn: func(home, _ string) (string, error) {
+				// Claude Desktop stores global MCP config in a platform-specific location.
+				switch runtime.GOOS {
+				case "darwin":
+					return filepath.Join(home, "Library", "Application Support", "Claude", "claude_desktop_config.json"), nil
+				case "windows":
+					appData := os.Getenv("APPDATA")
+					if appData == "" {
+						appData = filepath.Join(home, "AppData", "Roaming")
+					}
+					return filepath.Join(appData, "Claude", "claude_desktop_config.json"), nil
+				default:
+					return filepath.Join(home, ".config", "Claude", "claude_desktop_config.json"), nil
+				}
+			},
+		},
+		{
+			id:        "zed",
+			label:     "Zed",
+			serverKey: "context_servers", // Zed uses context_servers with a nested command object
+			pathFn: func(home, _ string) (string, error) {
+				// Zed reads MCP context servers from ~/.config/zed/settings.json.
+				return filepath.Join(home, ".config", "zed", "settings.json"), nil
+			},
+		},
+		{
+			// Codex CLI (OpenAI) reads MCP servers from ~/.codex/config.toml.
+			id:      "codex",
+			label:   "Codex CLI",
+			tomlFmt: true,
+			pathFn: func(home, _ string) (string, error) {
+				return filepath.Join(home, ".codex", "config.toml"), nil
+			},
+		},
+		{
+			// Kiro (Amazon's AI IDE) stores project MCP servers in .kiro/settings/mcp.json.
+			id:    "kiro",
+			label: "Kiro",
+			pathFn: func(_, repo string) (string, error) {
+				base := repo
+				if base == "" {
+					if wd, err := os.Getwd(); err == nil {
+						base = wd
+					} else {
+						base = "."
+					}
+				}
+				abs, err := filepath.Abs(base)
+				if err != nil {
+					return "", err
+				}
+				return filepath.Join(abs, ".kiro", "settings", "mcp.json"), nil
+			},
+		},
+		{
+			id:        "vscode",
+			label:     "VS Code",
+			serverKey: "servers", // VS Code uses {"servers":{...}} not {"mcpServers":{...}}
+			pathFn: func(_, repo string) (string, error) {
+				// VS Code reads workspace MCP servers from .vscode/mcp.json.
+				// Fall back to cwd when --repo is not provided.
+				base := repo
+				if base == "" {
+					if wd, err := os.Getwd(); err == nil {
+						base = wd
+					} else {
+						base = "."
+					}
+				}
+				abs, err := filepath.Abs(base)
+				if err != nil {
+					return "", err
+				}
+				return filepath.Join(abs, ".vscode", "mcp.json"), nil
 			},
 		},
 	}
@@ -107,7 +185,7 @@ func cmdMCPInstallFor(args []string) int {
 		fmt.Fprintf(os.Stderr, "unknown client %q (run --list to see supported ones)\n", clientID)
 		return 1
 	}
-	configPath, err := spec.pathFn(home)
+	configPath, err := spec.pathFn(home, *repo)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
@@ -123,8 +201,24 @@ func cmdMCPInstallFor(args []string) int {
 		relayBin = exe
 	}
 
+	serverKey := spec.serverKey
+	if serverKey == "" {
+		serverKey = "mcpServers"
+	}
+
 	if *uninstall {
-		removed, err := updateClientConfig(configPath, "relay", nil)
+		var removed bool
+		var err error
+		switch {
+		case spec.tomlFmt:
+			// TOML removal: overwrite without the relay block.
+			err = updateCodexConfig(configPath, "", nil)
+			removed = err == nil
+		case spec.arrayFmt:
+			removed, err = updateContinueConfig(configPath, serverKey, "relay", nil)
+		default:
+			removed, err = updateClientConfig(configPath, serverKey, "relay", nil)
+		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return 1
@@ -137,9 +231,29 @@ func cmdMCPInstallFor(args []string) int {
 		return 0
 	}
 
-	entry := buildRelayEntry(relayBin, *repo)
-	if _, err := updateClientConfig(configPath, "relay", entry); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	var entry map[string]any
+	switch spec.id {
+	case "zed":
+		entry = buildZedEntry(relayBin, *repo)
+	default:
+		entry = buildRelayEntry(relayBin, *repo)
+		if serverKey == "servers" {
+			// VS Code requires a "type" field; env map is not used.
+			entry["type"] = "stdio"
+			delete(entry, "env")
+		}
+	}
+	var installErr error
+	switch {
+	case spec.tomlFmt:
+		installErr = updateCodexConfig(configPath, relayBin, []string{"mcp", "serve", "--repo", *repo})
+	case spec.arrayFmt:
+		_, installErr = updateContinueConfig(configPath, serverKey, "relay", entry)
+	default:
+		_, installErr = updateClientConfig(configPath, serverKey, "relay", entry)
+	}
+	if installErr != nil {
+		fmt.Fprintln(os.Stderr, installErr)
 		return 1
 	}
 	fmt.Printf("installed relay MCP entry into %s\n", configPath)
@@ -173,14 +287,27 @@ func buildRelayEntry(relayBin, repo string) map[string]any {
 	}
 }
 
-// updateClientConfig reads the JSON file at path, ensures it has an
-// "mcpServers" object, then sets or removes the named entry. Returns
-// removed=true if --uninstall actually deleted something; the install path
-// returns false (unused).
-//
-// The file is created if absent; surrounding fields are preserved so users
-// don't lose unrelated config they've added themselves.
-func updateClientConfig(path, name string, entry map[string]any) (bool, error) {
+// buildZedEntry constructs the MCP-server descriptor for Zed. Zed wraps the
+// command under a nested "command" object with "path"/"args"/"env" fields,
+// stored under the "context_servers" key rather than "mcpServers".
+func buildZedEntry(relayBin, repo string) map[string]any {
+	args := []string{"mcp", "serve"}
+	if repo != "" {
+		args = append(args, "--repo", repo)
+	}
+	return map[string]any{
+		"command": map[string]any{
+			"path": relayBin,
+			"args": args,
+			"env":  map[string]string{},
+		},
+	}
+}
+
+// updateContinueConfig manages relay's entry in an array-style servers list
+// (used by Continue, which stores mcpServers as [{name, command, args}]).
+// Entries are matched by the "name" field; name is injected automatically.
+func updateContinueConfig(path, serverKey, name string, entry map[string]any) (bool, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return false, fmt.Errorf("mkdir config dir: %w", err)
 	}
@@ -195,18 +322,75 @@ func updateClientConfig(path, name string, entry map[string]any) (bool, error) {
 	if doc == nil {
 		doc = map[string]any{}
 	}
-	servers, _ := doc["mcpServers"].(map[string]any)
+	var servers []any
+	if s, ok := doc[serverKey].([]any); ok {
+		servers = s
+	}
+	// Locate existing entry by "name" field.
+	idx := -1
+	for i, s := range servers {
+		if m, ok := s.(map[string]any); ok && m["name"] == name {
+			idx = i
+			break
+		}
+	}
+	if entry == nil {
+		if idx < 0 {
+			return false, writeJSON(path, doc)
+		}
+		servers = append(servers[:idx], servers[idx+1:]...)
+		doc[serverKey] = servers
+		return true, writeJSON(path, doc)
+	}
+	// Copy entry and inject the "name" field so we don't mutate the caller's map.
+	e := make(map[string]any, len(entry)+1)
+	for k, v := range entry {
+		e[k] = v
+	}
+	e["name"] = name
+	if idx >= 0 {
+		servers[idx] = e
+	} else {
+		servers = append(servers, e)
+	}
+	doc[serverKey] = servers
+	return false, writeJSON(path, doc)
+}
+
+// updateClientConfig reads the JSON file at path, ensures it has a
+// serverKey object (e.g. "mcpServers" or "servers"), then sets or removes
+// the named entry. Returns removed=true if --uninstall actually deleted
+// something; the install path returns false (unused).
+//
+// The file is created if absent; surrounding fields are preserved so users
+// don't lose unrelated config they've added themselves.
+func updateClientConfig(path, serverKey, name string, entry map[string]any) (bool, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return false, fmt.Errorf("mkdir config dir: %w", err)
+	}
+	var doc map[string]any
+	if raw, err := os.ReadFile(path); err == nil {
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			return false, fmt.Errorf("parse %s: %w", path, err)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return false, fmt.Errorf("read %s: %w", path, err)
+	}
+	if doc == nil {
+		doc = map[string]any{}
+	}
+	servers, _ := doc[serverKey].(map[string]any)
 	if servers == nil {
 		servers = map[string]any{}
 	}
 	if entry == nil {
 		_, removed := servers[name]
 		delete(servers, name)
-		doc["mcpServers"] = servers
+		doc[serverKey] = servers
 		return removed, writeJSON(path, doc)
 	}
 	servers[name] = entry
-	doc["mcpServers"] = servers
+	doc[serverKey] = servers
 	return false, writeJSON(path, doc)
 }
 
@@ -232,17 +416,6 @@ func writeJSON(path string, doc map[string]any) error {
 		return err
 	}
 	return os.Rename(tmp, path)
-}
-
-// supportedClientLabels returns a stable, sorted, comma-joined list for
-// error messages.
-func supportedClientLabels() string {
-	ids := make([]string, 0, 4)
-	for _, c := range supportedClients() {
-		ids = append(ids, c.id)
-	}
-	sort.Strings(ids)
-	return strings.Join(ids, ", ")
 }
 
 // Touch runtime so older toolchains (go 1.21 and below) compile this file

@@ -189,7 +189,15 @@ func cmdHookPreCommit(repoRoot string, stdout, stderr io.Writer) int {
 		}
 		for _, f := range findings {
 			// Scope to staged files only — analyzers may scan repo-wide.
-			if f.Path != "" && !inSet(staged, f.Path) {
+			// Normalize absolute paths (gitleaks reports them absolute when
+			// --source is a directory) to repo-relative before matching.
+			relPath := f.Path
+			if filepath.IsAbs(relPath) {
+				if r, err := filepath.Rel(repoRoot, relPath); err == nil {
+					relPath = r
+				}
+			}
+			if relPath != "" && !inSet(staged, relPath) {
 				continue
 			}
 			switch f.Severity {

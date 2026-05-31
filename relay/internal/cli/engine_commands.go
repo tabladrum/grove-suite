@@ -27,8 +27,8 @@ import (
 	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/semgrep"
 	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/sonar"
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
-	"github.com/tabladrum/grove-suite/relay/internal/cert/build"
 	"github.com/tabladrum/grove-suite/relay/internal/cert/analysis"
+	"github.com/tabladrum/grove-suite/relay/internal/cert/build"
 	"github.com/tabladrum/grove-suite/relay/internal/config"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
 	"github.com/tabladrum/grove-suite/relay/internal/engine"
@@ -169,6 +169,12 @@ policies:
     options:
       max_files: 100
       max_added_lines: 5000
+  coverage:
+    enabled: true
+    options:
+      min_coverage: 80  # Minimum aggregate coverage %. Default: 80. Set to 0 to disable.
+                        # Override per stack/profile. Annotate irreducible diffs with:
+                        #   // relay:no-test-required
 `
 		if err := os.WriteFile(cfgPath, []byte(tmpl), 0o644); err != nil {
 			fmt.Fprintln(os.Stderr, "write:", err)
@@ -205,6 +211,16 @@ keys/
 		}
 		fmt.Println("wrote .relay/.gitignore")
 	}
+	// Wire relay tools with detected AI coding agents: append Pre-Flight
+	// Autopilot instructions to per-agent instruction files and register the
+	// relay MCP server with every tool config found in the project.
+	relayBin, _ := os.Executable()
+	if relayBin == "" {
+		relayBin = "relay"
+	}
+	writeRelaySteeringInstructions(root)
+	registerRelayMCPTools(root, relayBin)
+
 	fmt.Printf("relay initialized at %s\n", relayDir)
 	return 0
 }
@@ -473,8 +489,8 @@ func BuildEngine(start string) (*engine.Engine, func(), error) {
 		ICR:      engine.NoopICRProvider{},
 		Signer:   sgn,
 		Config:   cfg,
-		Build:   s1,
-		Analysis:   s2,
+		Build:    s1,
+		Analysis: s2,
 	}
 	// Stage-aware gates read the cached results via closures.
 	reg.Register(&coverage.Gate{Build: e.BuildResult})

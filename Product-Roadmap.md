@@ -1,7 +1,7 @@
 # Product Suite: Naming, Vision & Sequenced Roadmap
 
-**Last Updated:** May 23, 2026
-**Status:** Pre-build — architecture validated, implementation not started
+**Last Updated:** May 31, 2026
+**Status:** Grove, Prism, Fuse shipped. Relay Phase 1 (intake) + Phase 2A laptop MVP (MVP-L1 through L8) shipped, including agent wiring (`relay init`) and intent MCP tools. Phase 2A team mode in progress.
 
 -----
 
@@ -402,6 +402,8 @@ The original spec included a full CKG service as a component. That component is 
 
 - Replaces Jira + GitHub PRs + Jenkins + deployment pipelines
 - No branches — ICR isolation (via Grove) replaces branching entirely
+- **One-command agent wiring** — `relay init` writes Pre-Flight Autopilot instructions and MCP config for all detected AI tools (Claude Code, GitHub Copilot, Cursor, Codex CLI, VS Code, Windsurf, Zed, and more)
+- Intent MCP tools: `relay_intent_open`, `relay_intent_update`, `relay_intent_close`, `relay_intent_list` — agents open and close intents as part of their workflow
 - Agents execute in isolated K8s pods within Grove-computed change regions
 - Machine certification replaces traditional CI
 - Progressive canary deployment with intent-metric validation

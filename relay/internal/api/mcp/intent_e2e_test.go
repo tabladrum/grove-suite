@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -134,9 +133,9 @@ func TestIntentCaptureRoundTrip(t *testing.T) {
 func TestIntentOpenRejectsMissingFields(t *testing.T) {
 	s := NewServer(t.TempDir(), buildFakeEngine(&fakeGate{name: "x", verdict: core.VerdictAllow}))
 	for _, args := range []map[string]any{
-		{"description": "x"},                  // missing title
-		{"title": "x"},                        // missing description
-		{},                                    // both missing
+		{"description": "x"}, // missing title
+		{"title": "x"},       // missing description
+		{},                   // both missing
 	} {
 		in := framedRequest(t, 1, "tools/call", map[string]any{"name": "relay_intent_open", "arguments": args})
 		frames := serveOnce(t, s, in)
@@ -144,6 +143,4 @@ func TestIntentOpenRejectsMissingFields(t *testing.T) {
 			t.Errorf("expected error for args %v, got %+v", args, frames[0])
 		}
 	}
-	// Avoid "fmt imported and not used" if it ever stops being needed.
-	_ = fmt.Sprintf("")
 }

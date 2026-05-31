@@ -91,8 +91,7 @@ func TestE2E_Stage1RejectsBrokenTestAdmitsPassingFix(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var out2 string
-	out2 = captureStdout(t, func() {
+	out2 := captureStdout(t, func() {
 		code := RunEngine([]string{
 			"submit",
 			"--diff", passingPath,

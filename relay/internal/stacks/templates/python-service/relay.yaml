@@ -18,6 +18,10 @@ policies:
     options:
       max_files: 100
       max_added_lines: 5000
+  coverage:
+    enabled: true
+    options:
+      min_coverage: 80  # Default: 80. Set to 0 to disable. Override per environment.
   secrets:
     enabled: true
   fileclass:

@@ -2,379 +2,304 @@
 
 **MIT licensed · Part of [Grove Suite](../README.md)**
 
-Relay is the certified delivery layer for autonomous coding agents — a single binary that runs on a developer's laptop, a team server, or a multi-region enterprise control plane. It integrates with any coding agent (Claude Code, Cursor, Devin, GitHub Copilot Workspace, internal scripts) **as an MCP tool the agent calls in its own iteration loop**, providing pre-flight certification, graph-aware impact analysis, semantic merge resolution, and linear admission with cryptographic certificates.
+Relay is the certified delivery layer for autonomous coding agents. It sits between an AI agent writing code and that code reaching your codebase — running build, tests, and static analysis locally, signing the result with a cryptographic certificate, and admitting it as a linear commit with a full audit trail.
 
-The product thesis: AI-generated code volume has already overrun human PR review capacity. Reviewing every diff doesn't scale. Letting the agent self-correct against a machine-readable certification gate *before* the diff ever reaches a human does. Relay is what the agent calls between writing code and pushing it. See [docs/product-proposal.md](docs/product-proposal.md) for the full positioning and roadmap, and [docs/product-proposal.md §4.5](docs/product-proposal.md) for how Relay differs from skills, orchestration frameworks, and background agents.
+---
+
+## Why Relay
+
+AI-generated code volume has outrun human PR review capacity. Reviewing every agent-produced diff at the same depth as human-written code doesn't scale — but letting agents self-merge without any gate erodes code quality and destroys the audit trail.
+
+Relay is what the agent calls between writing code and pushing it. It provides:
+
+- **Pre-flight certification** — the agent calls `relay_check` in its iteration loop; structured findings (file, line, rule, severity, fix-hint) flow back so the agent self-corrects before any human sees the diff.
+- **Signed certificates** — every admitted commit carries an Ed25519 signature over the exact config, toolchain, test results, and findings. The cert is byte-reproducible: `relay cert replay <id>` re-runs gates and tells you whether the result still matches.
+- **Audit-proof intent trail** — the user's natural-language prompt is captured as a YAML intent, committed alongside the code, and linked to the admission cert via `Intent-ID:` trailer. Not just the output — also the request that produced it.
+
+The core design constraint: laptop mode requires zero infrastructure. One binary, SQLite, a local Ed25519 key. The same binary scales to team (Postgres + Redis + KMS) via config.
+
+---
 
 ## What Relay Does
 
-- **Pre-flight certification (MCP-first)**: the agent calls `relay_check` after writing code; structured findings (file, line, rule, severity, fix-hint, `class`) flow back so the agent self-corrects in-loop before any human sees the diff. Sub-10-second target on typical change. `relay_certify` runs the full admission pipeline at commit time.
-- **Auto-Intent Capture (the prompt IS the intent)**: the agent calls `relay_intent_open` with the user's natural-language request before coding; Relay drafts an intent YAML and promotes it to `.relay/intents/INT-*.yaml` (committed) on `relay_intent_close`. The prompt becomes a first-class, PR-reviewable artifact stored alongside the code — auditable forever, not lost with the session.
-- **Same engine on three surfaces**: MCP server (for agents), CLI (for humans), git pre-push hook (backstop) — all run identical gates and emit identical certificates. On laptop, all three transports proxy to a long-running `relay daemon` (single writer guarantee).
-- **Three deployment modes — laptop = full Relay server, single user**: laptop (single binary + SQLite + `relay daemon` + local Ed25519 key + local intent-store git, zero config), team (Postgres + Redis + KMS + shared intent-store), company (multi-tenant, multi-region — Phase 4). Same binary, configuration-driven. Cross-platform in Phase 2A: macOS Intel/ARM and Linux x86_64/ARM64; Windows = WSL.
-- **MCP client auto-registration**: `relay mcp install-for {claude-code,cursor,continue,windsurf}` — one command per IDE, no hand-editing.
-- **Configuration in the repo (`.relay/`)**: per-repo Relay config is source-controlled alongside the code (`relay.yaml`, `policies/`, `rulesets/`, `intents/`, `templates/`). Mutable state lives in `.relay/.cache/` (gitignored, written by `relay init`). Same `.relay/` produces identical results in every deployment mode. Effective config hash recorded in every certificate, so audit replay is byte-reproducible.
-- **Batteries-included tooling — lean default**: ships with semgrep, gitleaks, govulncheck, golangci-lint, eslint, ruff, checkstyle, pmd (~50MB, no JRE). Tool versions pinned per Relay release; drift recorded in certificate trailer.
-- **SonarQube without a server (hybrid)**: `relay import sonarqube-profile` ships in Phase 2A and lands quality profile XML into `.relay/rulesets/` (committed, travels with the repo). The SonarLint Core engine + bundled Eclipse Temurin JRE 21 that actually run those rules locally ship in Phase 2B via `relay tools install --with-sonar` — same approach as the VS Code "SonarQube for IDE" extension. See [`docs/sonarqube-no-server-investigation.md`](docs/sonarqube-no-server-investigation.md).
-- **Intake**: accepts intents from Jira, GitHub Issues, CLI, MCP, or direct API; validates scope via two-stage granularity scoring (heuristic + Grove ICR symbol count).
-- **Impact analysis**: uses Grove's `/icr`, `/impact`, `/deps` to compute the affected symbol set and blast radius.
-- **Policy gating**: six gates — path policy, secret scanner, special file class, dependency change, size limit, test coverage of changed symbols (warn by default on laptop, enforce on team).
-- **Certification**: build + full test suite (selective opt-in for monorepos) + coverage-of-changed-symbols + standalone static-analysis suite. No external SonarQube/CI server required.
-- **Admission**: linear commit to a configurable target branch (default = current branch on laptop, `relay-main` on team) with full trailer metadata (Intent-ID, Intent-Hash, certificate ID, agent identity, model version, ICR hash, Sonar engine, toolchain drift).
-- **Audit in every mode**: signed certificates emitted in laptop mode too — local Ed25519 key at `~/.relay/keys/admission.ed25519`. Intent-store git repo accumulates an append-only AI-code provenance trail, exportable for EU AI Act / SOC 2. A solo dev's cert history is the seed of the team's audit corpus on upgrade — never reset to zero.
-- **Privacy by default**: laptop mode does not phone home. OpenTelemetry traces default off. Documented in `getting-started.md`.
-
-Relay is designed to work *alongside* GitHub today. As confidence in agent output and graph isolation grows, it removes the need for branches for approved classes of agent-delivered work.
-
-## Full Pipeline
-
-```
-Work item (Jira / GitHub Issues / CLI)
-     │
-     ▼
-Project routing  (B → C → A, see below)
-     │
-     ▼
-GS check  (heuristic + Grove ICR symbol count)
-     │
-     ├── too broad → needs_info + feedback to source
-     └── scoped    → queued
-     │
-     ▼
-Grove decomposition
-POST grove:7777/icr  → affected symbol list
-POST grove:7777/deps → edges between symbols
-union-find → connected components
-     │
-     ├── Component A (independent)    ├── Component B (independent)
-     │   Agent Pod in K8s             │   Agent Pod in K8s
-     │   Prism context delivery       │   Prism context delivery
-     │   Claude runs, produces diff   │   Claude runs, produces diff
-     │                                │
-     └──────────── Fuse merge ────────┘
-                       │
-                       ▼
-              Certification
-              POST grove:7777/impact → blast radius
-              POST grove:7777/tests  → test selection
-              lint + test + deploy dry-run
-                       │
-                       ▼
-              Admission
-              rebase → linear commit to main
-                       │
-                       ▼
-              Canary → metric validation → realized
-```
-
-**Current status:** Phase 1 (intake + routing) is built. Phase 2 (decomposition + execution + certification + admission) is designed, not yet implemented.
+| Capability | How it works |
+|------------|-------------|
+| Pre-flight check | `relay_check` / `relay check`: SAST on changed files + Grove-affected unit tests. Sub-10 s target. |
+| Full certification | `relay_certify` / `relay certify`: Stage 1 (build + test + coverage) + Stage 2 (static analysis suite). |
+| Signed admission | Linear commit to target branch with Ed25519 signature and full trailer metadata. |
+| Risk heatmap | Per-diff risk score: ICR + stage2 severity + coverage delta + touch intensity. Versioned model. |
+| Certificate replay | `relay cert replay <id>`: re-runs gates, returns `byte_reproducible` / `tool_drift` / `config_drift`. |
+| Intent capture | Auto-captures the user's prompt as a committed YAML intent before coding starts. |
+| Agent wiring | `relay init` auto-writes Pre-Flight Autopilot instructions and MCP config for every detected AI tool (Claude Code, GitHub Copilot, Cursor, Codex CLI, Windsurf, Zed, VS Code, and more). |
+| Batteries-included | Ships semgrep, gitleaks, govulncheck, eslint, ruff pre-bundled. No setup required. |
+| Policy profiles | Built-in compliance profiles: `soc2-baseline`, `pci-dss-baseline`, stack-strict variants. |
 
 ---
 
-## Data Model
+## Quick Start
 
-The central concept is **Project** — the onboarding unit that ties a codebase location to its work item sources.
-
-```
-Repo
-  url: https://github.com/acme/backend
-  default_branch: main
-    │
-    │  one repo → many projects (monorepo support)
-    ▼
-Project
-  name: auth-service
-  source_path: /services/auth
-  gs_threshold: 0.75
-  auto_approve: false
-  owner: eng-auth@acme.com
-    │
-    ├── ProjectIntegration (M:M with external boards)
-    │     type: jira          external_id: AUTH
-    │     type: github_issues external_id: acme/backend
-    │     config: trigger_status, relay_project_field,
-    │             label_trigger, component_filter, auto_approve
-    │
-    └── Intent
-          project_id → Project   ← the structural link
-          description, status, gs_score, icr_symbols
-          source: jira | github_issue | native
-          source_ref: AUTH-123 | acme/backend#42
-```
-
-### Onboarding a repo
+### Laptop (single binary, SQLite, no server required)
 
 ```bash
-# 1. Register the repo
-relay repo add --name backend --url https://github.com/acme/backend
+# 1. Build and install
+cd relay && make install
 
-# 2. Create projects (one per logical service / monorepo path)
-relay project add auth-service  --repo backend --path /services/auth  --owner eng-auth@acme.com
-relay project add auth-worker   --repo backend --path /services/auth-worker
-relay project add payments      --repo backend --path /services/payments
+# 2. Initialize in your project — scaffolds .relay/, generates local Ed25519 key,
+#    writes Pre-Flight Autopilot instructions to CLAUDE.md / .cursorrules / .github/copilot-instructions.md
+#    / AGENTS.md / GEMINI.md / .clinerules and registers MCP for every detected tool
+#    (Claude Code, GitHub Copilot, Cursor, Codex CLI, VS Code, Claude Desktop, Windsurf, Zed, …)
+cd /your/project
+relay init --stack=go-microservice
 
-# 3. Link work item sources (M:M — AUTH board feeds both auth projects)
-relay project link auth-service  jira AUTH           --trigger "Ready for Relay" --field "Relay Project"
-relay project link auth-worker   jira AUTH           --trigger "Ready for Relay" --component auth-worker
-relay project link payments      jira PAY            --trigger "Ready for Relay" --auto-approve
-relay project link auth-service  github_issues acme/backend --label relay
-
-# 4. Start the server
-relay serve
-```
-
-### Source-controlled configuration (`.relay/`)
-
-Each source repo carries its own Relay configuration in `.relay/`, committed alongside the code it governs. The same `.relay/` applies in laptop, team, and company modes — config travels with the repo.
-
-```
-my-repo/
-├── .relay/
-│   ├── relay.yaml              # version pin, gates enabled, runners, cert stages, admission_target
-│   ├── .gitignore              # written by `relay init`; covers .relay/.cache/
-│   ├── policies/               # per-gate detail (path, secrets, fileclass, deps, size, coverage)
-│   ├── rulesets/               # custom rule bundles + imported SonarQube profile XML (verbatim)
-│   ├── intents/                # COMMITTED intents — Auto-Intent Capture lands them here
-│   ├── templates/              # intent templates for the team
-│   └── .cache/                 # GITIGNORED — daemon state, intent drafts, indexer caches
-├── src/
-└── tests/
-```
-
-Bootstrap (laptop):
-
-```bash
-cd my-repo
-relay init --stack=go-microservice    # scaffolds .relay/, writes .relay/.gitignore,
-                                      # generates local Ed25519 key, starts relay daemon,
-                                      # registers MCP with installed IDEs
+# 3. Commit the .relay/ config alongside your code
 git add .relay/ && git commit -m "Add Relay configuration"
-```
 
-Configuration layering (resolved at every invocation): built-in defaults ⨁ org baseline from `platform-config` (enterprise only; can lock specific fields) ⨁ `.relay/` in the repo ⨁ `~/.relay/config.yaml` (credentials and transport only — never policy).
+# 4. Install the git pre-push hook (backstop for unmanaged pushes)
+relay hook install
 
-`relay_check`, `relay check`, and the git pre-push hook walk upward from the working directory to find the nearest `.relay/relay.yaml` — same discovery pattern as git, npm, eslint. Monorepos can have nested `.relay/` directories; the deepest match wins.
-
-The effective merged config is hashed and recorded in every certificate as `Effective-Config-Hash` so audit replay is byte-reproducible.
-
-The `.relay/intents/` directory is where Auto-Intent Capture commits the prompt-derived intent YAML for each AI-assisted change. The commit's `Intent-ID:` trailer points back to the file; reviewers see the prompt alongside the diff on the GitHub PR.
-
----
-
-## Project Routing (B → C → A)
-
-When a work item arrives, Relay resolves which Project owns it. This matters because the same Jira board can feed multiple projects (e.g. AUTH board → auth-service and auth-worker).
-
-```
-[B] Explicit relay-project field (highest priority)
-    Jira:   custom field "Relay Project" = "auth-service"
-    GitHub: label "relay-project:auth-service"
-    → direct route, no ambiguity
-
-[C] Unrouted (fallback when B fails)
-    Intent created with status: unrouted
-    Appears in dashboard triage queue
-    Human assigns: relay intent assign <id> --project auth-service
-
-[A] Component/label filter (optional refinement)
-    Configured per ProjectIntegration in config JSONB
-    Jira: component_filter = "auth-worker"
-    GitHub: component_label = "component:auth"
-    → auto-routes if exactly one integration matches
-    → falls through to C if multiple match
+# 5. Have your AI agent use relay_check in its loop
+#    System-prompt fragment: see docs/agent-prompt.md
 ```
 
 ---
 
-## Intent Lifecycle
-
-```
-ingest → draft
-           │
-    B resolved?─────yes──► validating
-           │
-           no
-           │
-           ▼
-        unrouted ──► human assigns project ──► validating
-                                                    │
-                                          ┌─────────┼─────────┐
-                                          ▼         ▼         ▼
-                                      needs_info  queued  rejected
-                                          │
-                                      resubmit
-                                          │
-                                          ▼
-                                      validating
-```
-
-Every transition is recorded as an `intent_event` (actor, timestamp, detail). Full event log: `GET /api/intents/:id/events`.
-
----
-
-## Granularity Score (GS)
-
-The GS check runs at intake and again after project assignment (using the project's configured threshold, not the global default).
-
-**Stage 1 — heuristic (no Grove, fast):**
-- Penalises descriptions under 8 words or over 150 words
-- Penalises vague phrases: "refactor all", "update everything", "improve", "clean up"
-- Rewards specificity: endpoint, function, method, or file names
-- Penalises cross-domain scatter (3+ distinct system domains)
-
-**Stage 2 — Grove ICR:**
-- `POST grove:7777/icr {"intent": description}` → affected symbol count
-- 1–50 symbols: GS 0.70–0.95 (well-scoped)
-- 51–150 symbols: GS 0.40–0.70 (borderline)
-- 151+ symbols: GS < 0.40 (too broad)
-
-Final GS = 40% heuristic + 60% ICR. Per-project threshold (default 0.70).
-
-**Note on decomposability (Phase 2):** A high symbol count does not automatically mean rejection. If those symbols form independent connected components in the Grove graph, the intent can be decomposed into parallel sub-tasks — each scoped appropriately. The GS check will account for this in Phase 2.
-
----
-
-## Source System Integration
-
-### Jira
-
-- **Inbound**: `POST /integrations/jira/webhook` — `jira:issue_updated` events. Triggers on configured status transition. HMAC-SHA256 validation.
-- **Manual pull**: `relay intent from-jira AUTH-123`
-- **Outbound**: bot comments on status changes, transition ticket on realization (Phase 2)
-
-### GitHub Issues
-
-- **Inbound**: `POST /integrations/github/webhook` — `issues` events. Triggers when configured label added. `X-Hub-Signature-256` validation.
-- **Manual pull**: `relay intent from-github owner/repo#123`
-- **Outbound**: bot comments, close issue on realization (Phase 2)
-
-### GitHub Projects
-
-Supported via `type: github_projects` integration. Uses custom field for explicit routing (B) instead of label.
-
-### Adding new sources
-
-Implement the `core.Connector` interface:
-
-```go
-type Connector interface {
-    Name() string
-    FetchTicket(ref string) (*TicketData, error)
-    PostComment(ref, message string) error
-    TransitionTicket(ref, toStatus string) error
-}
-```
-
-Register in the integration registry at startup. Routing and lifecycle work without modification.
-
----
-
-## HTTP API
-
-All `/api/*` routes require `Authorization: Bearer <token>` (auto-generated at `.relay/.token` on first start). Webhook routes and `/health` are unauthenticated.
-
-```
-GET  /health
-GET  /                                    HTML dashboard
-
-# Intents
-GET  /api/intents                         list: ?status=&project_id=&source=&limit=&offset=
-POST /api/intents                         create (body: description, project_id, author)
-GET  /api/intents/unrouted                triage queue for unrouted intents
-GET  /api/intents/:id
-POST /api/intents/:id/approve             body: {"approved_by": "email"}
-POST /api/intents/:id/reject              body: {"rejected_by": "email", "note": "..."}
-POST /api/intents/:id/assign              body: {"project_name": "auth-service", "assigned_by": "email"}
-GET  /api/intents/:id/events              full event log
-
-# Repos
-GET  /api/repos
-POST /api/repos                           body: {"name": "backend", "url": "...", "default_branch": "main"}
-GET  /api/repos/:id
-DELETE /api/repos/:id
-
-# Projects
-GET  /api/projects                        ?repo_id=
-POST /api/projects                        body: {"name": "auth-service", "repo_name": "backend", "source_path": "/services/auth"}
-GET  /api/projects/:id
-DELETE /api/projects/:id
-GET  /api/projects/:id/integrations
-POST /api/projects/:id/integrations       body: {"type": "jira", "external_id": "AUTH", "config": {...}}
-DELETE /api/projects/:id/integrations/:integration_id
-
-# Webhooks (HMAC-validated, unauthenticated)
-POST /integrations/jira/webhook
-POST /integrations/github/webhook
-```
-
----
-
-## Dashboard
-
-`http://localhost:9000` shows:
-- Pipeline strip: draft / unrouted / validating / needs_info / queued / rejected
-- **Unrouted triage queue** — intents awaiting project assignment
-- Recent intents: project, source badge, description, GS score, status, age
-- Repos and projects registered with Relay
-- Integration status: Jira / GitHub / Grove connectivity
-
----
-
-## CLI Reference
+## Installation
 
 ```bash
-relay serve [--port 9000] [--db <dsn>] [--config relay.yaml]
-
-relay repo add --name <name> [--branch main] <url>
-relay repo list
-relay repo remove <id>
-
-relay project add <name> --repo <repo-name> [--path /] [--owner eng@acme.com] [--gs-threshold 0.70]
-relay project list
-relay project show <id-or-name>
-relay project link <project> <type> <external-id> [--trigger <status>] [--label <label>] [--field <field>] [--component <comp>] [--auto-approve]
-relay project unlink <integration-id>
-
-relay intent create <description> --project <name> [--domain <tag>] [--author <a>]
-relay intent list [--status <s>] [--project <id>]
-relay intent show <id>
-relay intent approve <id> [--by <email>]
-relay intent reject <id> [--by <email>] [--reason <text>]
-relay intent assign <id> --project <name> [--by <email>]
-relay intent from-jira <ticket-id>
-relay intent from-github <owner/repo#number>
-
-relay version
+make build    # compile ./bin/relay
+make install  # install to $GOPATH/bin
+make test     # run all tests
 ```
+
+**Requirements:**
+- Go 1.22+
+- Grove running at `http://localhost:7777` (Relay auto-starts it if unreachable)
+- Git 2.x
 
 ---
 
 ## Configuration
 
-`relay.yaml`:
+Configuration lives in `.relay/` in your project root and is **committed alongside the code**. The same `.relay/` works identically in laptop, team, and company mode.
 
-```yaml
-port: 9000
-grove_url: http://localhost:7777
-db_url: postgres://localhost/relay
-token_file: .relay/.token
-gs_threshold: 0.70          # global default; per-project threshold overrides this
-
-jira:
-  url: https://company.atlassian.net
-  token: ${JIRA_API_TOKEN}
-  webhook_secret: ${JIRA_WEBHOOK_SECRET}
-  relay_project_field: "Relay Project"   # Jira custom field name for B-routing
-
-github:
-  token: ${GITHUB_TOKEN}
-  webhook_secret: ${GITHUB_WEBHOOK_SECRET}
-  label_trigger: "relay"
+```
+.relay/
+├── relay.yaml          # version pin, gates, runners, admission target
+├── .gitignore          # written by relay init; covers .relay/.cache/
+├── policies/           # per-gate config (path, secrets, fileclass, deps, size, coverage)
+├── rulesets/           # custom rule bundles + imported SonarQube profile XML
+├── intents/            # committed intent YAMLs (Auto-Intent Capture lands here)
+├── templates/          # intent templates for the team
+└── .cache/             # GITIGNORED — daemon state, intent drafts, indexer caches
 ```
 
-Project-level integration config is stored in Postgres (via `relay project link`), not in `relay.yaml`. `relay.yaml` holds only global credentials and defaults.
+**`relay.yaml` (minimal laptop config):**
 
-Environment overrides: `RELAY_PORT`, `RELAY_DB_URL`, `GROVE_URL`, `RELAY_GS_THRESHOLD`, `JIRA_API_TOKEN`, `JIRA_WEBHOOK_SECRET`, `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`.
+```yaml
+version: "1"
+admission_target: relay-main    # branch to admit certified commits to
+gates:
+  coverage: warn                 # warn | enforce | off
+  secrets: enforce
+  fileclass: enforce
+  deps: warn
+  size: warn
+```
+
+**Configuration layering:** built-in defaults ⨁ `.relay/relay.yaml` ⨁ `~/.relay/config.yaml` (credentials only).
+
+The effective merged config is hashed into every certificate as `Effective-Config-Hash` — audit replay is byte-reproducible.
+
+**Environment variables:**
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `GROVE_URL` | `http://localhost:7777` | Grove instance URL |
+| `RELAY_PORT` | `9000` | HTTP API / dashboard port |
+| `RELAY_DB_URL` | `.relay/.cache/state.sqlite` | Database (SQLite on laptop, Postgres on team) |
+| `JIRA_API_TOKEN` | — | Jira integration credential |
+| `GITHUB_TOKEN` | — | GitHub integration credential |
+
+---
+
+## MCP Tools
+
+Relay exposes 5 tools over MCP stdio, accessible from any MCP-capable AI agent (Claude Code, Cursor, Windsurf, Continue):
+
+| Tool | What it does | When to call |
+|------|-------------|--------------|
+| `relay_check` | Fast pre-flight: SAST on changed files + Grove-affected unit tests. Sub-10 s. | Every iteration before requesting human review |
+| `relay_certify` | Full certification: Stage 1 build + test + coverage + Stage 2 static analysis. | Before final admission |
+| `relay_submit` | Submit a ChangeSet for admission (calls `relay_certify` internally). | When code is ready to commit |
+| `relay_policy` | Query effective policy for the current workspace. | To understand what gates apply |
+| `relay_explain` | Explain a specific finding with rule context and fix guidance. | When `relay_check` returns findings |
+
+**Register with your IDE:**
+
+```bash
+relay mcp install-for claude-code    # writes .claude/mcp.json
+relay mcp install-for cursor         # writes .cursor/mcp.json
+relay mcp install-for windsurf       # writes .windsurf/mcp.json
+relay mcp install-for continue       # writes .continue/config.json
+```
+
+**Start MCP stdio server directly:**
+
+```bash
+relay mcp serve [--repo .]
+```
+
+For the recommended agent system-prompt fragment, see [docs/agent-prompt.md](docs/agent-prompt.md).
+
+---
+
+## CLI Reference
+
+### Core certification
+
+```bash
+relay init [--stack <name>] [--profile <name>] [.]
+            # Scaffold .relay/, generate Ed25519 key, register MCP with IDEs
+            # Stacks: go-microservice | node-api | python-service | java-spring
+            # Profiles: soc2-baseline | pci-dss-baseline | go-microservice-strict | ...
+
+relay check [--repo .]
+            # Fast pre-flight: SAST on changed files + Grove-affected tests
+
+relay certify [--repo .]
+              # Full certification pipeline: Stage 1 + Stage 2 + admission
+
+relay submit --diff <patch> --intent <id> [--repo .]
+             # Submit a specific ChangeSet diff for certification
+```
+
+### Certificates
+
+```bash
+relay cert list [--limit 20]         # list recent certificates
+relay cert show <id-or-ref>          # certificate details
+relay cert show --jsonld <id>        # JSON-LD export (AI Code Passport)
+relay cert verify <id-or-ref>        # verify Ed25519 signature
+relay cert replay <id-or-ref>        # replay gates: byte_reproducible | tool_drift | config_drift
+```
+
+### Tools and profiles
+
+```bash
+relay tools install                  # install bundled tools (semgrep, gitleaks, govulncheck, ...)
+relay tools list                     # show installed tools and versions
+relay init --list-stacks             # list available stack templates
+relay init --list-profiles           # list available compliance profiles
+relay import sonarqube-profile <xml> # import SonarQube quality profile XML into .relay/rulesets/
+```
+
+### Git hook
+
+```bash
+relay hook install [--force] [--repo .]    # install git pre-push hook
+relay hook uninstall [--repo .]            # remove hook
+```
+
+### Outbox
+
+```bash
+relay outbox push --intent-store=<path> [--repo .] [--batch 10]
+# Push certified changesets from local store to the intent-store git repo
+```
+
+### Intent intake (Phase 1)
+
+```bash
+relay serve [--port 9000]            # start HTTP server + dashboard
+relay intent create <description> --project <name>
+relay intent list [--status <s>]
+relay intent show <id>
+relay intent approve <id>
+relay intent reject <id>
+relay intent from-jira <ticket-id>
+relay intent from-github <owner/repo#number>
+relay repo add --name <name> <url>
+relay project add <name> --repo <repo-name> [--path /]
+relay project link <project> jira <board-key>
+relay project link <project> github_issues <owner/repo>
+```
+
+---
+
+## Certification Pipeline
+
+```
+agent writes code
+      │
+      ▼
+relay_check  (fast, in-loop)
+  ├── SAST on changed files (semgrep, gitleaks, inline-secrets)
+  ├── Grove-affected unit tests only
+  └── findings → agent self-corrects
+
+      │  agent satisfied
+      ▼
+relay_certify / relay certify  (full, at commit time)
+  │
+  ├── Stage 1: build + full test suite (git worktree isolation)
+  │     └── coverage-of-changed-symbols gate (vs Grove /tests edges)
+  │
+  ├── Stage 2: static analysis
+  │     ├── inline-secrets (always available)
+  │     ├── gitleaks (secrets)
+  │     ├── semgrep (OWASP ruleset + custom .relay/rulesets/)
+  │     ├── govulncheck / npm audit / pip-audit (deps)
+  │     └── eslint / ruff / golangci-lint (language linters)
+  │
+  ├── Risk heatmap
+  │     └── ICR (0.30) + stage2 severity (0.30) + coverage delta (0.25) + touch intensity (0.15)
+  │
+  ├── Policy gates (path, secrets, fileclass, deps, size, coverage)
+  │
+  └── Admission
+        ├── rebase onto target branch
+        ├── Ed25519 sign (CanonicalBytes over config + results, excludes admitted commit SHA)
+        ├── linear commit with full trailer:
+        │     Intent-ID: · Agent: · Model: · Certificate: · ICR-Hash:
+        │     Test-Plan: · Policy-Version: · Toolchain-Image: · Signed-By:
+        └── certificate persisted to store + intent-store git
+```
+
+---
+
+## Certificate Format
+
+Every certificate is an Ed25519-signed record over: the ChangeSet, the effective config hash, toolchain versions, test results, and findings. The admitted commit SHA is added to the trailer *after* signing.
+
+```bash
+relay cert show HEAD
+# Certificate: relay-cert-abc123
+# Intent-ID:   INT-0042
+# Agent:       claude-sonnet-4-6
+# Stage1:      PASS (42 tests, 87.3% coverage)
+# Stage2:      PASS (0 HIGH, 1 MEDIUM suppressed by policy)
+# Risk:        0.12 (low) — model v1
+# Admitted:    a1b2c3d (relay-main)
+# Signed-By:   ~/.relay/keys/admission.ed25519
+
+relay cert show --jsonld HEAD    # JSON-LD export for AI Code Passport / audit systems
+relay cert replay HEAD           # re-run gates against current tools → byte_reproducible
+```
+
+---
+
+## Built-in Profiles
+
+Relay ships 6 profiles for `relay init --profile=<name>`:
+
+| Profile | What it enforces |
+|---------|-----------------|
+| `soc2-baseline` | secrets + fileclass gates enforced; audit log required |
+| `pci-dss-baseline` | secrets + deps + fileclass enforced; strict coverage threshold |
+| `go-microservice-strict` | go vet + govulncheck + coverage ≥ 80% + fileclass |
+| `node-api-strict` | eslint + npm audit + coverage ≥ 75% |
+| `python-service-strict` | ruff + pip-audit + coverage ≥ 75% |
+| `java-spring-strict` | checkstyle + pmd + coverage ≥ 80% |
 
 ---
 
@@ -382,44 +307,56 @@ Environment overrides: `RELAY_PORT`, `RELAY_DB_URL`, `GROVE_URL`, `RELAY_GS_THRE
 
 Relay calls Grove at three points:
 
-| When | Endpoint | Purpose |
-|------|----------|---------|
-| GS check (intake) | `POST /icr` | Symbol count → is intent scoped? |
-| Decomposition (Phase 2) | `POST /icr` + `POST /deps` | Find independent connected components → parallel agents |
-| Certification (Phase 2) | `POST /impact` + `POST /tests` | Blast radius + test selection |
+| Phase | Endpoint | Purpose |
+|-------|----------|---------|
+| Intake: GS scoring | `POST /icr` | Symbol count → is intent scoped tightly enough? |
+| Certification: test selection | `POST /impact` + `POST /tests` | Which tests cover the changed symbols? |
+| Certification: blast radius | `POST /impact` + `POST /deps` | What else might break? |
 
-Relay auto-starts Grove if unreachable at startup (same contract as Prism and Fuse).
-
----
-
-## Storage
-
-| What | Where | Why |
-|------|-------|-----|
-| Intent proposals, status, events | Postgres | Mutable, needs concurrent writes, complex queries |
-| Project and repo config | Postgres | Operational state, changes frequently |
-| Routing rules (ProjectIntegration) | Postgres | M:M relationships, queried on every webhook |
-| Approved intent snapshots + certificates | Git (Phase 2) | Immutable, auditable, version-controlled |
-| Agent execution state | Postgres + K8s Jobs (Phase 2) | Operational |
+Relay auto-starts Grove if unreachable at startup (`GROVE_URL` health check → `exec grove serve --port 7777`).
 
 ---
 
 ## Security
 
-- HTTP server binds to `127.0.0.1:9000` — no LAN exposure
+- All HTTP servers bind to `127.0.0.1` — no LAN exposure
 - Bearer token at `.relay/.token` (mode 0600) required on all `/api/*` routes
-- Webhook routes are HMAC-validated (Jira: SHA256, GitHub: X-Hub-Signature-256) before any processing
-- Postgres credentials via environment variables only
+- Webhook routes validated with HMAC-SHA256 before any processing
+- Ed25519 keypair at `~/.relay/keys/admission.ed25519` (mode 0600), generated on `relay init`
+- Credentials via environment variables only — never in `.relay/relay.yaml`
 
 ---
 
 ## Testing
 
 ```bash
-make test
-go test ./internal/ingestion/...           # GS scoring
-go test ./internal/lifecycle/...           # state machine transitions
-go test ./internal/routing/...             # B→C→A routing logic
-go test ./internal/integration/jira/...    # HMAC + webhook parsing
-go test ./internal/integration/github/...  # HMAC + webhook parsing
+make test                                    # all packages
+go test ./internal/cert/...                  # certification pipeline
+go test ./internal/engine/...                # engine orchestrator
+go test ./internal/analyzers/...             # static analysis adapters
+go test ./internal/admission/...             # linear admission
+go test ./internal/runner/...                # test runners (Go, Python, Node)
+go test ./internal/ingestion/...             # GS scoring
+go test ./internal/lifecycle/...             # state machine
+go test ./internal/routing/...               # B→C→A routing
 ```
+
+---
+
+## Intent Intake (Phase 1)
+
+Relay can also ingest work items from Jira and GitHub Issues, validate their scope via GS scoring, and route them to registered projects. This surface is independent of the certification engine.
+
+```bash
+relay serve --port 9000   # start HTTP server + dashboard at http://localhost:9000
+
+# Register repos and projects
+relay repo add --name backend --url https://github.com/acme/backend
+relay project add auth-service --repo backend --path /services/auth
+relay project link auth-service jira AUTH --trigger "Ready for Relay"
+relay project link auth-service github_issues acme/backend --label relay
+```
+
+Dashboard at `http://localhost:9000` shows the triage queue, intent pipeline, GS scores, Grove connectivity, and registered projects.
+
+See [docs/architecture.md](docs/architecture.md) and [docs/design.md](docs/design.md) for the full system design.

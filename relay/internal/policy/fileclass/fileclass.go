@@ -99,9 +99,7 @@ func pathsFromDiff(diff string) []string {
 		if p == "/dev/null" {
 			continue
 		}
-		if strings.HasPrefix(p, "b/") {
-			p = p[2:]
-		}
+		p = strings.TrimPrefix(p, "b/")
 		if _, ok := seen[p]; ok {
 			continue
 		}

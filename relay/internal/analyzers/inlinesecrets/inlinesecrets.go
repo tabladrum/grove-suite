@@ -96,9 +96,7 @@ func (a *Analyzer) Run(_ context.Context, cs *core.ChangeSet, _ string) ([]cert.
 		case strings.HasPrefix(line, "+++ "):
 			p := strings.TrimPrefix(line, "+++ ")
 			p = strings.TrimSpace(p)
-			if strings.HasPrefix(p, "b/") {
-				p = p[2:]
-			}
+			p = strings.TrimPrefix(p, "b/")
 			currentPath = p
 			addedLineNum = 0
 		case strings.HasPrefix(line, "@@"):

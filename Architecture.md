@@ -34,7 +34,7 @@ All consumers use this API. All endpoints except `/health` require `Authorizatio
 | Endpoint | Method | Request | Consumer |
 |----------|--------|---------|----------|
 | `/health` | GET | — | Prism, Fuse, Relay (startup check) |
-| `/status` | GET | — | Prism, Relay |
+| `/status` | GET | — | Prism, Relay, VS Code extension |
 | `/index` | POST | `{"dir": string}` | All |
 | `/query` | POST | `{"intent": string, "limit": int}` | Prism, Relay (agent context) |
 | `/impact` | POST | `{"file": string, "line": int}` | Fuse, Relay (blast radius) |
@@ -47,16 +47,14 @@ All consumers use this API. All endpoints except `/health` require `Authorizatio
 
 ## Grove's Role Across the Full Pipeline
 
-Grove is not just a context delivery backend — it drives three distinct decisions in Relay's pipeline:
-
 | Phase | Grove endpoint | What it decides |
 |-------|---------------|-----------------|
-| Intake: GS scoring | `/icr` | Is the intent scoped tightly enough to execute? (symbol count) |
-| Intake: decomposition | `/icr` → connected components via `/deps` | Can a broad intent be split into independent parallel sub-intents? |
+| Intake: GS scoring | `/icr` | Is the intent scoped tightly enough to execute? |
+| Intake: decomposition (Phase 3) | `/icr` → connected components via `/deps` | Can a broad intent be split into independent parallel sub-intents? |
 | Execution: agent context | `/query` `/symbols` `/deps` via Prism | What code context does each agent need? |
-| Certification: test selection | `/impact` `/tests` | Which tests cover the changed symbols? |
-| Certification: blast radius | `/impact` `/deps` | What else might break? |
-| Merge: parallel agent output | `/impact` `/deps` via Fuse | Semantic merge of independent ChangeSets |
+| Certification: test selection | `/impact` + `/tests` | Which tests cover the changed symbols? |
+| Certification: blast radius | `/impact` + `/deps` | What else might break? |
+| Merge: parallel agent output (Phase 3) | `/impact` + `/deps` via Fuse | Semantic merge of independent ChangeSets |
 
 ---
 
@@ -78,16 +76,18 @@ Prism, Fuse, and Relay all implement identical startup logic:
 
 **Shared secret token.** Grove generates a 64-character hex token from `crypto/rand` on first start, writes it to `.grove/.token` with mode 0600, and requires `Authorization: Bearer <token>` on all non-health requests. Prism reads the token from the same path via `WithTokenFromDir`. Fuse and Relay follow the same pattern.
 
-**Threat boundary.** This model stops network-adjacent and browser-based attacks. It does not stop other local processes running as the same user — those can read `.grove/.token`. Full isolation would require OS-level sandboxing outside the scope of these tools.
+**Ed25519 admission key.** Relay generates a local Ed25519 keypair at `~/.relay/keys/admission.ed25519` (mode 0600) on `relay init`. Every admitted commit is signed over CanonicalBytes (config hash + ChangeSet + test results + findings). The admitted commit SHA is recorded in the trailer *after* signing — the cert is valid before the commit exists.
+
+**Threat boundary.** This model stops network-adjacent and browser-based attacks. It does not stop other local processes running as the same user — those can read token files. Full isolation would require OS-level sandboxing outside the scope of these tools.
 
 ---
 
 ## Data Flows
 
-### AI agent using Prism
+### AI agent using Prism (MCP or VS Code)
 
 ```
-Agent task description ("add rate limiting to login")
+Agent task description ("add rate limiting to login endpoint")
      │
      ▼
 prism_query
@@ -97,7 +97,7 @@ prism_query
      │
      ▼
 5-signal ranking
-(graph distance + semantic similarity + recency + test relevance + edit frequency)
+(graph distance · semantic similarity · recency · test relevance · edit frequency)
      │
      ▼
 Budget allocation
@@ -113,6 +113,23 @@ Session deduplication (LRU — already-seen symbols downranked)
      ▼
 Token-optimized context pack → agent
 ```
+
+### VS Code (Prism extension)
+
+```
+VS Code workspace
+     │
+     ├── Left status bar: "$(database) Grove N syms"  — Grove symbol count
+     ├── Left status bar: "$(graph) Prism X.X%"       — Prism session savings
+     │
+     ├── Copilot Agent mode:
+     │     #prismQuery, #prismRead, #prismSearch, #prismLookup,
+     │     #prismIndex, #prismSavings, #prismCompact, #prismFeedback
+     │
+     └── Auto-index on file save
+```
+
+The standalone Grove VS Code extension (grove-vscode) has been retired. The Prism extension owns the VS Code surface and provides full Grove + Prism integration.
 
 ### Git merge with Fuse
 
@@ -137,95 +154,40 @@ IntelliMerge 7-phase pipeline:
                         exit 1
 ```
 
-### Relay intent lifecycle (full pipeline)
-
-#### Phase 1 — Intake and routing (built)
+### Relay certification pipeline
 
 ```
-Work item arrives (Jira webhook / GitHub webhook / CLI / API)
+agent writes code
      │
      ▼
-Project routing  (B → C → A)
-     │
-     ├── B: explicit "Relay Project" field on ticket → direct route
-     ├── C: no unique match → status: unrouted (human assigns via dashboard)
-     └── A: component/label filter → route if exactly one project matches
+relay_intent_open → intent YAML saved to .relay/.cache/intents/
      │
      ▼
-Intent created with project_id
+relay_check  (fast, in-loop — sub-10 s target)
+  └── SAST on changed files + Grove-affected unit tests only
+     │  structured findings (file, line, rule, severity, fix-hint) returned to agent
+     ▼  agent self-corrects; loops up to 3× until Allowed=true
      │
-     ▼
-GS check — two stages:
+     ▼  (agent calls relay_certify only after relay_check Allowed=true)
+relay_certify
      │
-     ├── Stage 1: heuristic (word count, vagueness, specificity signals)
+     ├── Stage 1: build + full test suite (git worktree isolation)
+     │     └── coverage-of-changed-symbols gate (vs Grove /tests edges)
      │
-     ├── Stage 2: POST grove:7777/icr → affected symbol count
-     │           1–50 symbols  → GS 0.70–0.95 (well-scoped)
-     │           51–150        → GS 0.40–0.70 (borderline)
-     │           151+          → GS < 0.40    (too broad)
+     ├── Stage 2: static analysis (semgrep, gitleaks, govulncheck, linters)
      │
-     │   Final GS = 40% heuristic + 60% ICR
+     ├── Risk heatmap: ICR (0.30) + severity (0.30) + coverage (0.25) + touch (0.15)
      │
-     ├── GS ≥ threshold → status: queued (auto or manual approval)
-     └── GS < threshold → status: needs_info + feedback to source system
+     ├── Policy gates (path, secrets, fileclass, deps, size, coverage)
+     │
+     └── Admission
+           ├── rebase onto target branch
+           ├── Ed25519 sign CanonicalBytes
+           ├── linear commit with full trailer
+           └── certificate persisted + intent-store git snapshot
+
+relay_intent_close → intent promoted to .relay/intents/ + committed
 ```
-
-#### Phase 2 — Execution (planned)
-
-```
-Queued intent
-     │
-     ▼
-Grove decomposition
-     │
-     ├──► POST grove:7777/icr   → affected symbol list
-     ├──► POST grove:7777/deps  → edges between affected symbols
-     │
-     │   union-find on edge set → connected components
-     │
-     │   Component A         Component B         (no edges between them)
-     │   RateLimiter         Logger
-     │   LoginHandler        RequestLogger
-     │   TokenValidator      AuditWriter
-     │
-     ▼
-One K8s Job per independent component (parallel)
-
-     ┌─────────────────────┐   ┌─────────────────────┐
-     │  Agent Pod A        │   │  Agent Pod B        │
-     │                     │   │                     │
-     │  grove index        │   │  grove index        │
-     │  prism_query →      │   │  prism_query →      │
-     │    context for A    │   │    context for B    │
-     │  claude implements  │   │  claude implements  │
-     │  git diff → patch   │   │  git diff → patch   │
-     └────────┬────────────┘   └──────────┬──────────┘
-              │                           │
-              └──────────┬────────────────┘
-                         ▼
-                   Fuse semantic merge
-                   (parallel agent output →
-                    single unified diff)
-                         │
-                         ▼
-                   Certification
-                   ├── POST grove:7777/impact → blast radius
-                   ├── POST grove:7777/tests  → which tests to run
-                   ├── lint + test suite
-                   └── deploy dry-run
-                         │
-                         ▼
-                   Admission
-                   rebase → linear commit to main (no branches)
-                         │
-                         ▼
-                   Canary deployment
-                   metric validation → intent marked "realized"
-```
-
-**Why Grove drives decomposition:** Two symbols are independently executable if they share no `calls`, `uses-type`, or `imports` edges in the code graph. Grove's BFS traversal over the affected symbol set finds these connected components in O(V+E). This is the same graph used by Fuse for blast radius — the data is already there.
-
-**Why Fuse is the merge layer:** When parallel agents produce ChangeSets, Fuse resolves them at symbol granularity rather than line granularity. Agents working on structurally independent symbols cannot produce conflicts at the symbol level — but they can touch adjacent lines. Fuse's symbol-aware pipeline handles this correctly; line-level merge would produce false conflicts.
 
 ---
 
@@ -234,97 +196,55 @@ One K8s Job per independent component (parallel)
 ```
 Repo
   id, name, url, default_branch
-  e.g. "backend" → https://github.com/acme/backend
-    │
-    │ one repo → many projects (monorepo support)
-    ▼
-Project
-  id, name, repo_id, source_path, gs_threshold, auto_approve, owner
-  e.g. "auth-service"  path: /services/auth
-  e.g. "payments"      path: /services/payments
-    │
-    ├── many ProjectIntegrations (M:M with external boards)
-    │     id, project_id, type, external_id, config (JSONB)
-    │     type: "jira" | "github_issues" | "github_projects" | "linear"
-    │     external_id: "AUTH" (Jira board key), "acme/backend" (GitHub repo)
-    │
-    └── many Intents
-          id, project_id, description, source, source_ref
-          status, gs_score, icr_symbols, author
-          created_at, updated_at, approved_at, rejected_at
-```
 
-### Intent state machine
+    └── Project (many per repo — monorepo support)
+          id, name, repo_id, source_path, gs_threshold, auto_approve, owner
 
-```
-                    ingest
-                      │
-         B resolved?  │  B failed?
-              │       │       │
-              ▼       │       ▼
-           draft      │    unrouted ──► human assigns project
-              │       │       │               │
-              ▼       └───────┘               │
-         validating ◄──────────────────────────┘
-              │
-     ┌────────┼────────┐
-     ▼        ▼        ▼
-needs_info  queued  rejected
-     │
-  resubmit
-     │
-     ▼
-validating
-```
+            └── ProjectIntegration (M:M with external boards)
+                  type: jira | github_issues | github_projects | linear
+                  external_id: "AUTH" | "acme/backend"
+                  config: trigger_status, label_trigger, component_filter, auto_approve
 
-### Routing algorithm (B → C → A)
+            └── Intent
+                  project_id → Project
+                  description, status, gs_score, icr_symbols
+                  source: jira | github_issue | native | mcp
+                  source_ref: AUTH-123 | acme/backend#42
 
-```
-Webhook received (type="jira", external_id="AUTH", ticket data)
-     │
-     ▼
-1. Find ProjectIntegrations where type=jira AND external_id=AUTH
-   → zero matches: ignore (board not registered)
-   → one or more: proceed
-     │
-     ▼
-2. [B] Extract explicit relay-project value from ticket:
-       Jira:   custom field "Relay Project"
-       GitHub: label "relay-project:<name>"
-   → match found: route to named project
-     │
-     ▼
-3. [A] Apply component/label filter on each matching integration config
-   → exactly one match: route to that project
-   → multiple or zero: fall through
-     │
-     ▼
-4. [C] Create intent with status=unrouted
-       Human assigns via dashboard or:
-       relay intent assign <id> --project auth-service
+            └── ChangeSet (Phase 2A)
+                  intent_id → Intent
+                  diff, agent_id, model_version
+
+            └── Certificate (Phase 2A)
+                  changeset_id → ChangeSet
+                  stage1_result, stage2_findings, risk_score
+                  signature (Ed25519), effective_config_hash
+                  admitted_commit_sha, admitted_branch
 ```
 
 ---
 
 ## Module Paths
 
-| Directory | Module |
-|-----------|--------|
-| `grove/` | `github.com/tabladrum/grove-suite/grove` |
-| `prism/` | `github.com/tabladrum/grove-suite/prism` |
-| `fuse/` | `github.com/tabladrum/grove-suite/fuse` |
-| `relay/` | `github.com/tabladrum/grove-suite/relay` |
+```
+github.com/tabladrum/grove-suite/grove     go.mod: grove/go.mod
+github.com/tabladrum/grove-suite/prism     go.mod: prism/go.mod
+github.com/tabladrum/grove-suite/fuse      go.mod: fuse/go.mod
+github.com/tabladrum/grove-suite/relay     go.mod: relay/go.mod
+github.com/tabladrum/grove-suite/astkit    go.mod: astkit/go.mod
+```
 
-All four are wired into a Go workspace at `go.work` in the repository root.
+Go workspace: `go.work` at the repo root references all modules.
 
 ---
 
 ## Key Invariants
 
-- **CGO is isolated.** Only `grove/internal/parser/` contains CGO (tree-sitter). The rest of Grove and all of Prism/Fuse/Relay are pure Go.
-- **Delta indexing.** Grove never re-parses a file whose git blob SHA hasn't changed. Tests that force re-parsing must either change file content or clear the SHA cache.
-- **Scoped edges.** `calls` and `uses-type` edges are only created within the same file or across `imports` edges. Violating this produces false positives proportional to the number of symbols with common names.
-- **Symbol IDs are content-addressed.** An ID `path::name@sha` becomes stale as soon as the file content changes. Stale IDs must not be stored in external systems without a revalidation step.
-- **Decomposition requires edge absence.** Two work items are independently executable only when no `calls`, `uses-type`, or `imports` edge connects their symbol sets. Relay must verify this before spawning parallel agents.
-- **Fuse is the merge layer for parallel agents.** When multiple agents produce ChangeSets from the same base commit, Fuse's semantic merge resolves them. Line-level merge is not sufficient.
-- **Postgres is operational state (Relay).** Intent proposals, project config, routing rules live in Postgres. Approved intent snapshots and certificates live in git. These are separate concerns.
+1. **Grove is always the single source of graph truth.** No product rebuilds the symbol graph internally.
+2. **All HTTP servers bind to `127.0.0.1` only.** Never `0.0.0.0`.
+3. **Token files use mode 0600.** Generated from `crypto/rand`. Never committed.
+4. **Relay's CanonicalBytes excludes `admitted_commit_sha`.** The cert is signed before the commit exists; the SHA is appended to the trailer post-commit.
+5. **Delta indexing by git blob SHA.** If the SHA matches, the file is never re-parsed, regardless of project size.
+6. **Fuse parses merge versions in-memory.** It does not write base/ours/theirs to disk or call Grove's indexer. Grove is queried only for cross-file context (impact, deps).
+7. **The Prism extension is the sole VS Code surface.** The standalone Grove extension (grove-vscode) has been retired; Grove status is surfaced via the Prism extension's left status bar items.
+8. **`relay init` is the one-command agent wiring step.** It writes Pre-Flight Autopilot instructions to every per-agent instruction file and registers the relay MCP server with every detected tool — idempotent on re-run.
