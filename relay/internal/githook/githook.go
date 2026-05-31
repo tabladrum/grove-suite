@@ -40,8 +40,8 @@ if ! command -v relay >/dev/null 2>&1; then
   exit 1
 fi
 
-# Pipe the push spec back so relay can decide which refs to certify.
-printf '%s\n' "$push_input" | relay check --pre-push || exit $?
+# Pipe the push spec back so relay can run local pre-push checks.
+printf '%s\n' "$push_input" | relay hook run || exit $?
 `
 
 // HookFileName is the on-disk filename of the pre-push hook.

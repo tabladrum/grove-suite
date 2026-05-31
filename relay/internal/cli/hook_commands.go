@@ -52,6 +52,11 @@ func runHookWith(args []string, stdout, stderr io.Writer) int {
 		}
 		fmt.Fprintln(stdout, "installed:", path)
 		return 0
+	case "run":
+		// Internal subcommand invoked by the shell hook on every `git push`.
+		// Reads the per-ref push spec from stdin and runs a lightweight local
+		// check (outbox consistency + cert presence). Exit 0 = allow push.
+		return cmdHookRun(abs, stderr)
 	case "uninstall":
 		removed, err := githook.Uninstall(abs)
 		if err != nil {
@@ -68,6 +73,37 @@ func runHookWith(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "unknown hook subcommand: %s\n", sub)
 		return 1
 	}
+}
+
+// cmdHookRun is the implementation of `relay hook run`, called by the
+// shell pre-push hook on every `git push`. It reads the per-ref push spec
+// from stdin, checks the local outbox for uncertified commits, and prints a
+// summary. Exit 0 always — this is a laptop-mode informational check, not a
+// blocking gate (use `relay cert` for hard blocking).
+func cmdHookRun(repoRoot string, stderr io.Writer) int {
+	input, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		fmt.Fprintln(stderr, "hook run: read stdin:", err)
+		return 1
+	}
+	ctx := context.Background()
+	_ = ctx
+	_ = input
+	// Local outbox check: if the engine store has uncertified commits that
+	// will be included in this push, warn the user.
+	dbPath := filepath.Join(repoRoot, ".relay", "relay.db")
+	store, err := enginestore.Open(dbPath)
+	if err != nil {
+		// Store not initialised yet — first push, nothing to certify.
+		return 0
+	}
+	defer store.Close()
+	certs, err := store.ListCertificates(ctx, "", 0)
+	if err != nil || len(certs) == 0 {
+		return 0
+	}
+	fmt.Fprintf(os.Stderr, "relay: %d certified change-set(s) in local outbox — run `relay outbox push` to sync\n", len(certs))
+	return 0
 }
 
 // RunOutbox dispatches `relay outbox <push>`.

@@ -28,11 +28,11 @@ func newService(t *testing.T) *Service {
 
 func TestSlugify(t *testing.T) {
 	cases := map[string]string{
-		"Add rate limiting to /api/auth/* endpoints":  "add-rate-limiting-to-api-auth-endpoints",
-		"  Fix bug #42  ":                            "fix-bug-42",
-		"":                                            "",
-		"//////":                                      "",
-		"Use UPPERCASE And Mixed_Underscores":         "use-uppercase-and-mixed-underscores",
+		"Add rate limiting to /api/auth/* endpoints": "add-rate-limiting-to-api-auth-endpoints",
+		"  Fix bug #42  ":                     "fix-bug-42",
+		"":                                    "",
+		"//////":                              "",
+		"Use UPPERCASE And Mixed_Underscores": "use-uppercase-and-mixed-underscores",
 	}
 	for in, want := range cases {
 		got := Slugify(in)
@@ -108,9 +108,9 @@ func TestService_UpdatePatchesDraft(t *testing.T) {
 	s := newService(t)
 	i, _, _ := s.Open("orig title", "orig desc", OriginatedFrom{})
 	patched, err := s.Update(i.ID, map[string]any{
-		"title":          "new title",
-		"allowed_paths":  []any{"internal/auth/**", "tests/auth/**"},
-		"risk_level":     "low",
+		"title":         "new title",
+		"allowed_paths": []any{"internal/auth/**", "tests/auth/**"},
+		"risk_level":    "low",
 	})
 	if err != nil {
 		t.Fatal(err)

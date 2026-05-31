@@ -34,8 +34,8 @@ func TestInstall_FreshRepo(t *testing.T) {
 	if !strings.Contains(string(body), ManagedMarker) {
 		t.Error("body missing ManagedMarker")
 	}
-	if !strings.Contains(string(body), "relay check --pre-push") {
-		t.Error("body missing relay check invocation")
+	if !strings.Contains(string(body), "relay hook run") {
+		t.Error("body missing relay hook run invocation")
 	}
 	if runtime.GOOS != "windows" {
 		info, _ := os.Stat(path)
