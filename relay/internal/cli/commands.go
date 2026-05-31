@@ -802,32 +802,46 @@ func printIntent(i *core.Intent) {
 func printUsage() {
 	fmt.Println(`usage: relay <command> [options]
 
-Commands:
-  serve            start the HTTP server
-  repo             manage repositories
-  project          manage projects
-  intent           manage intents
-  version          print version
+Laptop-mode workflow (single developer, no Postgres required):
+  relay init                          initialize .relay/ in the current repo
+  relay keys gen                      generate Ed25519 signing key (mode 0600)
+  relay keys fingerprint              print key id + public-key hex
+  relay keys export --out <bundle>    export keys as a tarball for portability
+  relay keys import <bundle>          import keys from a tarball
+  relay daemon start                  start the local Unix-socket daemon
+  relay daemon status                 show daemon health, pid, socket path
+  relay daemon stop                   stop the daemon
+  relay daemon restart                stop then start
+  relay intent open --title <t> --description <d> [--agent <a>] [--model <m>]
+  relay intent update --id <id> --patch <yaml>
+  relay intent close --id <id> [--agent <a>]
+  relay intent list                   list captured intents (laptop mode)
+  relay intent list-captured          same, explicit form
+  relay intent get-captured --id <id>
+  relay check --diff <file>           pre-flight verdict (fast slice)
+  relay certify --diff <file>         full certification pipeline
+  relay submit --diff <file>          certify + admit to current branch
+  relay hook install|uninstall        manage the git pre-push hook
+  relay mcp serve                     run the MCP server over stdio
+  relay mcp install-for <client>      auto-register relay in IDE MCP config
+                                      <client> in {claude-code, cursor, continue, windsurf}
+  relay mcp install-for --list        print supported clients
+  relay tools list|install            manage analyzer toolchain
+  relay import sonarqube-profile <path.xml>  import SQ ruleset (verbatim)
 
-Repo subcommands:
-  relay repo add --name <name> [--branch main] <url>
-  relay repo list
-  relay repo remove <id>
+Team-mode workflow (requires DATABASE_URL pointing at Postgres):
+  relay serve                         start the HTTP server
+  relay repo add|list|remove          manage source repositories
+  relay project add|list|show|link|unlink   manage projects
+  relay intent create|show|approve|reject|assign  Postgres-backed intent workflow
+  relay intent from-jira <ticket>    import from Jira
+  relay intent from-github <owner/repo#number>  import from GitHub
 
-Project subcommands:
-  relay project add <name> --repo <repo-name> [--path /] [--owner eng@example.com]
-  relay project list
-  relay project show <id-or-name>
-  relay project link <project> <type> <external-id> [--trigger <status>] [--label <label>] [--field <field>]
-  relay project unlink <integration-id>
+Other:
+  relay version                       print version
+  relay outbox <subcommand>           inspect the outbox reconciler
 
-Intent subcommands:
-  relay intent create <desc> --project <name> [--domain <d>] [--author <a>]
-  relay intent list [--status <s>] [--project <id>]
-  relay intent show <id>
-  relay intent approve <id> [--by <email>]
-  relay intent reject <id> [--by <email>] [--reason <text>]
-  relay intent assign <id> --project <name> [--by <email>]
-  relay intent from-jira <ticket-id>
-  relay intent from-github <owner/repo#number>`)
+Environment:
+  DATABASE_URL          set to switch into team mode (Postgres-backed intent storage)
+  GROVE_URL             override Grove HTTP base URL (default http://localhost:7777)`)
 }

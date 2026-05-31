@@ -35,12 +35,34 @@ func RunIntentCapture(args []string) (handled bool, exit int) {
 	case "close":
 		return true, cmdIntentClose(args[1:])
 	case "list-captured":
-		// Disambiguated name so we don't clash with the Phase 1 `intent list`.
+		// Explicit name (kept for back-compat).
 		return true, cmdIntentCaptureList(args[1:])
 	case "get-captured":
 		return true, cmdIntentCaptureGet(args[1:])
+	case "list":
+		// In laptop mode (.relay/intents/ exists and no Postgres URL is
+		// configured), `relay intent list` should mean "list captured
+		// intents on disk." Without this route, the user gets a confusing
+		// Postgres connection error. Team mode still falls through to the
+		// legacy Postgres-backed cmdIntent.
+		if isLaptopMode() {
+			return true, cmdIntentCaptureList(args[1:])
+		}
 	}
 	return false, 0
+}
+
+// isLaptopMode reports whether the current repo is using local
+// file-backed intents (laptop mode) rather than the Postgres-backed
+// team service. Detection is intentionally simple and cheap:
+//   - DATABASE_URL set (even empty doesn't count): team mode
+//   - otherwise: laptop mode (the default)
+//
+// We deliberately do not require .relay/intents/ to exist — that
+// directory is created on first `relay intent open`, and `list` should
+// work before that, returning zero rows.
+func isLaptopMode() bool {
+	return os.Getenv("DATABASE_URL") == ""
 }
 
 func cmdIntentOpen(args []string) int {
