@@ -9,10 +9,17 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/tabladrum/grove-suite/relay/internal/analyzers"
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
 	"github.com/tabladrum/grove-suite/relay/internal/tools"
 )
+
+func init() {
+	analyzers.DefaultRegistry.Register("gitleaks", func(_ string, _ core.AnalyzerConfig) (analyzers.Analyzer, error) {
+		return New(), nil
+	})
+}
 
 // Analyzer wraps `gitleaks detect --no-banner --report-format=json --no-git`.
 type Analyzer struct{}

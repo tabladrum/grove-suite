@@ -15,12 +15,18 @@ import (
 
 	"github.com/tabladrum/grove-suite/relay/internal/admission"
 	"github.com/tabladrum/grove-suite/relay/internal/analyzers"
-	"github.com/tabladrum/grove-suite/relay/internal/analyzers/eslint"
-	"github.com/tabladrum/grove-suite/relay/internal/analyzers/gitleaks"
-	"github.com/tabladrum/grove-suite/relay/internal/analyzers/govulncheck"
-	"github.com/tabladrum/grove-suite/relay/internal/analyzers/inlinesecrets"
-	"github.com/tabladrum/grove-suite/relay/internal/analyzers/ruff"
-	"github.com/tabladrum/grove-suite/relay/internal/analyzers/semgrep"
+
+	// Side-effect imports: each adapter registers its factory with
+	// analyzers.DefaultRegistry in init().
+	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/eslint"
+	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/external"
+	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/gitleaks"
+	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/govulncheck"
+	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/inlinesecrets"
+	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/ruff"
+	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/semgrep"
+	_ "github.com/tabladrum/grove-suite/relay/internal/analyzers/sonar"
+	"github.com/tabladrum/grove-suite/relay/internal/cert"
 	"github.com/tabladrum/grove-suite/relay/internal/cert/stage1"
 	"github.com/tabladrum/grove-suite/relay/internal/cert/stage2"
 	"github.com/tabladrum/grove-suite/relay/internal/config"
@@ -437,14 +443,15 @@ func BuildEngine(start string) (*engine.Engine, func(), error) {
 	reg.Register(policy.PathGate{})
 	reg.Register(policy.SizeGate{})
 	reg.Register(&fileclass.Gate{})
-	stage2Analyzers := []analyzers.Analyzer{
-		inlinesecrets.New(),
-		gitleaks.New(),
-		semgrep.New(),
-		govulncheck.New(),
-		eslint.New(),
-		ruff.New(),
+	stage2Analyzers, err := buildStage2Analyzers(cfg)
+	if err != nil {
+		_ = store.Close()
+		return nil, nil, fmt.Errorf("build analyzers: %w", err)
 	}
+	s2 := stage2.New(stage2Analyzers...)
+	s2.Scope = cfg.Scope.Normalize()
+	s2.SeverityFloors = severityFloors(cfg)
+	s2.ScopeOverrides = scopeOverrides(cfg)
 	// Multilang dispatcher: Go is checked first (it's the only language
 	// whose runner requires a separate build step today), then Python and
 	// Node. The dispatcher returns a multilang-tagged empty TestRun when
@@ -467,13 +474,63 @@ func BuildEngine(start string) (*engine.Engine, func(), error) {
 		Signer:   sgn,
 		Config:   cfg,
 		Stage1:   s1,
-		Stage2:   stage2.New(stage2Analyzers...),
+		Stage2:   s2,
 	}
 	// Stage-aware gates read the cached results via closures.
 	reg.Register(&coverage.Gate{Stage1: e.Stage1Result})
 	reg.Register(&secrets.Gate{Stage2: e.Stage2Result})
 	reg.Register(&deps.Gate{Stage2: e.Stage2Result})
 	return e, func() { _ = store.Close() }, nil
+}
+
+// buildStage2Analyzers resolves the configured analyzer set against the
+// factory registry. When cfg.Analyzers is empty (legacy configs that
+// predate the section), the historical built-in default is used so an
+// upgrade is a no-op for those repos.
+func buildStage2Analyzers(cfg *core.RelayConfig) ([]analyzers.Analyzer, error) {
+	if cfg == nil || len(cfg.Analyzers) == 0 {
+		enabled := true
+		cfg = &core.RelayConfig{
+			Analyzers: map[string]core.AnalyzerConfig{
+				"inline-secrets": {Enabled: &enabled},
+				"gitleaks":       {Enabled: &enabled},
+				"semgrep":        {Enabled: &enabled, RulePacks: []string{"auto"}, RulesetsFromRelayDir: true},
+				"govulncheck":    {Enabled: &enabled},
+				"eslint":         {Enabled: &enabled},
+				"ruff":           {Enabled: &enabled},
+				"sonar":          {Enabled: &enabled, RulesetsFromRelayDir: true},
+			},
+		}
+	}
+	return analyzers.Build(cfg.Analyzers, nil)
+}
+
+// severityFloors extracts the SeverityFloor map keyed by analyzer name.
+func severityFloors(cfg *core.RelayConfig) map[string]cert.Severity {
+	if cfg == nil {
+		return nil
+	}
+	out := map[string]cert.Severity{}
+	for name, a := range cfg.Analyzers {
+		if a.SeverityFloor != "" {
+			out[name] = cert.Severity(a.SeverityFloor)
+		}
+	}
+	return out
+}
+
+// scopeOverrides extracts per-analyzer ScopeOverride values.
+func scopeOverrides(cfg *core.RelayConfig) map[string]core.ScanScope {
+	if cfg == nil {
+		return nil
+	}
+	out := map[string]core.ScanScope{}
+	for name, a := range cfg.Analyzers {
+		if a.ScopeOverride != "" {
+			out[name] = core.ScanScope(a.ScopeOverride)
+		}
+	}
+	return out
 }
 
 // goBuilderIfGo runs the Go builder only when goRunner.Detect(dir) is true.

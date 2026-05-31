@@ -25,6 +25,17 @@ type Stage2 struct {
 	// MaxParallel caps concurrent analyzer execution. Zero means unbounded
 	// (one goroutine per analyzer).
 	MaxParallel int
+	// Scope, when ScopeNew, drops findings whose (Path, Line) is not in
+	// the diff's added-line ranges. ScopeAll (default) reports everything.
+	// Applied uniformly across every analyzer's findings.
+	Scope core.ScanScope
+	// SeverityFloors maps analyzer name → minimum severity to keep. Empty
+	// means "no floor". Applied per-analyzer before scope filtering so a
+	// noisy linter can be muted to high-only without affecting others.
+	SeverityFloors map[string]cert.Severity
+	// ScopeOverrides maps analyzer name → per-analyzer ScanScope that
+	// overrides Stage2.Scope for that analyzer's findings only.
+	ScopeOverrides map[string]core.ScanScope
 }
 
 // New constructs a Stage2 with the given analyzers.
@@ -111,6 +122,27 @@ func (s *Stage2) Run(ctx context.Context, cs *core.ChangeSet) (cert.Stage2Result
 		}()
 	}
 	wg.Wait()
+
+	var added core.AddedLineMap
+	if s.Scope == core.ScopeNew || len(s.ScopeOverrides) > 0 {
+		added = core.ParseAddedLines(cs.Diff)
+	}
+
+	for i, r := range results {
+		findings := r.findings
+		if floor, ok := s.SeverityFloors[r.run.Name]; ok && floor != "" {
+			findings = filterFloor(findings, floor)
+		}
+		scope := s.Scope
+		if ov, ok := s.ScopeOverrides[r.run.Name]; ok && ov != "" {
+			scope = ov
+		}
+		if scope == core.ScopeNew && added != nil {
+			findings = filterNewCode(findings, added)
+		}
+		results[i].findings = findings
+		results[i].run.NumFindings = len(findings)
+	}
 
 	for _, r := range results {
 		res.Runs = append(res.Runs, r.run)

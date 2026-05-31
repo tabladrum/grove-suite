@@ -1,6 +1,10 @@
 // Package semgrep adapts the semgrep CLI (https://semgrep.dev) into the
-// Stage-2 analyzer contract. By default it runs semgrep's `auto` ruleset,
-// which covers OWASP Top-10 style checks across many languages.
+// Stage-2 analyzer contract. Rule packs are supplied via the
+// `rule_packs` config block (e.g. ["auto", "p/security-audit",
+// "rulesets/my-org.yml"]); each becomes a `--config <pack>` argument.
+// When `rulesets_from_relay_dir: true`, every `*.yml`/`*.yaml`/`.json`
+// file under .relay/rulesets/ is appended.
+//
 // Unavailable when the binary is not in PATH.
 package semgrep
 
@@ -8,22 +12,43 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
+	"github.com/tabladrum/grove-suite/relay/internal/analyzers"
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
 	"github.com/tabladrum/grove-suite/relay/internal/tools"
 )
 
-// Analyzer wraps `semgrep --json --config <Config>`.
+// Analyzer wraps `semgrep --json --config <RulePack> ...`.
 type Analyzer struct {
-	// Config is the semgrep --config value (rule pack). Defaults to "auto".
-	Config string
+	// RulePacks is the list of --config values. Empty defaults to ["auto"].
+	RulePacks []string
+	// LoadFromRulesetsDir, when true, also loads .relay/rulesets/*.yml
+	// (and .yaml/.json) at run time from the worktree root.
+	LoadFromRulesetsDir bool
+	// ExtraArgs are appended after the config flags.
+	ExtraArgs []string
 }
 
-// New returns a semgrep adapter with default config.
-func New() *Analyzer { return &Analyzer{Config: "auto"} }
+// NewWithConfig constructs a Semgrep adapter from its analyzer config block.
+// This is the factory the registry uses.
+func NewWithConfig(_ string, cfg core.AnalyzerConfig) (analyzers.Analyzer, error) {
+	a := &Analyzer{
+		RulePacks:           append([]string(nil), cfg.RulePacks...),
+		LoadFromRulesetsDir: cfg.RulesetsFromRelayDir,
+		ExtraArgs:           append([]string(nil), cfg.ExtraArgs...),
+	}
+	return a, nil
+}
+
+// New returns the zero-config Semgrep adapter (legacy API). Equivalent
+// to NewWithConfig("semgrep", AnalyzerConfig{}).
+func New() *Analyzer { return &Analyzer{} }
 
 // Name implements analyzers.Analyzer.
 func (*Analyzer) Name() string { return "semgrep" }
@@ -51,21 +76,26 @@ type semgrepReport struct {
 
 // Run executes semgrep against dir and parses its JSON output.
 func (a *Analyzer) Run(ctx context.Context, _ *core.ChangeSet, dir string) ([]cert.Finding, error) {
-	cfg := a.Config
-	if cfg == "" {
-		cfg = "auto"
-	}
 	bin := tools.Locate("semgrep")
 	if bin == "" {
 		return nil, nil
 	}
-	cmd := exec.CommandContext(ctx, bin,
-		"--json",
-		"--quiet",
-		"--disable-version-check",
-		"--config", cfg,
-		dir,
-	)
+	packs := append([]string(nil), a.RulePacks...)
+	if a.LoadFromRulesetsDir {
+		packs = append(packs, discoverRulesets(dir)...)
+	}
+	if len(packs) == 0 {
+		packs = []string{"auto"}
+	}
+
+	args := []string{"--json", "--quiet", "--disable-version-check"}
+	for _, p := range packs {
+		args = append(args, "--config", p)
+	}
+	args = append(args, a.ExtraArgs...)
+	args = append(args, dir)
+
+	cmd := exec.CommandContext(ctx, bin, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -77,9 +107,9 @@ func (a *Analyzer) Run(ctx context.Context, _ *core.ChangeSet, dir string) ([]ce
 	}
 	var rep semgrepReport
 	if err := json.Unmarshal(stdout.Bytes(), &rep); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("semgrep: parse JSON: %w", err)
 	}
-	var out []cert.Finding
+	out := make([]cert.Finding, 0, len(rep.Results))
 	for _, r := range rep.Results {
 		sev := mapSeverity(r.Extra.Severity)
 		path := r.Path
@@ -103,6 +133,37 @@ func (a *Analyzer) Run(ctx context.Context, _ *core.ChangeSet, dir string) ([]ce
 	return out, nil
 }
 
+// discoverRulesets returns the absolute paths of every
+// .relay/rulesets/*.{yml,yaml,json} file at workDir or any parent up to
+// 8 levels. XML profiles are skipped — those belong to the sonar adapter.
+func discoverRulesets(workDir string) []string {
+	cur := workDir
+	for i := 0; i < 8; i++ {
+		dir := filepath.Join(cur, ".relay", "rulesets")
+		if entries, err := os.ReadDir(dir); err == nil {
+			var out []string
+			for _, e := range entries {
+				if e.IsDir() {
+					continue
+				}
+				ext := strings.ToLower(filepath.Ext(e.Name()))
+				if ext == ".yml" || ext == ".yaml" || ext == ".json" {
+					out = append(out, filepath.Join(dir, e.Name()))
+				}
+			}
+			if len(out) > 0 {
+				return out
+			}
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			break
+		}
+		cur = parent
+	}
+	return nil
+}
+
 func mapSeverity(s string) cert.Severity {
 	switch strings.ToUpper(s) {
 	case "ERROR":
@@ -114,4 +175,8 @@ func mapSeverity(s string) cert.Severity {
 	default:
 		return cert.SeverityLow
 	}
+}
+
+func init() {
+	analyzers.DefaultRegistry.Register("semgrep", NewWithConfig)
 }

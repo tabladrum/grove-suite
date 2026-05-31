@@ -66,8 +66,10 @@ func LoadRelayConfig(start string) (*core.RelayConfig, error) {
 }
 
 func defaultRelayConfig() *core.RelayConfig {
+	enabled := true
 	return &core.RelayConfig{
 		RelayVersion: "0.1",
+		Scope:        core.ScopeAll,
 		Policies: map[string]core.PolicyBlock{
 			"path": {Enabled: true, Options: map[string]any{
 				"deny": []any{".git/", "vendor/", "node_modules/"},
@@ -89,6 +91,18 @@ func defaultRelayConfig() *core.RelayConfig {
 			"deps": {Enabled: true, Options: map[string]any{
 				"deny_high": false,
 			}},
+		},
+		Analyzers: map[string]core.AnalyzerConfig{
+			"inline-secrets": {Enabled: &enabled},
+			"gitleaks":       {Enabled: &enabled},
+			"semgrep":        {Enabled: &enabled, RulePacks: []string{"auto"}, RulesetsFromRelayDir: true},
+			"govulncheck":    {Enabled: &enabled},
+			"eslint":         {Enabled: &enabled},
+			"ruff":           {Enabled: &enabled},
+			"sonar": {
+				Enabled:              &enabled,
+				RulesetsFromRelayDir: true,
+			},
 		},
 	}
 }

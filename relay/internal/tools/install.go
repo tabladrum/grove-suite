@@ -126,13 +126,119 @@ func (i *Installer) installRelease(rel Release) (string, error) {
 	if _, err := os.Stat(binSrc); err != nil {
 		return "", fmt.Errorf("binary not found after extract at %s: %w", binSrc, err)
 	}
-	// safeExtract / copyFile already wrote the binary with mode 0o755; no
-	// extra chmod is needed and the previous defensive call was unreachable
-	// in tests on POSIX.
+	// Layout dispatch: standard "shim" links into <root>/bin; "java-home"
+	// republishes the JRE under <root>/jre/; "sonar-jar" copies the JAR
+	// to <root>/sonar/relay-sonar.jar. Both special layouts are read by
+	// the sonar analyzer at run time.
+	switch rel.Layout {
+	case "java-home":
+		if err := i.publishJavaHome(verDir, binSrc); err != nil {
+			return "", err
+		}
+		return binSrc, nil
+	case "sonar-jar":
+		if err := i.publishSonarJar(binSrc); err != nil {
+			return "", err
+		}
+		return binSrc, nil
+	case "sonar-plugin":
+		// Analyzer plugin jars land under <root>/sonar/analyzers/ so the
+		// LSP launcher can glob them at startup without each adapter
+		// reaching back into the per-version cache.
+		if err := i.publishSonarPlugin(binSrc); err != nil {
+			return "", err
+		}
+		return binSrc, nil
+	}
 	if err := i.linkInto(binSrc, binName(rel)); err != nil {
 		return "", err
 	}
 	return binSrc, nil
+}
+
+// publishJavaHome materializes the JRE at <root>/jre-home/ with a stable
+// bin/java entry point. We copy rather than symlink the whole tree so
+// macOS Gatekeeper doesn't flag the bundle as quarantined when java
+// dlopens its sibling .dylibs across a symlink.
+//
+// Note the publish root (<root>/jre-home) is a *sibling* of the per-
+// version cache (<root>/jre/<version>/...), not its parent: nuking the
+// publish root must never touch the cache the copy reads from.
+func (i *Installer) publishJavaHome(verDir, binSrc string) error {
+	jreRoot := filepath.Join(i.Root, "jre-home")
+	if err := os.RemoveAll(jreRoot); err != nil {
+		return err
+	}
+	// binSrc is .../bin/java (linux/windows) or .../Contents/Home/bin/java
+	// (macOS); the JAVA_HOME is two directories up from binSrc on linux,
+	// three on macOS. Walk up to the directory that contains "bin/java".
+	home := filepath.Dir(filepath.Dir(binSrc))
+	if filepath.Base(filepath.Dir(home)) == "Contents" {
+		// macOS layout: <home>/Contents/Home/bin/java; JAVA_HOME = <home>/Contents/Home
+		// home is already correct (it's .../Contents/Home).
+	}
+	if err := copyTree(home, jreRoot); err != nil {
+		return err
+	}
+	// Sanity check: the analyzer looks for <jreRoot>/bin/java(.exe).
+	javaName := "java"
+	if runtime.GOOS == "windows" {
+		javaName = "java.exe"
+	}
+	if _, err := os.Stat(filepath.Join(jreRoot, "bin", javaName)); err != nil {
+		return fmt.Errorf("publishJavaHome: %w", err)
+	}
+	_ = verDir // versionDir kept for cache provenance
+	return nil
+}
+
+// publishSonarJar copies the wrapper JAR to its stable location.
+func (i *Installer) publishSonarJar(binSrc string) error {
+	dst := filepath.Join(i.Root, "sonar", "sonarlint-ls.jar")
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	return copyFile(binSrc, dst, 0o644)
+}
+
+// publishSonarPlugin copies an analyzer plugin jar to
+// <root>/sonar/analyzers/<basename>. The launcher passes every jar in
+// that directory to sonarlint-ls via -analyzers, so adding a plugin is
+// just `relay tools install --only=sonar-php` with the matching
+// registry entry.
+func (i *Installer) publishSonarPlugin(binSrc string) error {
+	dst := filepath.Join(i.Root, "sonar", "analyzers", filepath.Base(binSrc))
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	return copyFile(binSrc, dst, 0o644)
+}
+
+// copyTree copies the directory tree at src into dst. Existing dst is
+// not removed (caller's responsibility). Preserves file mode bits.
+func copyTree(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+		switch {
+		case info.IsDir():
+			return os.MkdirAll(target, info.Mode().Perm()|0o700)
+		case info.Mode()&os.ModeSymlink != 0:
+			link, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+			return os.Symlink(link, target)
+		default:
+			return copyFile(path, target, info.Mode().Perm())
+		}
+	})
 }
 
 func (i *Installer) installGoTool(rel Release) (string, error) {
@@ -175,6 +281,11 @@ func defaultGoInstall(pkg, _, destDir string) (string, error) {
 	}
 	return filepath.Join(destDir, base), nil
 }
+
+// installMavenJar and findMavenSource were removed when we switched
+// from building our own SonarLint wrapper to downloading SonarSource's
+// published sonarlint-language-server jar directly from Maven Central.
+// See Registry["sonarlint-ls"] in registry.go.
 
 func (i *Installer) linkInto(src, dstName string) error {
 	if err := os.MkdirAll(i.BinDir(), 0o755); err != nil {

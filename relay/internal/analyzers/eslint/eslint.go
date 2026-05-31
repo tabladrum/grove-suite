@@ -10,10 +10,19 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/tabladrum/grove-suite/relay/internal/analyzers"
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
 	"github.com/tabladrum/grove-suite/relay/internal/tools"
 )
+
+func init() {
+	analyzers.DefaultRegistry.Register("eslint", func(_ string, cfg core.AnalyzerConfig) (analyzers.Analyzer, error) {
+		a := New()
+		a.ExtraArgs = cfg.ExtraArgs
+		return a, nil
+	})
+}
 
 // Analyzer wraps `eslint --format=json`.
 type Analyzer struct {

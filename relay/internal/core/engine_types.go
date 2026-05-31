@@ -95,10 +95,15 @@ type Certificate struct {
 // The canonical-JSON encoding of this struct (with deterministic field order) is
 // what gets sha256-hashed into EffectiveConfigHash.
 type RelayConfig struct {
-	RelayVersion string                 `json:"relay_version"`
-	Stack        string                 `json:"stack,omitempty"`
-	Policies     map[string]PolicyBlock `json:"policies"`
-	SourcePath   string                 `json:"-"` // discovered location, excluded from hash
+	RelayVersion string                    `json:"relay_version"`
+	Stack        string                    `json:"stack,omitempty"`
+	Policies     map[string]PolicyBlock    `json:"policies"`
+	Analyzers    map[string]AnalyzerConfig `json:"analyzers,omitempty"`
+	// Scope controls the post-hoc finding filter applied to every analyzer
+	// output. "all" (default) reports everything; "new" reports only
+	// findings on lines the ChangeSet diff added or modified.
+	Scope      ScanScope `json:"scope,omitempty"`
+	SourcePath string    `json:"-"` // discovered location, excluded from hash
 }
 
 // PolicyBlock holds the raw, gate-specific options. Each gate decides how to interpret.

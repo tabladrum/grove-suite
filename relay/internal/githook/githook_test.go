@@ -131,3 +131,59 @@ func TestInstall_NoGitDir(t *testing.T) {
 		t.Error("expected error when .git is missing")
 	}
 }
+
+func TestInstallPreCommit_FreshRepo(t *testing.T) {
+	repo := initRepo(t)
+	path, err := InstallPreCommit(repo, false)
+	if err != nil {
+		t.Fatalf("InstallPreCommit: %v", err)
+	}
+	want := filepath.Join(repo, ".git", "hooks", "pre-commit")
+	if path != want {
+		t.Errorf("path=%q want %q", path, want)
+	}
+	body, _ := os.ReadFile(path)
+	if !strings.Contains(string(body), ManagedMarker) {
+		t.Error("pre-commit body missing ManagedMarker")
+	}
+	if !strings.Contains(string(body), "relay hook pre-commit") {
+		t.Error("pre-commit body missing 'relay hook pre-commit' invocation")
+	}
+	if runtime.GOOS != "windows" {
+		info, _ := os.Stat(path)
+		if info.Mode().Perm()&0o100 == 0 {
+			t.Errorf("pre-commit hook not executable: %v", info.Mode())
+		}
+	}
+}
+
+func TestUninstallPreCommit_RoundTrip(t *testing.T) {
+	repo := initRepo(t)
+	if _, err := InstallPreCommit(repo, false); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := UninstallPreCommit(repo)
+	if err != nil || !removed {
+		t.Errorf("uninstall pre-commit: removed=%v err=%v", removed, err)
+	}
+	// Second uninstall is a no-op.
+	removed, err = UninstallPreCommit(repo)
+	if err != nil || removed {
+		t.Errorf("second uninstall pre-commit: removed=%v err=%v", removed, err)
+	}
+}
+
+func TestInstallPreCommit_RefusesForeign(t *testing.T) {
+	repo := initRepo(t)
+	hooks := filepath.Join(repo, ".git", "hooks")
+	_ = os.MkdirAll(hooks, 0o755)
+	if err := os.WriteFile(filepath.Join(hooks, "pre-commit"), []byte("#!/bin/sh\necho foreign\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InstallPreCommit(repo, false); err == nil {
+		t.Error("expected error when foreign pre-commit exists")
+	}
+	if _, err := InstallPreCommit(repo, true); err != nil {
+		t.Errorf("force should overwrite: %v", err)
+	}
+}

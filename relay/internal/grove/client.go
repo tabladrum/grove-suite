@@ -15,6 +15,8 @@ import (
 type Client struct {
 	baseURL   string
 	token     string
+	tokenPath string // resolved path of .grove/.token (when WithTokenFromDir was used)
+	tokenDir  string // directory passed to WithTokenFromDir (for diagnostics)
 	groveBin  string
 	autoStart bool
 }
@@ -28,12 +30,24 @@ func NewClient(baseURL string) *Client {
 }
 
 func (c *Client) WithTokenFromDir(dir string) *Client {
-	data, err := os.ReadFile(filepath.Join(dir, ".grove", ".token"))
+	c.tokenDir = dir
+	c.tokenPath = filepath.Join(dir, ".grove", ".token")
+	data, err := os.ReadFile(c.tokenPath)
 	if err == nil {
 		c.token = strings.TrimSpace(string(data))
 	}
 	return c
 }
+
+// TokenPath returns the absolute path the client last attempted to read
+// the bearer token from, or "" when WithTokenFromDir was never called.
+// `relay doctor` uses this to tell the user exactly which file to check
+// when a 401 fires.
+func (c *Client) TokenPath() string { return c.tokenPath }
+
+// HasToken reports whether a non-empty bearer token was successfully
+// loaded from disk.
+func (c *Client) HasToken() bool { return c.token != "" }
 
 func (c *Client) EnsureRunning(projectDir string) error {
 	if err := c.Health(); err == nil {
@@ -109,7 +123,25 @@ func (c *Client) post(path string, body, out any) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("grove POST %s: %d", path, resp.StatusCode)
+		return fmt.Errorf("grove POST %s: %d%s", path, resp.StatusCode, c.authHint(resp.StatusCode))
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+// authHint returns a human-readable explanation appended to non-200
+// errors when the response is an auth failure. Tells the user exactly
+// which file the client tried to read the token from so they don't have
+// to guess which `.grove/` directory the daemon honored.
+func (c *Client) authHint(status int) string {
+	if status != http.StatusUnauthorized && status != http.StatusForbidden {
+		return ""
+	}
+	switch {
+	case c.tokenPath == "":
+		return " (no token loaded; call WithTokenFromDir or run `relay doctor`)"
+	case !c.HasToken():
+		return fmt.Sprintf(" (token file not found at %s — run `grove serve %s` to bootstrap)", c.tokenPath, c.tokenDir)
+	default:
+		return fmt.Sprintf(" (sent token from %s; grove rejected it — token may be stale, regenerate with `grove serve`)", c.tokenPath)
+	}
 }

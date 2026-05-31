@@ -44,8 +44,33 @@ fi
 printf '%s\n' "$push_input" | relay hook run || exit $?
 `
 
+// PreCommitBody is the shell script written into .git/hooks/pre-commit. It
+// runs fast staged-file analyzers (gitleaks for secrets, semgrep for OWASP
+// patterns) and aborts the commit on findings at or above the configured
+// floor. Heavier analyzers (sonarlint) run in pre-push.
+//
+// Behaviour is intentionally non-blocking when the analyzer binaries are
+// missing — a laptop without semgrep installed should not be unable to
+// commit; instead the hook prints a one-line warning and exits 0.
+const PreCommitBody = `#!/bin/sh
+` + ManagedMarker + `
+# Auto-installed by 'relay hook install --pre-commit'.
+# Runs gitleaks + semgrep on staged files. To bypass: git commit --no-verify.
+set -eu
+
+if ! command -v relay >/dev/null 2>&1; then
+  echo "relay: binary not in PATH; skipping pre-commit checks" >&2
+  exit 0
+fi
+
+relay hook pre-commit || exit $?
+`
+
 // HookFileName is the on-disk filename of the pre-push hook.
 const HookFileName = "pre-push"
+
+// PreCommitFileName is the on-disk filename of the pre-commit hook.
+const PreCommitFileName = "pre-commit"
 
 // hooksDir returns <repo>/.git/hooks, validating that the repo looks like a
 // git working tree.
@@ -86,11 +111,32 @@ func IsManaged(path string) (bool, error) {
 // and force is false, Install returns an error rather than clobbering it.
 // Returns the absolute path to the written file.
 func Install(repoRoot string, force bool) (string, error) {
+	return installNamed(repoRoot, HookFileName, HookBody, force)
+}
+
+// Uninstall removes the pre-push hook only when it is relay-managed.
+// Returns (true, nil) when a managed hook was removed, (false, nil) when no
+// hook (or a foreign hook) is present.
+func Uninstall(repoRoot string) (bool, error) {
+	return uninstallNamed(repoRoot, HookFileName)
+}
+
+// InstallPreCommit writes the pre-commit hook. Symmetric to Install.
+func InstallPreCommit(repoRoot string, force bool) (string, error) {
+	return installNamed(repoRoot, PreCommitFileName, PreCommitBody, force)
+}
+
+// UninstallPreCommit removes the pre-commit hook only when relay-managed.
+func UninstallPreCommit(repoRoot string) (bool, error) {
+	return uninstallNamed(repoRoot, PreCommitFileName)
+}
+
+func installNamed(repoRoot, name, body string, force bool) (string, error) {
 	dir, err := hooksDir(repoRoot)
 	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(dir, HookFileName)
+	path := filepath.Join(dir, name)
 	if _, err := os.Stat(path); err == nil {
 		managed, mErr := IsManaged(path)
 		if mErr != nil {
@@ -100,21 +146,18 @@ func Install(repoRoot string, force bool) (string, error) {
 			return "", fmt.Errorf("githook: %s exists and is not relay-managed; pass --force to overwrite", path)
 		}
 	}
-	if err := os.WriteFile(path, []byte(HookBody), 0o755); err != nil {
+	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
 		return "", err
 	}
 	return path, nil
 }
 
-// Uninstall removes the pre-push hook only when it is relay-managed.
-// Returns (true, nil) when a managed hook was removed, (false, nil) when no
-// hook (or a foreign hook) is present.
-func Uninstall(repoRoot string) (bool, error) {
+func uninstallNamed(repoRoot, name string) (bool, error) {
 	dir, err := hooksDir(repoRoot)
 	if err != nil {
 		return false, err
 	}
-	path := filepath.Join(dir, HookFileName)
+	path := filepath.Join(dir, name)
 	managed, err := IsManaged(path)
 	if err != nil {
 		return false, err

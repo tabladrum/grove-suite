@@ -14,9 +14,16 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tabladrum/grove-suite/relay/internal/analyzers"
 	"github.com/tabladrum/grove-suite/relay/internal/cert"
 	"github.com/tabladrum/grove-suite/relay/internal/core"
 )
+
+func init() {
+	analyzers.DefaultRegistry.Register("inline-secrets", func(_ string, _ core.AnalyzerConfig) (analyzers.Analyzer, error) {
+		return New(), nil
+	})
+}
 
 // Analyzer scans a unified diff for added lines that match known secret
 // patterns. Stateless: the diff is read from the ChangeSet passed to Run.

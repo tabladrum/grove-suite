@@ -48,12 +48,16 @@ func Run(args []string) int {
 		return RunEngine(args)
 	case "tools":
 		return RunTools(args[1:])
+	case "doctor":
+		return RunDoctor(args[1:])
 	case "import":
 		return RunImport(args[1:])
 	case "mcp":
 		return RunMCP(args[1:])
 	case "hook":
 		return RunHook(args[1:])
+	case "laptop":
+		return RunLaptop(args[1:])
 	case "outbox":
 		return RunOutbox(args[1:])
 	case "keys":
