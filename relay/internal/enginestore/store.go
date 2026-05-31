@@ -235,6 +235,59 @@ func (s *Store) GetCertificateByCommit(ctx context.Context, sha string) (*core.C
 	return scanCertificate(row)
 }
 
+// ListCertificates returns certificates in created_at ascending order
+// (oldest first). When sinceID is non-empty, only certs created strictly
+// after the cert with that ID are returned — this lets callers paginate
+// efficiently for outbox replay. When limit is zero or negative, all
+// matching certificates are returned.
+func (s *Store) ListCertificates(ctx context.Context, sinceID string, limit int) ([]*core.Certificate, error) {
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	if sinceID != "" {
+		// Compare against the sinceID row's created_at via a subquery so we
+		// don't depend on monotonic IDs.
+		q := `SELECT id, changeset_id, intent_id, admitted_commit_sha, base_sha, icr_json, policies_json,
+		             effective_config_hash, policy_version, toolchain_image, signed_by, signature, created_at, payload_json
+		      FROM certificates
+		      WHERE created_at > COALESCE((SELECT created_at FROM certificates WHERE id = ?), '')
+		      ORDER BY created_at ASC, id ASC`
+		if limit > 0 {
+			q += " LIMIT ?"
+			rows, err = s.db.QueryContext(ctx, q, sinceID, limit)
+		} else {
+			rows, err = s.db.QueryContext(ctx, q, sinceID)
+		}
+	} else {
+		q := `SELECT id, changeset_id, intent_id, admitted_commit_sha, base_sha, icr_json, policies_json,
+		             effective_config_hash, policy_version, toolchain_image, signed_by, signature, created_at, payload_json
+		      FROM certificates ORDER BY created_at ASC, id ASC`
+		if limit > 0 {
+			q += " LIMIT ?"
+			rows, err = s.db.QueryContext(ctx, q, limit)
+		} else {
+			rows, err = s.db.QueryContext(ctx, q)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*core.Certificate
+	for rows.Next() {
+		c, err := scanCertificate(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type rowScanner interface {
 	Scan(dest ...any) error
 }
