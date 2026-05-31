@@ -7,22 +7,22 @@ import (
 
 // Release is one downloadable artifact for a (name, version, os, arch) tuple.
 type Release struct {
-	Name        string // tool name (matches Tool.Name)
-	Version     string // semver, no leading "v"
-	OS          string // GOOS: linux, darwin, windows
-	Arch        string // GOARCH: amd64, arm64
-	URL         string // direct download URL
-	SHA256      string // hex-encoded sha256 of the downloaded archive
-	Archive     ArchiveKind
-	BinaryPath  string // path inside the archive to the executable (forward slashes)
-	BinaryName  string // installed binary name (default: tool name; ".exe" auto-appended on windows)
+	Name       string // tool name (matches Tool.Name)
+	Version    string // semver, no leading "v"
+	OS         string // GOOS: linux, darwin, windows
+	Arch       string // GOARCH: amd64, arm64
+	URL        string // direct download URL
+	SHA256     string // hex-encoded sha256 of the downloaded archive
+	Archive    ArchiveKind
+	BinaryPath string // path inside the archive to the executable (forward slashes)
+	BinaryName string // installed binary name (default: tool name; ".exe" auto-appended on windows)
 }
 
 // ArchiveKind enumerates supported archive formats.
 type ArchiveKind string
 
 const (
-	ArchiveRaw   ArchiveKind = "raw"    // the URL points directly at the binary
+	ArchiveRaw   ArchiveKind = "raw" // the URL points directly at the binary
 	ArchiveTarGz ArchiveKind = "tar.gz"
 	ArchiveZip   ArchiveKind = "zip"
 )

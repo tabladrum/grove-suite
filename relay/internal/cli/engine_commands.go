@@ -154,7 +154,7 @@ func cmdCheck(args []string) int {
 		return 1
 	}
 	cs.RepoRoot = repoRoot
-	e, cleanup, err := buildEngine(repoRoot)
+	e, cleanup, err := BuildEngine(repoRoot)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
@@ -185,7 +185,7 @@ func cmdSubmit(args []string) int {
 		return 1
 	}
 	cs.RepoRoot = repoRoot
-	e, cleanup, err := buildEngine(repoRoot)
+	e, cleanup, err := BuildEngine(repoRoot)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
@@ -318,9 +318,9 @@ func readDiff(path string) (string, error) {
 	return string(data), err
 }
 
-// buildEngine wires an Engine for use by the engine-mode CLI commands.
-// Returns a cleanup function the caller must defer.
-func buildEngine(start string) (*engine.Engine, func(), error) {
+// BuildEngine wires an Engine for use by the engine-mode CLI commands and the
+// MCP server. Returns a cleanup function the caller must defer.
+func BuildEngine(start string) (*engine.Engine, func(), error) {
 	root, err := config.DiscoverRelayRoot(start)
 	if err != nil {
 		return nil, nil, fmt.Errorf("discover .relay/: %w", err)

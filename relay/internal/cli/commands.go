@@ -45,6 +45,8 @@ func Run(args []string) int {
 		return RunTools(args[1:])
 	case "import":
 		return RunImport(args[1:])
+	case "mcp":
+		return RunMCP(args[1:])
 	case "version", "--version", "-v":
 		fmt.Println("relay", version.Version)
 		return 0

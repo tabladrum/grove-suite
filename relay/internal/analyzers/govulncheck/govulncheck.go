@@ -85,8 +85,8 @@ func (a *Analyzer) Run(ctx context.Context, _ *core.ChangeSet, dir string) ([]ce
 
 	osvSummaries := map[string]string{}
 	type pending struct {
-		osv  string
-		trc  *traceL
+		osv string
+		trc *traceL
 	}
 	var pendings []pending
 
