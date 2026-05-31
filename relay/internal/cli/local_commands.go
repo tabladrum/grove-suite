@@ -1,6 +1,6 @@
 package cli
 
-// `relay laptop init` — one-command bootstrap for a developer laptop.
+// `relay local init` — one-command bootstrap for a developer machine.
 //
 // Combines (in order):
 //   1. `relay tools install --with-sonar`  — fetch jre, sonarlint-ls, plugins,
@@ -28,25 +28,25 @@ import (
 	"github.com/tabladrum/grove-suite/relay/internal/githook"
 )
 
-// RunLaptop dispatches `relay laptop <sub>`.
-func RunLaptop(args []string) int {
+// RunLocal dispatches `relay local <sub>`.
+func RunLocal(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: relay laptop <init|status> [args]")
+		fmt.Fprintln(os.Stderr, "usage: relay local <init|status> [args]")
 		return 1
 	}
 	switch args[0] {
 	case "init":
-		return cmdLaptopInit(args[1:])
+		return cmdLocalInit(args[1:])
 	case "status":
-		return cmdLaptopStatus(args[1:])
+		return cmdLocalStatus(args[1:])
 	default:
-		fmt.Fprintf(os.Stderr, "unknown laptop subcommand: %s\n", args[0])
+		fmt.Fprintf(os.Stderr, "unknown local subcommand: %s\n", args[0])
 		return 1
 	}
 }
 
-func cmdLaptopInit(args []string) int {
-	fs := flag.NewFlagSet("laptop init", flag.ContinueOnError)
+func cmdLocalInit(args []string) int {
+	fs := flag.NewFlagSet("local init", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "path to the workspace git repository")
 	skipTools := fs.Bool("skip-tools", false, "skip `relay tools install` (use when binaries are already provisioned)")
 	skipHooks := fs.Bool("skip-hooks", false, "skip git pre-commit/pre-push hook installation")
@@ -60,7 +60,7 @@ func cmdLaptopInit(args []string) int {
 	}
 	repoAbs, err := filepath.Abs(*repo)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "laptop init:", err)
+		fmt.Fprintln(os.Stderr, "local init:", err)
 		return 1
 	}
 	w := os.Stdout
@@ -73,7 +73,7 @@ func cmdLaptopInit(args []string) int {
 			toolArgs = append(toolArgs, "--with-sonar")
 		}
 		if rc := cmdToolsInstall(toolArgs); rc != 0 {
-			fmt.Fprintln(os.Stderr, "laptop init: tools install reported failures (continuing)")
+			fmt.Fprintln(os.Stderr, "local init: tools install reported failures (continuing)")
 		}
 	}
 
@@ -123,14 +123,14 @@ func cmdLaptopInit(args []string) int {
 	}
 
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "laptop ready. Next:")
+	fmt.Fprintln(w, "local setup ready. Next:")
 	fmt.Fprintln(w, "  relay doctor                  # verify install")
 	fmt.Fprintln(w, "  relay daemon start            # background daemon for MCP")
 	return 0
 }
 
-func cmdLaptopStatus(args []string) int {
-	fs := flag.NewFlagSet("laptop status", flag.ContinueOnError)
+func cmdLocalStatus(args []string) int {
+	fs := flag.NewFlagSet("local status", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "path to the workspace git repository")
 	if err := fs.Parse(args); err != nil {
 		return 1

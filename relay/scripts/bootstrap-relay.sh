@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap-relay.sh — one-command laptop install for Relay.
+# bootstrap-relay.sh — one-command local install for Relay.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/tabladrum/grove-suite/main/relay/scripts/bootstrap-relay.sh | bash
@@ -8,7 +8,7 @@
 #
 # What it does:
 #   1. Builds (or installs) the `relay` binary into $GOBIN.
-#   2. Runs `relay laptop init` against the target workspace:
+#   2. Runs `relay local init` against the target workspace:
 #        - installs Stage-2 analyzer binaries (jre, sonarlint-ls, plugins,
 #          semgrep hints, gitleaks hints, ...).
 #        - installs the relay-managed git pre-commit + pre-push hooks.
@@ -48,8 +48,8 @@ if [[ ":$PATH:" != *":$GOBIN:"* ]]; then
   echo "[bootstrap-relay] run: export PATH=\"$GOBIN:\$PATH\""
 fi
 
-echo "[bootstrap-relay] running: relay laptop init --repo $WORKSPACE_DIR"
-"$GOBIN/relay" laptop init --repo "$WORKSPACE_DIR"
+echo "[bootstrap-relay] running: relay local init --repo $WORKSPACE_DIR"
+"$GOBIN/relay" local init --repo "$WORKSPACE_DIR"
 
 echo
 echo "[bootstrap-relay] done. Next:"

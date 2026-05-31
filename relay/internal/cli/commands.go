@@ -56,8 +56,8 @@ func Run(args []string) int {
 		return RunMCP(args[1:])
 	case "hook":
 		return RunHook(args[1:])
-	case "laptop":
-		return RunLaptop(args[1:])
+	case "local":
+		return RunLocal(args[1:])
 	case "outbox":
 		return RunOutbox(args[1:])
 	case "keys":

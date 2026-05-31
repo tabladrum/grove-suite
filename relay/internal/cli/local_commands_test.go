@@ -20,9 +20,9 @@ func initRepo(t *testing.T) string {
 	return dir
 }
 
-func TestLaptopInit_WritesAgentInstructions(t *testing.T) {
+func TestLocalInit_WritesAgentInstructions(t *testing.T) {
 	repo := initRepo(t)
-	rc := cmdLaptopInit([]string{
+	rc := cmdLocalInit([]string{
 		"--repo", repo,
 		"--skip-tools",
 		"--skip-mcp",
@@ -43,9 +43,9 @@ func TestLaptopInit_WritesAgentInstructions(t *testing.T) {
 	}
 }
 
-func TestLaptopInit_InstallsHooks(t *testing.T) {
+func TestLocalInit_InstallsHooks(t *testing.T) {
 	repo := initRepo(t)
-	rc := cmdLaptopInit([]string{
+	rc := cmdLocalInit([]string{
 		"--repo", repo,
 		"--skip-tools",
 		"--skip-mcp",
@@ -127,18 +127,18 @@ func TestWriteVSCodeMCP_MergesExisting(t *testing.T) {
 	}
 }
 
-func TestLaptopStatus(t *testing.T) {
+func TestLocalStatus(t *testing.T) {
 	repo := initRepo(t)
-	if rc := cmdLaptopStatus([]string{"--repo", repo}); rc != 0 {
+	if rc := cmdLocalStatus([]string{"--repo", repo}); rc != 0 {
 		t.Errorf("rc %d", rc)
 	}
 }
 
-func TestRunLaptop_Dispatcher(t *testing.T) {
-	if rc := RunLaptop(nil); rc == 0 {
+func TestRunLocal_Dispatcher(t *testing.T) {
+	if rc := RunLocal(nil); rc == 0 {
 		t.Error("expected non-zero for empty args")
 	}
-	if rc := RunLaptop([]string{"weird"}); rc == 0 {
+	if rc := RunLocal([]string{"weird"}); rc == 0 {
 		t.Error("expected non-zero for unknown subcommand")
 	}
 }
