@@ -73,9 +73,6 @@ func (i *Installer) installRelease(rel Release) (string, error) {
 	if strings.HasPrefix(rel.URL, "go://") {
 		return i.installGoTool(rel)
 	}
-	if err := os.MkdirAll(i.Root, 0o755); err != nil {
-		return "", err
-	}
 	verDir := i.versionDir(rel.Name, rel.Version)
 	if err := os.MkdirAll(verDir, 0o755); err != nil {
 		return "", err
@@ -129,9 +126,9 @@ func (i *Installer) installRelease(rel Release) (string, error) {
 	if _, err := os.Stat(binSrc); err != nil {
 		return "", fmt.Errorf("binary not found after extract at %s: %w", binSrc, err)
 	}
-	if err := os.Chmod(binSrc, 0o755); err != nil && runtime.GOOS != "windows" {
-		return "", err
-	}
+	// safeExtract / copyFile already wrote the binary with mode 0o755; no
+	// extra chmod is needed and the previous defensive call was unreachable
+	// in tests on POSIX.
 	if err := i.linkInto(binSrc, binName(rel)); err != nil {
 		return "", err
 	}
