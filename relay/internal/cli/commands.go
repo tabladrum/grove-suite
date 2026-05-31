@@ -819,8 +819,8 @@ Laptop-mode workflow (single developer, no Postgres required):
   relay intent list-captured          same, explicit form
   relay intent get-captured --id <id>
   relay check --diff <file>           pre-flight verdict (fast slice)
-  relay certify --diff <file>         full certification pipeline
-  relay submit --diff <file>          certify + admit to current branch
+  relay submit --diff <file>          full pipeline: certify + admit to current branch
+  relay cert verify|show|replay <ref> inspect or re-run a stored certificate
   relay hook install|uninstall        manage the git pre-push hook
   relay mcp serve                     run the MCP server over stdio
   relay mcp install-for <client>      auto-register relay in IDE MCP config

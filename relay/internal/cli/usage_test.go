@@ -54,8 +54,8 @@ func TestPrintUsage_ListsAllLaptopCommands(t *testing.T) {
 		"relay intent get-captured",
 		// Engine + admission
 		"relay check",
-		"relay certify",
 		"relay submit",
+		"relay cert",
 		// Hook + MCP install
 		"relay hook install",
 		"relay mcp serve",
