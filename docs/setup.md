@@ -45,7 +45,7 @@ The [AGENT_SETUP_PROMPT.md](https://raw.githubusercontent.com/tabladrum/grove-su
 5. **Check existing** — detects already-installed products, compares versions, asks before upgrading
 6. **Download + verify** — fetches the correct binary and verifies SHA-256 against `checksums.txt`
 7. **Install** — moves binary to the chosen path, handles macOS Gatekeeper quarantine removal
-8. **Initialize** — runs `prism init`, `fuse install`, `relay init --stack=<detected>`, then `relay tools install --with-sonar` and `relay doctor`; this pre-downloads analyzer dependencies so first use is deterministic
+8. **Initialize** — runs `prism init`, `fuse install`, `relay init --stack=<detected>`, then `relay tools install --with-sonar` and `relay doctor`; this pre-downloads analyzer dependencies so first use is deterministic. In VS Code, it can optionally install `prism.prism-vscode` and remove Prism MCP wiring from `.vscode/mcp.json` to avoid duplicate providers
 9. **Smoke test** — verifies each binary works end-to-end
 10. **Summary** — prints what's installed, where, and what to do next
 
@@ -79,6 +79,25 @@ curl -sf https://api.github.com/repos/tabladrum/grove-suite/releases/latest \
 
 ---
 
+## Need Uninstall Instead?
+
+The same agent prompt supports full uninstall/reset mode too.
+
+Use the same one-liner, then tell your agent:
+
+> Follow the uninstall/reset flow in this prompt.
+
+Under the hood, the agent will run the repo script:
+
+```bash
+cd /path/to/grove-suite
+./scripts/uninstall-grove-suite.sh /path/to/target/project
+```
+
+For manual details, see the [installation guide uninstall section](/installation#uninstall).
+
+---
+
 ## Troubleshooting Setup
 
 | Symptom | Fix |
@@ -86,6 +105,7 @@ curl -sf https://api.github.com/repos/tabladrum/grove-suite/releases/latest \
 | `command not found` after install | Install dir not on `$PATH` — add it and restart shell |
 | macOS "developer cannot be verified" | `xattr -d com.apple.quarantine $(which grove)` |
 | `grove: connection refused` on Prism start | Run `grove serve` once; it auto-starts on subsequent calls |
+| VS Code shows duplicate Prism providers/tools | Use either Prism MCP or the Prism VS Code extension, not both. If using extension mode, remove `prism` from `.vscode/mcp.json` |
 | Agent can't reach GitHub API | Check network, or download manually from [GitHub Releases](https://github.com/tabladrum/grove-suite/releases) |
 
 Full troubleshooting: [/troubleshooting](/troubleshooting)

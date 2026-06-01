@@ -1,6 +1,6 @@
 package cli
 
-// `relay tools <install|list|which>` — manage Stage-2 binaries.
+// `relay tools <install|uninstall|list|which>` — manage Stage-2 binaries.
 
 import (
 	"flag"
@@ -19,12 +19,14 @@ import (
 // RunTools dispatches `relay tools <sub>`.
 func RunTools(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: relay tools <install|list|status|which> [args]")
+		fmt.Fprintln(os.Stderr, "usage: relay tools <install|uninstall|list|status|which> [args]")
 		return 1
 	}
 	switch args[0] {
 	case "install":
 		return cmdToolsInstall(args[1:])
+	case "uninstall":
+		return cmdToolsUninstall(args[1:])
 	case "list":
 		return cmdToolsList(args[1:])
 	case "status":
@@ -89,6 +91,25 @@ func cmdToolsInstall(args []string) int {
 		fmt.Fprintf(os.Stderr, "%d/%d installations failed\n", failed, len(names))
 		return 1
 	}
+	return 0
+}
+
+func cmdToolsUninstall(args []string) int {
+	fs := flag.NewFlagSet("tools uninstall", flag.ContinueOnError)
+	root := fs.String("root", "", "override install root (default: $RELAY_TOOLS_ROOT or ~/.relay/tools)")
+	if err := fs.Parse(args); err != nil {
+		return 1
+	}
+	inst, err := newInstaller(*root)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	if err := os.RemoveAll(inst.Root); err != nil {
+		fmt.Fprintln(os.Stderr, "remove tools root:", err)
+		return 1
+	}
+	fmt.Printf("removed relay tools cache: %s\n", inst.Root)
 	return 0
 }
 

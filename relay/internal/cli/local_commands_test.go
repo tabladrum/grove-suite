@@ -143,6 +143,42 @@ func TestRunLocal_Dispatcher(t *testing.T) {
 	}
 }
 
+func TestLocalUninstall_RemovesManagedArtifacts(t *testing.T) {
+	repo := initRepo(t)
+	rc := cmdLocalInit([]string{
+		"--repo", repo,
+		"--skip-tools",
+		"--skip-mcp",
+	})
+	if rc != 0 {
+		t.Fatalf("init rc %d", rc)
+	}
+	rc = cmdLocalUninstall([]string{
+		"--repo", repo,
+		"--keep-tools",
+		"--keep-mcp",
+	})
+	if rc != 0 {
+		t.Fatalf("uninstall rc %d", rc)
+	}
+	for _, name := range []string{githook.HookFileName, githook.PreCommitFileName} {
+		p := filepath.Join(repo, ".git", "hooks", name)
+		if _, err := os.Stat(p); err == nil {
+			t.Errorf("hook %s should be removed", name)
+		}
+	}
+	for _, rel := range agentInstructionFiles() {
+		p := filepath.Join(repo, rel)
+		body, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		if strings.Contains(string(body), relaySteeringMarker) {
+			t.Errorf("relay marker still present in %s", rel)
+		}
+	}
+}
+
 func TestSplitCSV(t *testing.T) {
 	got := splitCSV(" a, b ,, c")
 	want := []string{"a", "b", "c"}

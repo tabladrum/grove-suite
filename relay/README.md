@@ -224,6 +224,7 @@ relay cert replay <id-or-ref>        # replay gates: byte_reproducible | tool_dr
 
 ```bash
 relay tools install                  # install bundled tools (semgrep, gitleaks, govulncheck, ...)
+relay tools uninstall                # remove relay-managed tool cache (~/.relay/tools)
 relay tools list                     # show installed tools and versions
 relay init --list-stacks             # list available stack templates
 relay init --list-profiles           # list available compliance profiles
@@ -235,6 +236,10 @@ relay import sonarqube-profile <xml> # import SonarQube quality profile XML into
 ```bash
 relay hook install [--force] [--repo .]    # install git pre-push hook
 relay hook uninstall [--repo .]            # remove hook
+
+# one-command laptop teardown (hooks, MCP registrations, relay instruction blocks,
+# and tool cache; use after relay local init)
+relay local uninstall --repo .
 ```
 
 ### Intent management

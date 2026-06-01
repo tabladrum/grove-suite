@@ -129,10 +129,14 @@ cd grove-suite/prism && make install && cd ..
 
 # Wire into your project
 cd /your/project
-prism init      # detects your coding tool, writes MCP config + steering instructions
+prism init      # writes steering instructions and MCP config for MCP-capable tools
 prism index     # initial index — delta indexing for subsequent runs
 
-# Restart your coding tool to pick up the MCP server
+# VS Code extension mode (optional): install native Prism tools for Copilot Chat
+# code --install-extension prism.prism-vscode
+# If using extension mode, remove Prism entry from .vscode/mcp.json to avoid duplicates
+
+# Restart your coding tool to pick up MCP (or restart VS Code after extension install)
 
 # Verify savings
 prism savings
@@ -161,6 +165,10 @@ Add `--json` for machine-readable output.
 ## VS Code Extension
 
 The Prism extension does not use MCP — it registers all 8 tools natively via `vscode.lm.registerTool`. No `prism serve` required, no port.
+
+If you choose VS Code extension mode, do not keep a Prism MCP entry in `.vscode/mcp.json` for the same workspace; this avoids duplicate Prism providers in Copilot Chat.
+
+Extension ID: `prism.prism-vscode`
 
 After install:
 - Tools appear in Copilot Chat as `#prismQuery`, `#prismRead`, `#prismSearch`, etc.

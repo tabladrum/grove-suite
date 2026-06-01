@@ -26,17 +26,20 @@ import (
 	"strings"
 
 	"github.com/tabladrum/grove-suite/relay/internal/githook"
+	"github.com/tabladrum/grove-suite/relay/internal/tools"
 )
 
 // RunLocal dispatches `relay local <sub>`.
 func RunLocal(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: relay local <init|status> [args]")
+		fmt.Fprintln(os.Stderr, "usage: relay local <init|uninstall|status> [args]")
 		return 1
 	}
 	switch args[0] {
 	case "init":
 		return cmdLocalInit(args[1:])
+	case "uninstall":
+		return cmdLocalUninstall(args[1:])
 	case "status":
 		return cmdLocalStatus(args[1:])
 	default:
@@ -167,6 +170,84 @@ func cmdLocalStatus(args []string) int {
 	return 0
 }
 
+func cmdLocalUninstall(args []string) int {
+	fs := flag.NewFlagSet("local uninstall", flag.ContinueOnError)
+	repo := fs.String("repo", ".", "path to the workspace git repository")
+	keepTools := fs.Bool("keep-tools", false, "keep relay tool cache (~/.relay/tools)")
+	keepHooks := fs.Bool("keep-hooks", false, "keep git pre-commit/pre-push hooks")
+	keepInstr := fs.Bool("keep-instructions", false, "keep relay steering blocks in agent instruction files")
+	keepMCP := fs.Bool("keep-mcp", false, "keep relay MCP registrations in clients")
+	clients := fs.String("mcp-clients", "claude-code,cursor,continue,windsurf,claude-desktop,zed,codex,kiro,vscode", "comma-separated MCP clients to unregister")
+	if err := fs.Parse(args); err != nil {
+		return 1
+	}
+	repoAbs, err := filepath.Abs(*repo)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "local uninstall:", err)
+		return 1
+	}
+	w := os.Stdout
+
+	if !*keepHooks {
+		section(w, "git hooks")
+		if removed, err := githook.Uninstall(repoAbs); err != nil {
+			fmt.Fprintf(w, "  pre-push:    SKIP (%v)\n", err)
+		} else if removed {
+			fmt.Fprintln(w, "  pre-push:    removed")
+		} else {
+			fmt.Fprintln(w, "  pre-push:    not present")
+		}
+		if removed, err := githook.UninstallPreCommit(repoAbs); err != nil {
+			fmt.Fprintf(w, "  pre-commit:  SKIP (%v)\n", err)
+		} else if removed {
+			fmt.Fprintln(w, "  pre-commit:  removed")
+		} else {
+			fmt.Fprintln(w, "  pre-commit:  not present")
+		}
+	}
+
+	if !*keepInstr {
+		section(w, "agent instructions")
+		removed := removeAgentInstructions(repoAbs)
+		if len(removed) == 0 {
+			fmt.Fprintln(w, "  no relay steering blocks found")
+		} else {
+			for _, p := range removed {
+				fmt.Fprintf(w, "  cleaned:     %s\n", p)
+			}
+		}
+	}
+
+	if !*keepMCP {
+		section(w, "MCP clients")
+		relayBin, _ := os.Executable()
+		if relayBin == "" {
+			relayBin = "relay"
+		}
+		for _, id := range splitCSV(*clients) {
+			rc := cmdMCPInstallFor([]string{"--uninstall", "--repo", repoAbs, "--bin", relayBin, id})
+			if rc != 0 {
+				fmt.Fprintf(w, "  %s: uninstall failed\n", id)
+			}
+		}
+	}
+
+	if !*keepTools {
+		section(w, "tools cache")
+		if root, err := tools.DefaultRoot(); err != nil {
+			fmt.Fprintf(w, "  tools:       SKIP (%v)\n", err)
+		} else if err := os.RemoveAll(root); err != nil {
+			fmt.Fprintf(w, "  tools:       SKIP (%v)\n", err)
+		} else {
+			fmt.Fprintf(w, "  removed:     %s\n", root)
+		}
+	}
+
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "local uninstall complete.")
+	return 0
+}
+
 // agentInstructionFiles lists the per-tool instruction files relay writes.
 func agentInstructionFiles() []string {
 	return []string{
@@ -244,6 +325,38 @@ func writeAgentInstructions(repoRoot string) []string {
 		written = append(written, p)
 	}
 	return written
+}
+
+// removeAgentInstructions removes only Relay's managed steering block from
+// agent instruction files. It preserves any pre-existing user content.
+func removeAgentInstructions(repoRoot string) []string {
+	var cleaned []string
+	trimmedBlock := strings.TrimPrefix(relaySteeringBlock, "\n")
+	for _, rel := range agentInstructionFiles() {
+		p := filepath.Join(repoRoot, rel)
+		raw, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		s := string(raw)
+		orig := s
+		s = strings.ReplaceAll(s, relaySteeringBlock, "\n")
+		s = strings.ReplaceAll(s, trimmedBlock, "")
+		s = strings.TrimLeft(s, "\n")
+		if s == orig {
+			continue
+		}
+		if strings.TrimSpace(s) == "" {
+			if err := os.Remove(p); err == nil {
+				cleaned = append(cleaned, p)
+			}
+			continue
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err == nil {
+			cleaned = append(cleaned, p)
+		}
+	}
+	return cleaned
 }
 
 // writeVSCodeMCP writes the workspace-scoped .vscode/mcp.json so VS Code's

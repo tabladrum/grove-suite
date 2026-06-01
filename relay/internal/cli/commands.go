@@ -830,7 +830,8 @@ Laptop-mode workflow (single developer, no Postgres required):
   relay mcp install-for <client>      auto-register relay in IDE MCP config
                                       <client> in {claude-code, cursor, continue, windsurf}
   relay mcp install-for --list        print supported clients
-  relay tools list|install            manage analyzer toolchain
+	relay local init|uninstall|status   one-command laptop setup/teardown/status
+	relay tools list|install|uninstall  manage analyzer toolchain
   relay import sonarqube-profile <path.xml>  import SQ ruleset (verbatim)
 
 Team-mode workflow (requires DATABASE_URL pointing at Postgres):

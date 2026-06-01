@@ -310,37 +310,23 @@ prism query "where is authentication handled?"
 
 ## Uninstall
 
-### Binaries installed via GitHub Releases
+### One-command uninstall (macOS / Linux)
 
 ```bash
-# macOS / Linux
-sudo rm /usr/local/bin/grove /usr/local/bin/prism /usr/local/bin/fuse /usr/local/bin/relay
+cd /path/to/grove-suite
+./scripts/uninstall-grove-suite.sh /path/to/your/project
 ```
 
-```powershell
-# Windows
-Remove-Item "$env:USERPROFILE\bin\grove.exe","$env:USERPROFILE\bin\prism.exe","$env:USERPROFILE\bin\fuse.exe","$env:USERPROFILE\bin\relay.exe"
-```
+What it removes automatically:
 
-### Binaries built from source
+- Relay-managed hooks and MCP registrations (via `relay local uninstall` when relay is available)
+- Relay downloaded tool cache (via `relay tools uninstall` when relay is available)
+- Grove/Prism/Fuse/Relay binaries from common install paths
+- Source-build binaries from `$GOPATH/bin`
+- Per-user runtime/cache dirs (`~/.relay`, `~/.grove`, `~/.prism`, `~/.fuse`, `~/.cache/prism`)
+- Per-project runtime state (`.grove`, `.git/fuse`, workspace MCP config files)
 
-```bash
-rm $GOPATH/bin/grove $GOPATH/bin/prism $GOPATH/bin/fuse $GOPATH/bin/relay
-```
-
-### Per-project state
-
-```bash
-cd /your/project
-rm -rf .grove .git/fuse
-# Keep .relay/ unless you want to discard your config — it's part of your repo
-```
-
-### Per-user state
-
-```bash
-rm -rf ~/.relay/keys ~/.cache/prism
-```
+Windows uninstall automation is planned; until then use the PowerShell removal commands.
 
 ---
 

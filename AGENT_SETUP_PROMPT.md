@@ -27,6 +27,13 @@ https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.
 
 You are setting up Grove Suite — infrastructure that makes AI coding agents production-safe. Follow each step in order. Ask the user when a decision is needed. Do not skip checksum verification.
 
+Before Step 1, ask:
+
+> Do you want to **install/update** Grove Suite, or **fully uninstall/reset** it?
+
+- If the user says **install/update**, continue with Step 1 as written.
+- If the user says **uninstall/reset**, skip to **Step U1 — Full Uninstall / Reset** below.
+
 ### Step 0 — Refresh These Instructions
 
 Before doing anything else, fetch the latest version of this file:
@@ -63,6 +70,18 @@ Also ask:
 > **3.** Let me specify a path
 
 On Windows, ask for the target directory and confirm it is on `%PATH%`.
+
+If the user selected any option that includes Prism, ask one more question:
+
+> Are you running this setup from VS Code and using GitHub Copilot Chat?
+>
+> If yes, do you want to install the Prism VS Code extension and use native
+> VS Code tools instead of MCP for Prism?
+
+Behavior rules:
+- If user says **yes** to extension mode: install extension `prism.prism-vscode`
+  and do **not** keep Prism VS Code MCP wiring (`.vscode/mcp.json`) for Prism.
+- If user says **no**: keep standard Prism MCP setup from `prism init`.
 
 ---
 
@@ -325,6 +344,37 @@ prism index   # initial index (delta-aware — subsequent runs only touch change
 echo "Prism: initialized. Restart your AI coding tool to activate the MCP server."
 ```
 
+If the user chose **VS Code extension mode**:
+
+```bash
+# Install Prism VS Code extension (native tools; no Prism MCP in VS Code)
+code --install-extension prism.prism-vscode
+
+# Keep prism init outputs, but remove Prism MCP wiring for VS Code only to avoid
+# duplicate Prism providers in Copilot Chat.
+if [ -f .vscode/mcp.json ]; then
+  cp .vscode/mcp.json .vscode/mcp.json.bak
+  python3 - << 'PY'
+import json, pathlib
+p = pathlib.Path('.vscode/mcp.json')
+doc = json.loads(p.read_text()) if p.exists() else {}
+servers = doc.get('servers', {})
+if 'prism' in servers:
+    del servers['prism']
+doc['servers'] = servers
+p.write_text(json.dumps(doc, indent=2) + '\n')
+print('Updated .vscode/mcp.json: removed prism MCP entry for VS Code extension mode')
+PY
+fi
+
+echo "Prism VS Code extension installed. Restart VS Code to activate native Prism tools."
+```
+
+Notes:
+- Keep Prism MCP for non-VS Code tools (Claude Code, Cursor, etc.) if configured.
+- If `code` CLI is unavailable, tell the user to install the extension manually in
+  VS Code Extensions: `prism.prism-vscode`.
+
 **Fuse (if selected):**
 ```bash
 fuse install   # registers 'fuse' as a git merge driver in ~/.gitconfig
@@ -442,7 +492,8 @@ Grove Suite installation complete
 
 Next steps
 ──────────
-  Prism  → Restart your AI coding tool to activate the MCP server
+  Prism  → If using MCP mode: restart your AI coding tool to activate the MCP server
+           If using VS Code extension mode: restart VS Code, then use #prismQuery
            Then run: prism savings   (see token savings after your first task)
 
   Fuse   → Your next `git merge` uses symbol-aware resolution automatically
@@ -459,6 +510,44 @@ Documentation
 ```
 
 List any products that were skipped or failed, with specific next steps for each.
+
+---
+
+## Step U1 — Full Uninstall / Reset
+
+Use this flow when the user asks to remove Grove Suite and start from a clean slate.
+
+Ask for the target project path first (the repo where MCP/hook wiring should be removed).
+
+Then run:
+
+**macOS / Linux:**
+```bash
+cd /path/to/grove-suite
+./scripts/uninstall-grove-suite.sh /path/to/target/project
+```
+
+What this removes:
+- Grove/Prism/Fuse/Relay binaries from common install paths
+- Relay-managed hooks and MCP registrations
+- Relay tool cache (`~/.relay/tools`) and user runtime/cache state
+- Project-local runtime state (`.grove`, `.git/fuse`, workspace MCP config files)
+- Lingering local processes (`grove serve`, relay MCP, etc.)
+
+After uninstall, verify:
+
+```bash
+command -v grove || echo "grove removed"
+command -v prism || echo "prism removed"
+command -v fuse  || echo "fuse removed"
+command -v relay || echo "relay removed"
+```
+
+Then report a short uninstall summary to the user and confirm they can now rerun this prompt for a clean install.
+
+**Windows:**
+- Full-script uninstall automation is not yet available.
+- Tell the user to follow the uninstall section in docs/installation.md for now.
 
 ---
 
