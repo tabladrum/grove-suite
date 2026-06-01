@@ -1,5 +1,5 @@
-title: Grove Suite
-description: The infrastructure layer that makes AI coding agents production-safe.
+title: Relay
+description: Certified delivery for AI coding agents — every AI-generated commit signed, tested, and traceable to the prompt that created it. Built on Grove, Prism, and Fuse (MIT). Local-first.
 theme: just-the-docs
 
 logo: "assets/images/logo.svg"

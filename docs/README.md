@@ -2,13 +2,13 @@
 title: Documentation
 layout: default
 nav_order: 8
-description: "Full documentation map for Grove Suite — organized by role, topic, product, and integration."
+description: "Full documentation map for Relay — and its open-source foundation Grove, Prism, and Fuse — organized by role, topic, product, and integration."
 permalink: /docs/
 ---
 
-# Grove Suite Documentation
+# Relay Documentation
 
-**Welcome.** This is the home of the long-form documentation for Grove Suite — the infrastructure layer that makes AI coding agents production-safe.
+**Welcome.** This is the home of the long-form documentation for **Relay** — certified delivery for AI coding agents — and its open-source foundation: **Grove** (code knowledge graph), **Prism** (context delivery), and **Fuse** (semantic merge).
 
 If you just want to install and try it, the [installation guide]({{ '/installation/' | relative_url }}) has the five-minute path. This page exists for the people who need to understand it deeper before they bring it to their team, their CISO, their CFO, or their auditor.
 
@@ -16,16 +16,16 @@ If you just want to install and try it, the [installation guide]({{ '/installati
 
 ## Licensing
 
-Grove Suite uses a split-license model on GitHub Pages:
+Relay is the product; Grove, Prism, and Fuse are its open-source foundation under a split-license model:
 
-| Product | License |
-|---------|---------|
-| Grove | MIT |
-| Prism | MIT |
-| Fuse | MIT |
-| Relay | AGPL-3.0 |
+| Component | Role | License |
+|-----------|------|---------|
+| **Relay** | The product — certified delivery | AGPL-3.0 |
+| Grove | Embedded code-graph engine (+ standalone CLI) | MIT |
+| Prism | Context delivery for AI agents | MIT |
+| Fuse | Semantic git merge driver | MIT |
 
-Relay's AGPL applies to the Relay product and its Relay-specific docs and source tree. The rest of the suite remains MIT licensed.
+Relay's AGPL applies to the Relay product and its Relay-specific docs and source tree. Grove, Prism, and Fuse remain MIT licensed — adopt them independently in commercial products without obligation.
 
 ---
 
@@ -33,13 +33,13 @@ Relay's AGPL applies to the Relay product and its Relay-specific docs and source
 
 | If you are a... | Start here |
 |----------------|-----------|
-| **Developer** evaluating Grove Suite for daily use | [Developer guide](audiences/developer.md) |
+| **Developer** evaluating Relay for daily use | [Developer guide](audiences/developer.md) |
 | **Team lead** rolling it out to your team | [Team lead guide](audiences/team-lead.md) |
 | **Engineering executive** building the business case | [Executive brief](audiences/executive.md) |
 | **CFO / finance** sizing the cost and savings | [Financial brief](audiences/financial.md) |
 | **CISO / security** evaluating the threat model | [Security brief]({{ '/audiences/security/' | relative_url }}) |
 | **Compliance / audit** evaluating evidence quality | [Audit brief]({{ '/audiences/audit/' | relative_url }}) |
-| **Anyone** wanting the founder's pitch | [Why Grove Suite](why.md) |
+| **Anyone** wanting the founder's pitch | [Why Relay](why.md) |
 
 ---
 
@@ -47,22 +47,22 @@ Relay's AGPL applies to the Relay product and its Relay-specific docs and source
 
 | Topic | Document |
 |-------|----------|
-| **The case for Grove Suite** — what we built, why we built it, what we deliberately didn't build | [Why Grove Suite](why.md) |
-| **Comparisons** — Prism vs Copilot semantic search · Grove vs LSP/Sourcegraph · Fuse vs git/AI-merge · Relay vs CI/CodeRabbit | [Comparisons](comparisons.md) |
+| **The case for Relay** — what we built, why we built it, what we deliberately didn't build | [Why Relay](why.md) |
+| **Comparisons** — Relay vs CI/CodeRabbit/Sigstore · Prism vs Copilot semantic search · Grove vs LSP/Sourcegraph · Fuse vs git/AI-merge | [Comparisons](comparisons.md) |
 | **FAQ** — top questions across technical, security, financial, and operational lenses | [FAQ](faq.md) |
 | **Troubleshooting** — common issues, how to diagnose, how to fix | [Troubleshooting](troubleshooting.md) |
-| **Architecture** — inter-product API contracts, data flows, security model | [Architecture](../Architecture.md) |
+| **Architecture** — embedded engine, the Go library API, data flows, security model | [Architecture](../Architecture.md) |
 
 ---
 
 ## Read by Product
 
-| Product | One-line | Documentation |
-|---------|---------|--------------|
-| **Grove** | Persistent code knowledge graph | [Grove README](../grove/README.md) |
+| Component | One-line | Documentation |
+|-----------|---------|--------------|
+| **Relay** *(the product)* | Certified delivery for agent-produced code | [Relay README](../relay/README.md) |
+| **Grove** | Embedded code knowledge graph (+ standalone CLI) | [Grove README](../grove/README.md) |
 | **Prism** | Graph-ranked context for any AI agent | [Prism README](../prism/README.md) |
 | **Fuse** | Symbol-aware git merge driver | [Fuse README](../fuse/README.md) |
-| **Relay** | Certified delivery for agent-produced code | [Relay README](../relay/README.md) |
 
 ---
 
@@ -81,7 +81,7 @@ Each of these explains one technical idea in depth.
 
 ## Read by Integration
 
-How Grove Suite hooks into the tools you already use.
+How Relay and its components hook into the tools you already use.
 
 | Tool | Document |
 |------|----------|
