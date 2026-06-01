@@ -2,8 +2,8 @@
 
 **Four painful things that happen when you start using AI coding agents seriously. Grove Suite fixes all four.**
 
-> **New?** Let your AI agent set everything up: paste [`SETUP.md`](SETUP.md) into Claude Code, Cursor, or any agent — it detects your platform, fetches the latest release, asks which products you want, and wires everything.
-> Or: `claude "Follow the setup instructions at https://raw.githubusercontent.com/tabladrum/grove-suite/main/SETUP.md"`
+> **New?** Let your AI agent set everything up: paste [`AGENT_SETUP_PROMPT.md`](AGENT_SETUP_PROMPT.md) into Claude Code, Cursor, or any agent — it detects your platform, fetches the latest release, asks which products you want, and wires everything.
+> Or: `claude "Follow the setup instructions at https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md"`
 
 ---
 

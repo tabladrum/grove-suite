@@ -20,14 +20,14 @@ Works with Claude Code, Cursor, Codex CLI, GitHub Copilot, Windsurf, and any age
 
 **Claude Code** — from inside any project directory:
 ```bash
-claude "Follow the setup instructions at https://raw.githubusercontent.com/tabladrum/grove-suite/main/SETUP.md"
+claude "Follow the setup instructions at https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md"
 ```
 
 **Any other agent:**
 
 Paste this URL into your agent's chat and say *"follow the setup instructions in this file"*:
 ```
-https://raw.githubusercontent.com/tabladrum/grove-suite/main/SETUP.md
+https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md
 ```
 
 The prompt fetches the latest version of its own instructions first — so it's always current regardless of when you saved or bookmarked it.
@@ -36,7 +36,7 @@ The prompt fetches the latest version of its own instructions first — so it's 
 
 ## What the Agent Does
 
-The [SETUP.md](https://raw.githubusercontent.com/tabladrum/grove-suite/main/SETUP.md) prompt walks the agent through:
+The [AGENT_SETUP_PROMPT.md](https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md) prompt walks the agent through:
 
 1. **Refresh** — fetches the latest version of these instructions from GitHub before doing anything
 2. **Ask** — which products to install (full suite / Prism only / custom), and where to put the binaries
