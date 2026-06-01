@@ -556,8 +556,9 @@ fi
 # ── Fuse: merge driver registration ─────────────────────────────────
 if command -v fuse &>/dev/null; then
   echo "--- Fuse: driver registration ---"
-  git config --global merge.fuse.driver 2>/dev/null \
-    && echo "✅ Fuse merge driver registered in ~/.gitconfig" \
+  # fuse install registers per-repo (local .git/config), not global
+  { git config merge.fuse.driver 2>/dev/null || git config --global merge.fuse.driver 2>/dev/null; } \
+    && echo "✅ Fuse merge driver registered" \
     || echo "❌ Fuse not registered — run: fuse install"
   echo ""
 fi
