@@ -1,8 +1,8 @@
 ---
 title: Installation
 layout: default
-nav_order: 2
-description: "How to install Grove Suite on macOS, Linux, and Windows — from GitHub Releases binaries or from source."
+nav_order: 7
+description: "How to install Relay on macOS, Linux, and Windows — from GitHub Releases binaries or from source."
 permalink: /installation/
 ---
 

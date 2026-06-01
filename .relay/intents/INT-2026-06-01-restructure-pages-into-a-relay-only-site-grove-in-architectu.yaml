@@ -1,0 +1,14 @@
+# Auto-Intent Capture artifact. The user's prompt that produced this code.
+# See docs/design.md §17. Do not hand-edit unless you know what you're doing.
+schema: relay.intent/v2
+id: INT-2026-06-01-restructure-pages-into-a-relay-only-site-grove-in-architectu
+status: committed
+title: Restructure Pages into a Relay-only site; Grove in architecture; Other Dev Tools page
+description: 'Make the GitHub Pages site entirely about Relay: features, architecture, how it works, why, and use cases (security, audit, change management, traceability). Fold Grove into the Relay architecture page (loud and clear, no standalone Grove page). Add a single ''Other Developer Tools'' page covering Prism and Fuse. Build full content this pass; use a Use Cases nav section with four child pages, reusing the existing Security and Audit briefs.'
+originated_from:
+    agent: claude-code
+    model: claude-opus-4-8
+    prompt_hash: f6a3ee888cf6bbe7dfe0e80db29a8de6b27381524f17f522942fdc0757951c58
+created_at: 2026-06-01T19:12:10.523101Z
+committed_at: 2026-06-01T19:25:24.066092Z
+committed_by_agent: claude-code

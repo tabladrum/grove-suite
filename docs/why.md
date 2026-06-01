@@ -34,13 +34,13 @@ You give an agent a task. It opens the files you pointed at. It greps for a few 
 
 This isn't an agent capability problem. It's a context delivery problem. The agent is operating with a fraction of the information your senior engineer has — and the agent is being asked to make decisions at the same level.
 
-**What we built:** [Grove](../grove/README.md) — a persistent knowledge graph of your codebase. 11 languages parsed with Tree-sitter, 8 edge types (defines, contains, imports, extends, implements, calls, uses-type, tests), BFS traversal, FTS5 full-text search, delta indexing by git blob SHA. **[Prism](../prism/README.md)** sits on top: graph-ranked context delivery with 5 signals (graph distance, semantic similarity, recency, test relevance, edit frequency), token budget allocation across 5 categories, and progressive disclosure — full source on the first read, sha-pointer on the next. **35–92% fewer tokens on first reads. ~99% on re-reads.**
+**What we built:** [Grove]({{ '/architecture/' | relative_url }}) — a persistent knowledge graph of your codebase, embedded directly in Relay. 11 languages parsed with Tree-sitter, 8 edge types (defines, contains, imports, extends, implements, calls, uses-type, tests), BFS traversal, FTS5 full-text search, delta indexing by git blob SHA. **[Prism]({{ '/other-tools/' | relative_url }})** sits on top: graph-ranked context delivery with 5 signals (graph distance, semantic similarity, recency, test relevance, edit frequency), token budget allocation across 5 categories, and progressive disclosure — full source on the first read, sha-pointer on the next. **35–92% fewer tokens on first reads. ~99% on re-reads.**
 
 ### 2. Two agents touching the same file create false conflicts
 
 One agent changed `Login()`. Another changed `validatePassword()`. Different functions, structurally independent — but git operates on lines, not symbols. They were on adjacent lines, so git declared a conflict. Now a developer stops and resolves something that was never actually conflicting. Multiply that by the number of parallel agent PRs hitting your repo each week.
 
-**What we built:** [Fuse](../fuse/README.md) — a symbol-aware git merge driver. It parses all three file versions (base, ours, theirs) with Tree-sitter, queries Grove for cross-file blast radius and breaking change detection, classifies the conflict (incremental / structural / configurational / architectural / complex), and resolves at symbol granularity. **~85% auto-resolution on incremental conflicts.** The rest get conflict markers plus a structured handoff prompt at `.git/fuse/conflict-<hash>.md` — feed it to your agent of choice for resolution in context.
+**What we built:** [Fuse]({{ '/other-tools/' | relative_url }}) — a symbol-aware git merge driver. It parses all three file versions (base, ours, theirs) with Tree-sitter, queries Grove for cross-file blast radius and breaking change detection, classifies the conflict (incremental / structural / configurational / architectural / complex), and resolves at symbol granularity. **~85% auto-resolution on incremental conflicts.** The rest get conflict markers plus a structured handoff prompt at `.git/fuse/conflict-<hash>.md` — feed it to your agent of choice for resolution in context.
 
 ### 3. The CI→agent→CI loop wastes hours per PR
 
@@ -57,7 +57,7 @@ Each loop is 5–15 minutes of human attention to triage and re-trigger. The age
 
 The fundamental issue: **quality gates live at the end of the pipeline. The agent is at the beginning.**
 
-**What we built:** [Relay](../relay/README.md) — `relay_check` runs the quality gates in the agent's loop, returns structured findings (file, line, rule, severity, fix-hint) in under 10 seconds. The agent self-corrects before opening a PR. When the code is ready, `relay_certify` runs the full suite — build, full test suite, coverage, secrets scanning, SAST, dependency audit — and produces a single result.
+**What we built:** [Relay]({{ '/how-it-works/' | relative_url }}) — `relay_check` runs the quality gates in the agent's loop, returns structured findings (file, line, rule, severity, fix-hint) in under 10 seconds. The agent self-corrects before opening a PR. When the code is ready, `relay_certify` runs the full suite — build, full test suite, coverage, secrets scanning, SAST, dependency audit — and produces a single result.
 
 ### 4. The audit trail doesn't exist
 
@@ -67,7 +67,7 @@ The PR says "refactor authentication." Three commits, one human reviewer's LGTM,
 
 This is a compliance problem today. With the EU AI Act high-risk activation in August 2026 and increasing scrutiny under SOC 2 / FedRAMP, it becomes a regulatory problem.
 
-**What we built:** [Relay](../relay/README.md) commits the user's original natural-language prompt as a YAML intent before coding starts. Every admitted commit carries an Ed25519 signature over the exact ChangeSet, effective config hash, toolchain versions, test results, and findings. The cert is linked to the commit via `Intent-ID:` trailer. `relay cert replay <id>` re-runs the gates at any time and returns `byte_reproducible` / `tool_drift` / `config_drift`. **The audit trail is cryptographic, not narrative.**
+**What we built:** [Relay]({{ '/use-cases/audit/' | relative_url }}) commits the user's original natural-language prompt as a YAML intent before coding starts. Every admitted commit carries an Ed25519 signature over the exact ChangeSet, effective config hash, toolchain versions, test results, and findings. The cert is linked to the commit via `Intent-ID:` trailer. `relay cert replay <id>` re-runs the gates at any time and returns `byte_reproducible` / `tool_drift` / `config_drift`. **The audit trail is cryptographic, not narrative.**
 
 ---
 
@@ -152,10 +152,10 @@ In order of usefulness:
 
 To not bullshit you. Every claim on this page is backed by something specific:
 
-- Token savings: see [Prism README → Performance](../prism/README.md#performance) for the benchmark table
-- Auto-resolution rate: see [Fuse README → Conflict Classification](../fuse/README.md#conflict-classification)
-- Sub-10s pre-flight: a target, not a contract; see [Relay README → Capabilities](../relay/README.md#capabilities)
-- Comparisons with competitors: see [comparisons.md](comparisons.md) — we name names and we link to their docs
+- Token savings: see [Prism README → Performance](https://github.com/tabladrum/grove-suite/tree/main/prism#performance) for the benchmark table
+- Auto-resolution rate: see [Fuse README → Conflict Classification](https://github.com/tabladrum/grove-suite/tree/main/fuse#conflict-classification)
+- Sub-10s pre-flight: a target, not a contract; see [Features → Capabilities]({{ '/features/#capabilities' | relative_url }})
+- Comparisons with competitors: see [Comparisons]({{ '/comparisons/' | relative_url }}) — we name names and we link to their docs
 
 If we got something wrong, the right move is to tell us, not to walk away.
 

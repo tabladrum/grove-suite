@@ -1,28 +1,14 @@
 ---
 title: Audit Brief
 layout: default
-nav_order: 4
-description: "How Relay supports auditability, evidence collection, and replayable commit history."
+nav_exclude: true
+search_exclude: true
+description: "Moved to Use Cases → Audit."
 permalink: /audiences/audit/
 ---
 
-# Audit Brief
+<meta http-equiv="refresh" content="0; url={{ '/use-cases/audit/' | relative_url }}">
 
-Relay is designed to make AI-generated changes auditable after the fact, not just reviewable at the pull request stage.
+# Audit
 
-## What You Get
-
-- The original user prompt captured as a committed YAML intent
-- An Ed25519-signed certificate for each admitted commit
-- Replayable evidence for build, test, coverage, secrets, SAST, and dependency checks
-- A commit trailer that links the code change to the intent and certificate
-
-## Why It Matters
-
-For audit and compliance work, the key question is not just "did the code merge?" It is "what exactly was asked, what ran, and what passed?" Relay preserves that chain so teams can reconstruct the evidence months later.
-
-## Related Pages
-
-- [Security brief]({{ '/audiences/security/' | relative_url }})
-- [FAQ]({{ '/faq/' | relative_url }})
-- [Relay README]({{ '/relay/' | relative_url }})
+This brief has moved to [Use Cases → Audit]({{ '/use-cases/audit/' | relative_url }}). If you are not redirected automatically, follow the link.

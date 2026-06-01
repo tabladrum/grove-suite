@@ -1,0 +1,14 @@
+# Auto-Intent Capture artifact. The user's prompt that produced this code.
+# See docs/design.md §17. Do not hand-edit unless you know what you're doing.
+schema: relay.intent/v2
+id: INT-2026-06-01-pages-stub-grove-prism-fuse-redirect-to-repo-readmes-focus-o
+status: committed
+title: 'Pages: stub Grove/Prism/Fuse, redirect to repo READMEs, focus on Relay'
+description: Make GitHub Pages focus solely on Relay. Replace the Grove/Prism/Fuse standalone pages with thin stub pages that redirect/point to the respective repo READMEs, remove them from the sidebar nav, and retarget index.html links for those three tools to their GitHub READMEs. The other tools should only be documented in the GitHub repo READMEs.
+originated_from:
+    agent: claude-code
+    model: claude-opus-4-8
+    prompt_hash: bfef2fc704e1e976769cec17c49b6871fb5092ac58d571e139775b0ffefba046
+created_at: 2026-06-01T19:03:55.372244Z
+committed_at: 2026-06-01T19:05:32.597754Z
+committed_by_agent: claude-code

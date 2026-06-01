@@ -1,8 +1,8 @@
 ---
 title: Agent Setup
 layout: default
-nav_order: 7
-description: "Install and configure Grove Suite using your AI coding agent — always at the latest version."
+nav_order: 8
+description: "Install and configure Relay using your AI coding agent — always at the latest version."
 permalink: /setup/
 ---
 

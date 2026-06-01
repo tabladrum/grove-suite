@@ -1,0 +1,14 @@
+# Auto-Intent Capture artifact. The user's prompt that produced this code.
+# See docs/design.md §17. Do not hand-edit unless you know what you're doing.
+schema: relay.intent/v2
+id: INT-2026-06-01-docs-state-that-cross-machine-cert-verification-requires-rel
+status: committed
+title: 'Docs: state that cross-machine cert verification requires Relay server mode'
+description: In the Pages/docs, clarify that in laptop mode certificate verification and replay are local to the originating machine (cert store and key are gitignored), and that independent cross-machine verification by an auditor/CI/reviewer requires Relay server (team) mode. Correct the security page spot that implied committing the public key alone enables fresh-clone verification. Then push.
+originated_from:
+    agent: claude-code
+    model: claude-opus-4-8
+    prompt_hash: 78c0928986824c8d0dfbea539040cc46cb88c3ea2cd379f0d327fc383f443d34
+created_at: 2026-06-01T19:44:59.49248Z
+committed_at: 2026-06-01T19:45:58.173079Z
+committed_by_agent: claude-code

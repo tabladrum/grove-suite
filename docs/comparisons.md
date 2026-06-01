@@ -1,7 +1,7 @@
 ---
 title: Comparisons
 layout: default
-nav_order: 9
+nav_order: 10
 description: "Honest comparisons — Prism vs Copilot/Claude Code/Cursor, Grove vs Sourcegraph/LSP, Fuse vs AI merge tools, Relay vs CI/CodeRabbit/Sigstore."
 permalink: /comparisons/
 ---
@@ -210,12 +210,12 @@ This is the comparison everyone asks for. "If I just use Devin / Cursor Backgrou
 
 | If your top concern is... | Look at |
 |---------------------------|---------|
-| Agents wasting context tokens | [Prism](../prism/README.md) |
+| Agents wasting context tokens | [Prism]({{ '/other-tools/' | relative_url }}) |
 | IDE-quality navigation | LSP (Grove complements, doesn't replace) |
 | Cross-repo enterprise search | Sourcegraph |
-| False git conflicts on parallel agent work | [Fuse](../fuse/README.md) |
-| Agents in a loop fighting CI findings | [Relay](../relay/README.md) |
-| Cryptographic audit trail for AI-generated commits | [Relay](../relay/README.md) |
+| False git conflicts on parallel agent work | [Fuse]({{ '/other-tools/' | relative_url }}) |
+| Agents in a loop fighting CI findings | [Relay]({{ '/relay/' | relative_url }}) |
+| Cryptographic audit trail for AI-generated commits | [Relay]({{ '/relay/' | relative_url }}) |
 | Post-PR AI code review | CodeRabbit / Greptile |
 | Build provenance | Sigstore / SLSA |
 | Fully managed autonomous agent | Devin / Cursor Background Agents / Copilot Workspace |

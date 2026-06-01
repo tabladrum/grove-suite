@@ -1,7 +1,7 @@
 ---
 title: FAQ
 layout: default
-nav_order: 10
+nav_order: 11
 description: "Frequently asked questions — technical, security, business, and audit perspectives."
 permalink: /faq/
 ---
@@ -35,10 +35,9 @@ Grove, Prism, and Fuse are MIT licensed. Relay is AGPL-3.0 licensed. The reposit
 
 ### Does it phone home?
 
-No. There is zero telemetry. No analytics. No "improving our models with your usage." Grove Suite runs entirely on your machine. The only network calls are:
-- Grove HTTP / gRPC bound to `127.0.0.1`
+No. There is zero telemetry. No analytics. No "improving our models with your usage." Relay runs entirely on your machine. Grove is embedded in-process — there is no daemon, no port, and no socket between components. The only network calls are:
+- Downloading pinned analyzer tools on first use (`relay tools install`)
 - Optional, opt-in calls to external embedding APIs (off by default — local Model2Vec is the default)
-- The Grove → Prism → Relay communication, all on localhost
 
 ### How do I install all four?
 
@@ -167,7 +166,7 @@ Grove Suite addresses all four.
 
 ### Is there a business case I can present?
 
-Yes — see the [Financial brief](audiences/financial.md) when published. The headline numbers:
+Yes — see [Why Relay → What This Costs You]({{ '/why/#what-this-costs-you' | relative_url }}). The headline numbers:
 - Token cost per developer drops 30–60% for any agent using Prism
 - Merge time on parallel agent PRs drops to near-zero for incremental conflicts
 - CI-loop iterations per PR drop from 3–5 to 0–1 with Relay in the agent loop
@@ -203,7 +202,7 @@ Today, no paid path exists. We are intentionally pre-revenue.
 
 ### Where does my code go?
 
-Nowhere. Grove Suite is 100% local. All daemons bind to `127.0.0.1`. No outbound network calls (except optional, opt-in embedding APIs which are off by default).
+Nowhere. Relay is 100% local. The Grove engine is embedded in-process — no daemon, no listening port. No outbound network calls except downloading pinned analyzer tools on first use, and optional opt-in embedding APIs (off by default).
 
 ### What about telemetry?
 
@@ -213,7 +212,7 @@ None.
 
 - Grove is now an embedded library — there is no HTTP daemon, no port, and no bearer token to leak
 - Prism and Relay MCP servers run as local stdio processes; they never bind a TCP socket
-- The Ed25519 admission key for Relay lives at `~/.relay/keys/admission.ed25519` (mode 0600)
+- The Ed25519 admission key for Relay lives at `<repo>/.relay/keys/signing.ed25519.key` (mode 0600), or `~/.relay/keys/` with `--user`
 - Credentials (Jira, GitHub) are environment variables only — never persisted to `.relay/relay.yaml`
 
 ### What if my codebase is in a regulated environment (HIPAA, FedRAMP, etc.)?
@@ -224,7 +223,7 @@ Grove Suite is well-suited to regulated environments precisely because it runs l
 - Cryptographic admission certificates are reproducible — you can prove what gates passed at commit time
 - Static analysis findings, test results, and signed commits all live in your git history
 
-For specific compliance frameworks, see the [Audit brief]({{ '/audiences/audit/' | relative_url }}).
+For specific compliance frameworks, see [Use Cases → Audit]({{ '/use-cases/audit/' | relative_url }}).
 
 ### Are the dependencies safe?
 
@@ -239,7 +238,7 @@ Each product's `go.mod` is auditable. We avoid heavy dependency trees deliberate
 
 ### How does the Ed25519 signing chain work?
 
-1. `relay init` generates an Ed25519 keypair at `~/.relay/keys/admission.ed25519` (mode 0600)
+1. `relay init` generates an Ed25519 keypair at `<repo>/.relay/keys/signing.ed25519.key` (mode 0600); the public half is `signing.ed25519.pub`
 2. On each admission, Relay computes CanonicalBytes over: ChangeSet + effective config hash + toolchain versions + test results + findings
 3. Ed25519 signature is computed before the commit SHA exists
 4. After signing, Relay creates the commit; the commit SHA is recorded in the trailer
@@ -248,9 +247,13 @@ Each product's `go.mod` is auditable. We avoid heavy dependency trees deliberate
 
 The signature attests to gates passing — not to the commit existing. This separation is what enables auditable replay.
 
+### Can someone else verify a certificate on their machine?
+
+In laptop mode, not yet. `relay cert verify` and `relay cert replay` need both the certificate store (`.relay/engine.db`) and the signing key — both local and gitignored — so verification runs on the machine that produced the admission. **Independent, cross-machine verification by an auditor, a CI runner, or a reviewer on a fresh clone is a Relay server (team) mode capability** (shared certificate store + KMS-backed signer), which is on the roadmap. See [Deployment modes]({{ '/architecture/#deployment-modes' | relative_url }}).
+
 ### What's the threat model?
 
-See [Security brief]({{ '/audiences/security/' | relative_url }}). Summary:
+See [Use Cases → Security]({{ '/use-cases/security/' | relative_url }}). Summary:
 - Threat: agent produces malicious code → Mitigation: Relay's gates run regardless of agent
 - Threat: attacker forges a Relay cert → Mitigation: Ed25519 signature with private key never leaving disk
 - Threat: dependency supply-chain attack → Mitigation: Stage 2 dep audit (govulncheck, npm audit, pip-audit) + Sigstore/SLSA on the build artifact (out of scope for Relay)
@@ -285,7 +288,7 @@ It directly addresses several SOC 2 Type II controls:
 - CC7.1: detection of vulnerabilities — Stage 2 SAST + dep audit on every commit
 - CC8.1: change management — every change is admitted via Relay, linked to an intent, signed
 
-A detailed mapping is in the [Audit brief]({{ '/audiences/audit/' | relative_url }}).
+A detailed mapping is in [Use Cases → Audit]({{ '/use-cases/audit/' | relative_url }}).
 
 ### Does this help with EU AI Act compliance?
 

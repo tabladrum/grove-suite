@@ -1,7 +1,7 @@
 ---
 title: Documentation
 layout: default
-nav_order: 8
+nav_order: 13
 description: "Full documentation map for Relay — and its open-source foundation Grove, Prism, and Fuse — organized by role, topic, product, and integration."
 permalink: /docs/
 ---
@@ -33,13 +33,13 @@ Relay's AGPL applies to the Relay product and its Relay-specific docs and source
 
 | If you are a... | Start here |
 |----------------|-----------|
-| **Developer** evaluating Relay for daily use | [Developer guide](audiences/developer.md) |
-| **Team lead** rolling it out to your team | [Team lead guide](audiences/team-lead.md) |
-| **Engineering executive** building the business case | [Executive brief](audiences/executive.md) |
-| **CFO / finance** sizing the cost and savings | [Financial brief](audiences/financial.md) |
-| **CISO / security** evaluating the threat model | [Security brief]({{ '/audiences/security/' | relative_url }}) |
-| **Compliance / audit** evaluating evidence quality | [Audit brief]({{ '/audiences/audit/' | relative_url }}) |
-| **Anyone** wanting the founder's pitch | [Why Relay](why.md) |
+| **Developer** evaluating Relay for daily use | [Overview]({{ '/relay/' | relative_url }}) · [Agent Setup]({{ '/setup/' | relative_url }}) |
+| **Team lead** rolling it out to your team | [Use Cases → Change Management]({{ '/use-cases/change-management/' | relative_url }}) |
+| **Engineering executive** building the business case | [Why Relay]({{ '/why/' | relative_url }}) |
+| **CFO / finance** sizing the cost and savings | [Why Relay → What This Costs You]({{ '/why/#what-this-costs-you' | relative_url }}) |
+| **CISO / security** evaluating the threat model | [Use Cases → Security]({{ '/use-cases/security/' | relative_url }}) |
+| **Compliance / audit** evaluating evidence quality | [Use Cases → Audit]({{ '/use-cases/audit/' | relative_url }}) |
+| **Anyone** wanting the founder's pitch | [Why Relay]({{ '/why/' | relative_url }}) |
 
 ---
 
@@ -47,11 +47,12 @@ Relay's AGPL applies to the Relay product and its Relay-specific docs and source
 
 | Topic | Document |
 |-------|----------|
-| **The case for Relay** — what we built, why we built it, what we deliberately didn't build | [Why Relay](why.md) |
-| **Comparisons** — Relay vs CI/CodeRabbit/Sigstore · Prism vs Copilot semantic search · Grove vs LSP/Sourcegraph · Fuse vs git/AI-merge | [Comparisons](comparisons.md) |
-| **FAQ** — top questions across technical, security, financial, and operational lenses | [FAQ](faq.md) |
-| **Troubleshooting** — common issues, how to diagnose, how to fix | [Troubleshooting](troubleshooting.md) |
-| **Architecture** — embedded engine, the Go library API, data flows, security model | [Architecture](../Architecture.md) |
+| **The case for Relay** — what we built, why we built it, what we deliberately didn't build | [Why Relay]({{ '/why/' | relative_url }}) |
+| **How It Works** — capture → gate → certify → sign → replay | [How It Works]({{ '/how-it-works/' | relative_url }}) |
+| **Comparisons** — Relay vs CI/CodeRabbit/Sigstore · Prism vs Copilot semantic search · Grove vs LSP/Sourcegraph · Fuse vs git/AI-merge | [Comparisons]({{ '/comparisons/' | relative_url }}) |
+| **FAQ** — top questions across technical, security, financial, and operational lenses | [FAQ]({{ '/faq/' | relative_url }}) |
+| **Troubleshooting** — common issues, how to diagnose, how to fix | [Troubleshooting]({{ '/troubleshooting/' | relative_url }}) |
+| **Architecture** — embedded Grove engine, single-binary design, data flows, security model | [Architecture]({{ '/architecture/' | relative_url }}) |
 
 ---
 
@@ -59,10 +60,10 @@ Relay's AGPL applies to the Relay product and its Relay-specific docs and source
 
 | Component | One-line | Documentation |
 |-----------|---------|--------------|
-| **Relay** *(the product)* | Certified delivery for agent-produced code | [Relay README](../relay/README.md) |
-| **Grove** | Embedded code knowledge graph (+ standalone CLI) | [Grove README](../grove/README.md) |
-| **Prism** | Graph-ranked context for any AI agent | [Prism README](../prism/README.md) |
-| **Fuse** | Symbol-aware git merge driver | [Fuse README](../fuse/README.md) |
+| **Relay** *(the product)* | Certified delivery for agent-produced code | [Overview]({{ '/relay/' | relative_url }}) · [Relay README](https://github.com/tabladrum/grove-suite/tree/main/relay#readme) |
+| **Grove** | Code knowledge graph embedded in Relay (+ standalone CLI) | [Architecture]({{ '/architecture/' | relative_url }}) · [Grove README](https://github.com/tabladrum/grove-suite/tree/main/grove#readme) |
+| **Prism** | Graph-ranked context for any AI agent | [Other Dev Tools]({{ '/other-tools/' | relative_url }}) · [Prism README](https://github.com/tabladrum/grove-suite/tree/main/prism#readme) |
+| **Fuse** | Symbol-aware git merge driver | [Other Dev Tools]({{ '/other-tools/' | relative_url }}) · [Fuse README](https://github.com/tabladrum/grove-suite/tree/main/fuse#readme) |
 
 ---
 
@@ -72,40 +73,38 @@ Each of these explains one technical idea in depth.
 
 | Concept | Document |
 |---------|----------|
-| **Progressive disclosure** — how Prism cuts token use ~99% on session re-reads | [Progressive disclosure](concepts/progressive-disclosure.md) |
-| **Symbol-level merge** — what Fuse does that line-level merge cannot | [Symbol-level merge](concepts/symbol-merge.md) |
-| **In-loop certification** — moving quality gates from CI into the agent loop | [In-loop certification](concepts/certification.md) |
-| **Intent capture** — committing the prompt as a YAML alongside the code | [Intent capture](concepts/intent-capture.md) |
+| **Progressive disclosure** — how Prism cuts token use ~99% on session re-reads | [Other Dev Tools → Prism]({{ '/other-tools/' | relative_url }}) |
+| **Symbol-level merge** — what Fuse does that line-level merge cannot | [Other Dev Tools → Fuse]({{ '/other-tools/' | relative_url }}) |
+| **In-loop certification** — moving quality gates from CI into the agent loop | [How It Works]({{ '/how-it-works/' | relative_url }}) |
+| **Intent capture** — committing the prompt as a YAML alongside the code | [Use Cases → Traceability]({{ '/use-cases/traceability/' | relative_url }}) |
 
 ---
 
 ## Read by Integration
 
-How Relay and its components hook into the tools you already use.
+How Relay hooks into the tools you already use. `relay init` auto-detects each and writes its MCP config — see [Features → Works with your agent]({{ '/features/#works-with-your-agent' | relative_url }}) and [Agent Setup]({{ '/setup/' | relative_url }}).
 
-| Tool | Document |
-|------|----------|
-| Claude Code | [integrations/claude-code.md](integrations/claude-code.md) |
-| GitHub Copilot (VS Code) | [integrations/copilot.md](integrations/copilot.md) |
-| Cursor | [integrations/cursor.md](integrations/cursor.md) |
-| Codex CLI | [integrations/codex-cli.md](integrations/codex-cli.md) |
-| Windsurf | [integrations/windsurf.md](integrations/windsurf.md) |
-| Zed | [integrations/zed.md](integrations/zed.md) |
+| Tool | Setup |
+|------|-------|
+| Claude Code | [Agent Setup]({{ '/setup/' | relative_url }}) |
+| GitHub Copilot (VS Code) | [Agent Setup]({{ '/setup/' | relative_url }}) |
+| Cursor | [Agent Setup]({{ '/setup/' | relative_url }}) |
+| Codex CLI | [Agent Setup]({{ '/setup/' | relative_url }}) |
+| Windsurf | [Agent Setup]({{ '/setup/' | relative_url }}) |
+| Zed | [Agent Setup]({{ '/setup/' | relative_url }}) |
 
 ---
 
 ## Status
 
-This documentation is being built in phases. The table above shows the **complete map**; not every page is written yet.
+The site is organized around Relay. Every link on this page points to a live page; the open-source tools (Grove, Prism, Fuse) are documented in their repository READMEs, with Grove also covered in [Architecture]({{ '/architecture/' | relative_url }}).
 
-| Phase | Documents | Status |
-|-------|-----------|--------|
-| 1 — Foundation | docs index, why, comparisons, FAQ, troubleshooting, GitHub Pages setup | **In progress** |
-| 2 — Audience briefs | executive, financial, security, audit, developer, team-lead | Planned |
-| 3 — Concept deep-dives | progressive disclosure, symbol merge, in-loop cert, intent capture | Planned |
-| 4 — Integration guides | per-tool setup, troubleshooting, advanced config | Planned |
-
-Pages that don't exist yet will return 404 — that's a feature, not a bug. We'd rather have five great pages than fifty mediocre ones.
+| Area | Pages |
+|------|-------|
+| Product | [Overview]({{ '/relay/' | relative_url }}), [Why Relay]({{ '/why/' | relative_url }}), [How It Works]({{ '/how-it-works/' | relative_url }}), [Architecture]({{ '/architecture/' | relative_url }}), [Features]({{ '/features/' | relative_url }}) |
+| Use cases | [Security]({{ '/use-cases/security/' | relative_url }}), [Audit]({{ '/use-cases/audit/' | relative_url }}), [Change Management]({{ '/use-cases/change-management/' | relative_url }}), [Traceability]({{ '/use-cases/traceability/' | relative_url }}) |
+| Get started | [Installation]({{ '/installation/' | relative_url }}), [Agent Setup]({{ '/setup/' | relative_url }}) |
+| Reference | [Comparisons]({{ '/comparisons/' | relative_url }}), [FAQ]({{ '/faq/' | relative_url }}), [Troubleshooting]({{ '/troubleshooting/' | relative_url }}), [Other Developer Tools]({{ '/other-tools/' | relative_url }}) |
 
 ---
 
