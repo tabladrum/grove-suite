@@ -45,7 +45,7 @@ The [SETUP.md](https://raw.githubusercontent.com/tabladrum/grove-suite/main/SETU
 5. **Check existing** — detects already-installed products, compares versions, asks before upgrading
 6. **Download + verify** — fetches the correct binary and verifies SHA-256 against `checksums.txt`
 7. **Install** — moves binary to the chosen path, handles macOS Gatekeeper quarantine removal
-8. **Initialize** — runs `prism init`, `fuse install`, `relay init --stack=auto` in your project
+8. **Initialize** — runs `prism init`, `fuse install`, `relay init --stack=<detected>`, and `relay tools install` in your project; pre-downloads all analyzer binaries so there is no delay on first use
 9. **Smoke test** — verifies each binary works end-to-end
 10. **Summary** — prints what's installed, where, and what to do next
 

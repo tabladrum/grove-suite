@@ -347,6 +347,13 @@ echo "Fuse: installed. Next git merge will use symbol-aware resolution."
 Ask the user which languages they use and only add those lines.
 
 **Relay (if selected):**
+
+First ask the user:
+> Would you like to install the SonarLint analysis stack? It adds ~500 MB (Eclipse
+> Temurin JRE + SonarLint Language Server + analyzer plugins) but enables SonarQube-
+> fidelity rules locally with no server. Skip if you only need secrets + SAST basics.
+
+Then run:
 ```bash
 relay init --list-stacks  # show available stacks: go-microservice, java-spring,
                           # node-api, python-service
@@ -355,6 +362,23 @@ relay init --stack=<stack> # pick the stack that matches your project;
                           # writes agent steering instructions to CLAUDE.md /
                           # .cursorrules / AGENTS.md / .clinerules automatically
 relay hook install        # installs pre-push backstop
+
+# Pre-download all analyzer binaries now so there is no delay on first use.
+# relay_check and the pre-push hook run these; without pre-downloading they
+# are silently skipped the first time, making checks appear to pass vacuously.
+relay tools install       # gitleaks, govulncheck, golangci-lint (lean set, ~30 MB)
+# If the user said yes to SonarLint above, run instead:
+# relay tools install --with-sonar  # also downloads JRE + sonarlint-ls.jar + plugins
+echo "Relay tools installed."
+
+# Semgrep cannot be bundled (Python package) — install it separately:
+if command -v pipx &>/dev/null; then
+  pipx install semgrep && echo "✅ semgrep installed"
+elif command -v pip3 &>/dev/null; then
+  pip3 install --user semgrep && echo "✅ semgrep installed (pip3 --user)"
+else
+  echo "ℹ️  semgrep: install manually with: pipx install semgrep"
+fi
 
 git add .relay/
 echo "Relay: initialized. Your agent will call relay_check before every commit."
@@ -394,6 +418,8 @@ if (Get-Command relay  -EA 0) { & relay version  && Write-Host "✅ relay ok"  |
 | `grove: connection refused` on Prism/Fuse/Relay | Run `grove serve` once; it auto-starts on subsequent calls |
 | `relay: key not found` | Run `relay init` from the project root |
 | `relay init --stack=auto` fails with "unknown stack" | Use `relay init --list-stacks` to see valid stack names, then `relay init --stack=<name>` |
+| `relay_check` passes but no SAST/secrets findings appear | Run `relay tools install` — analyzers are silently skipped when not pre-downloaded |
+| semgrep not running in relay_check | Install separately: `pipx install semgrep` |
 
 If anything fails, diagnose and fix before reporting done.
 

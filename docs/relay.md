@@ -172,11 +172,18 @@ relay init --stack=go-microservice
 # Scaffolds .relay/, generates local Ed25519 key,
 # writes agent steering instructions + MCP configs for every detected tool
 
-# Commit the .relay/ config
-git add .relay/ && git commit -m "Add Relay configuration"
-
 # Install the git pre-push backstop
 relay hook install
+
+# Pre-download all analyzer binaries NOW — avoids silent skips and delays
+# on first relay_check or pre-push hook invocation.
+relay tools install                   # gitleaks, govulncheck, golangci-lint (~30 MB)
+relay tools install --with-sonar      # optional: adds JRE + SonarLint jars (~500 MB)
+# Semgrep is a Python package — install separately if you want it:
+# pipx install semgrep
+
+# Commit the .relay/ config
+git add .relay/ && git commit -m "Add Relay configuration"
 
 # Your AI agent now calls relay_check before every PR. Automatically.
 ```
