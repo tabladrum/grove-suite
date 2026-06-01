@@ -348,7 +348,9 @@ Ask the user which languages they use and only add those lines.
 
 **Relay (if selected):**
 ```bash
-relay init --stack=auto   # auto-detects Go / Node / Python / Java stack,
+relay init --list-stacks  # show available stacks: go-microservice, java-spring,
+                          # node-api, python-service
+relay init --stack=<stack> # pick the stack that matches your project;
                           # scaffolds .relay/ config, generates Ed25519 key,
                           # writes agent steering instructions to CLAUDE.md /
                           # .cursorrules / AGENTS.md / .clinerules automatically
@@ -388,8 +390,10 @@ if (Get-Command relay  -EA 0) { & relay version  && Write-Host "✅ relay ok"  |
 |---------|-----|
 | `command not found` | Install directory not on `$PATH` — add it and restart shell |
 | macOS "cannot be opened because the developer cannot be verified" | Run `xattr -d com.apple.quarantine $(which grove)` |
+| macOS `zsh: killed` (exit 137) when binary is in `/opt/homebrew/bin` | Run `codesign -f -s - $(which grove)` (repeat for each binary) |
 | `grove: connection refused` on Prism/Fuse/Relay | Run `grove serve` once; it auto-starts on subsequent calls |
 | `relay: key not found` | Run `relay init` from the project root |
+| `relay init --stack=auto` fails with "unknown stack" | Use `relay init --list-stacks` to see valid stack names, then `relay init --stack=<name>` |
 
 If anything fails, diagnose and fix before reporting done.
 

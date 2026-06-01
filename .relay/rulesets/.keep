@@ -1,0 +1,2 @@
+# Place project-specific Relay rulesets here.
+# Imported via `relay import sonarqube-profile <path>` will land in this directory.

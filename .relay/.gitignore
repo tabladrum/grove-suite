@@ -1,0 +1,4 @@
+# Written by `relay init`. Mutable state owned by the laptop daemon.
+.cache/
+keys/
+*.local.yaml

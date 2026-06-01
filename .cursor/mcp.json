@@ -1,12 +1,5 @@
 {
   "mcpServers": {
-    "prism": {
-      "args": [
-        "mcp",
-        "/Users/tapabratapal/Projects/grove-suite"
-      ],
-      "command": "/opt/homebrew/bin/prism"
-    },
     "relay": {
       "args": [
         "mcp",
