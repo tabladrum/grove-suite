@@ -15,10 +15,10 @@ Grove Suite ships four single-file binaries: `grove`, `prism`, `fuse`, and `rela
 If you want the quickest path, use the agent-driven prompt first:
 
 [Open Agent Setup Guide]({{ '/setup/' | relative_url }}){: .btn .btn-primary .mr-2 }
-[Agent Setup Prompt File](https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md){: .btn }
+[Agent Setup Prompt File](https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md){: .btn }
 
 ```bash
-claude "Follow the setup instructions at https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md"
+claude "Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"
 ```
 
 Prefer manual installation? Use the options below.

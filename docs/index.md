@@ -38,10 +38,10 @@ All four products share one foundation: [Grove]({{ '/grove/' | relative_url }}) 
 
 ```bash
 # In Claude Code:
-claude "Follow the setup instructions at https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md"
+claude "Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"
 
 # In any other agent — paste this URL and say "follow the setup instructions":
-# https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md
+# https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md
 ```
 
 The agent detects your platform, fetches the latest release, asks which products you want, verifies checksums, and wires everything into your project. → [How it works]({{ '/setup/' | relative_url }})
