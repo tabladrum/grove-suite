@@ -2,3 +2,8 @@
 .cache/
 keys/
 *.local.yaml
+
+# Embedded engine / runtime databases (SQLite + WAL/SHM)
+*.db
+*.db-wal
+*.db-shm
