@@ -24,14 +24,15 @@ layout: null
   <meta name="twitter:image"       content="{{ '/assets/images/og-image.png' | absolute_url }}">
   <style>
     :root {
-      --bg:      #0a2318;
-      --bg2:     #0d3320;
-      --border:  #166534;
+      --bg:      #0e1117;
+      --bg2:     #161b27;
+      --bg3:     #1c2333;
+      --border:  #1e3a2f;
       --accent:  #22c55e;
       --accent2: #16a34a;
-      --text:    #f0fdf4;
-      --muted:   #bbf7d0;
-      --dim:     #6ee7b7;
+      --text:    #e6edf3;
+      --muted:   #8b9eb8;
+      --dim:     #6a8090;
       --mono:    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
       --sans:    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     }
@@ -82,8 +83,8 @@ layout: null
     .hero::before {
       content: ''; position: absolute; inset: 0; pointer-events: none;
       background-image:
-        linear-gradient(rgba(34,197,94,.055) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(34,197,94,.055) 1px, transparent 1px);
+        linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
       background-size: 60px 60px;
     }
     /* radial vignette so grid fades at edges */
@@ -179,8 +180,8 @@ layout: null
     /* ── PROBLEM GRID ───────────────────────────────────────────── */
     .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 2.5rem; }
     .problem-card {
-      padding: 1.8rem; background: rgba(10,35,24,.6);
-      border: 1px solid rgba(22,101,52,.4); border-radius: 10px;
+      padding: 1.8rem; background: rgba(14,17,23,.7);
+      border: 1px solid rgba(30,58,47,.6); border-radius: 10px;
     }
     .problem-card p { color: var(--muted); line-height: 1.68; font-size: .98rem; }
     .problem-card strong { color: #fff; }
@@ -200,14 +201,14 @@ layout: null
     }
     .product-card {
       padding: 2rem; border-radius: 12px;
-      border: 1px solid rgba(22,101,52,.4); background: var(--bg2);
+      border: 1px solid rgba(40,60,50,.5); background: var(--bg2);
       text-decoration: none; color: inherit; display: block;
       transition: border-color .2s, transform .15s;
     }
     .product-card:hover { border-color: var(--accent); transform: translateY(-2px); }
     .product-card-relay {
-      border-color: var(--border);
-      background: linear-gradient(140deg, #0d3320 0%, #0a2318 100%);
+      border-color: rgba(34,197,94,.25);
+      background: linear-gradient(140deg, #151f2e 0%, #0e1117 100%);
     }
     .ptag {
       display: inline-block; font-family: var(--mono); font-size: .75rem;
@@ -244,10 +245,10 @@ layout: null
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     pre.code-block {
-      background: #071a0f; border: 1px solid rgba(22,101,52,.35);
+      background: #090d12; border: 1px solid rgba(30,58,47,.5);
       border-top: none; border-radius: 0 0 8px 8px;
       padding: 1.6rem 1.8rem; font-family: var(--mono);
-      font-size: .86rem; line-height: 1.7; color: #bbf7d0; overflow-x: auto;
+      font-size: .86rem; line-height: 1.7; color: #b0c8b0; overflow-x: auto;
     }
     .c  { color: #4ade80; opacity: .65; }
     .kw { color: #f0fdf4; }

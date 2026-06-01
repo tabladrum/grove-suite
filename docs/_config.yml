@@ -10,7 +10,7 @@ baseurl: /grove-suite
 permalink: pretty
 
 # Just the Docs theme settings
-color_scheme: light
+color_scheme: dark
 search_enabled: true
 search:
   heading_level: 3
