@@ -1,5 +1,12 @@
 {
   "mcpServers": {
+    "prism": {
+      "args": [
+        "mcp",
+        "/Users/tapabratapal/Projects/grove-suite"
+      ],
+      "command": "/Users/tapabratapal/bin/prism"
+    },
     "relay": {
       "args": [
         "mcp",
@@ -7,7 +14,7 @@
         "--repo",
         "/Users/tapabratapal/Projects/grove-suite"
       ],
-      "command": "/usr/local/bin/relay",
+      "command": "/Users/tapabratapal/bin/relay",
       "env": {}
     }
   }

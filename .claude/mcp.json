@@ -5,7 +5,7 @@
         "mcp",
         "/Users/tapabratapal/Projects/grove-suite"
       ],
-      "command": "/opt/homebrew/bin/prism"
+      "command": "/Users/tapabratapal/bin/prism"
     },
     "relay": {
       "args": [
@@ -14,7 +14,7 @@
         "--repo",
         "/Users/tapabratapal/Projects/grove-suite"
       ],
-      "command": "/usr/local/bin/relay",
+      "command": "/Users/tapabratapal/bin/relay",
       "env": {}
     }
   }

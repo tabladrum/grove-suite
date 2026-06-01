@@ -1,4 +1,3 @@
-
 ## Prism — context delivery (ALWAYS use these tools)
 
 This project uses [Prism](https://github.com/tabladrum/grove-suite/prism) for token-optimized context delivery.
