@@ -293,15 +293,27 @@ mv "/tmp/${FILENAME}" ~/bin/${PRODUCT}
 chmod +x ~/bin/${PRODUCT}
 ```
 
-After installing to `~/bin`, check whether it is on `$PATH`:
+After installing to `~/bin`, register the directory with the system so it is
+available to **all processes** (terminals, git hooks, GUI apps):
+
 ```bash
-echo $PATH | grep -q "$HOME/bin" || {
-  SHELL_RC="$HOME/.zshrc"
-  [ -f "$HOME/.bashrc" ] && SHELL_RC="$HOME/.bashrc"
-  echo 'export PATH="$HOME/bin:$PATH"' >> "$SHELL_RC"
-  export PATH="$HOME/bin:$PATH"
-  echo "Added ~/bin to PATH in $SHELL_RC — restart your shell or run: source $SHELL_RC"
+# macOS: register via path_helper — works for git hooks, GUI apps, /bin/sh
+if [[ "$(uname)" == "Darwin" ]]; then
+  echo "$HOME/bin" | sudo tee /etc/paths.d/grove-suite > /dev/null
+  echo "Registered $HOME/bin in /etc/paths.d/grove-suite (all processes)"
+fi
+
+# All platforms: add to shell RC for interactive sessions (idempotent)
+SHELL_RC="$HOME/.zshrc"
+[ -n "$BASH_VERSION" ] && SHELL_RC="$HOME/.bashrc"
+EXPORT_LINE='export PATH="$HOME/bin:$PATH"'
+grep -qxF "$EXPORT_LINE" "$SHELL_RC" 2>/dev/null || {
+  echo "$EXPORT_LINE" >> "$SHELL_RC"
+  echo "Added ~/bin to PATH in $SHELL_RC"
 }
+
+export PATH="$HOME/bin:$PATH"
+echo "~/bin is now on PATH for this session"
 ```
 
 **macOS — remove Gatekeeper quarantine (required for downloaded binaries):**
