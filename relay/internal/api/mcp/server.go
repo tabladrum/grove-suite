@@ -91,10 +91,12 @@ func (s *Server) handle(method string, params json.RawMessage) (any, *rpcError) 
 	switch method {
 	case "initialize":
 		return map[string]any{
-			"protocolVersion": "2024-11-05",
+			"protocolVersion": "2025-03-26",
 			"serverInfo":      map[string]string{"name": "relay", "version": version.Version},
 			"capabilities":    map[string]any{"tools": map[string]any{}},
 		}, nil
+	case "ping":
+		return map[string]any{}, nil
 	case "tools/list":
 		return map[string]any{"tools": toolDescriptors()}, nil
 	case "tools/call":
