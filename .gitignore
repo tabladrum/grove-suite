@@ -4,6 +4,9 @@
 *.swp
 *.swo
 
+# MCP config — written by prism init / relay init with absolute machine-specific paths
+.mcp.json
+
 # OS
 .DS_Store
 Thumbs.db

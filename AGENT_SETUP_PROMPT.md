@@ -344,6 +344,11 @@ prism index   # initial index (delta-aware — subsequent runs only touch change
 echo "Prism: initialized. Restart your AI coding tool to activate the MCP server."
 ```
 
+> **Claude Code users:** `prism init` writes `.mcp.json` at the project root.
+> When you restart Claude Code, it will detect this file and show a prompt:
+> **"Allow MCP servers from .mcp.json?"** — click **Allow** (or run `claude mcp list`
+> and approve the pending entry). The MCP server will not connect until approved.
+
 If the user chose **VS Code extension mode**:
 
 ```bash
@@ -436,6 +441,10 @@ git add .relay/
 echo "Relay: initialized. Your agent will call relay_check before every commit."
 ```
 
+> **Claude Code users:** `relay init` also writes `.mcp.json` at the project root
+> (merging with Prism's entry if already present). When you restart Claude Code,
+> approve the pending `.mcp.json` MCP servers when prompted.
+
 ---
 
 ### Step 9 — Smoke Test
@@ -460,6 +469,14 @@ if (Get-Command fuse   -EA 0) { & fuse version   && Write-Host "✅ fuse ok"   |
 if (Get-Command relay  -EA 0) { & relay version  && Write-Host "✅ relay ok"  || Write-Host "❌ relay failed" }
 ```
 
+**Verify MCP server registration (Claude Code):**
+```bash
+claude mcp list
+# Expected: prism and relay listed as connected (green check).
+# If they show ⏸ Pending: restart Claude Code and approve when prompted.
+# If they don't appear: re-run prism init / relay init from the project root.
+```
+
 **Common failures and fixes:**
 
 | Symptom | Fix |
@@ -472,6 +489,7 @@ if (Get-Command relay  -EA 0) { & relay version  && Write-Host "✅ relay ok"  |
 | `relay init --stack=auto` fails with "unknown stack" | Use `relay init --list-stacks` to see valid stack names, then `relay init --stack=<name>` |
 | `relay_check` passes but no SAST/secrets findings appear | Run `relay tools install` — analyzers are silently skipped when not pre-downloaded |
 | semgrep not running in relay_check | Install separately: `pipx install semgrep` |
+| Claude Code `claude mcp list` doesn't show prism/relay | Re-run `prism init` / `relay init` from the project root, then restart Claude Code and approve `.mcp.json` when prompted |
 
 If anything fails, diagnose and fix before reporting done.
 

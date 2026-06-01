@@ -158,8 +158,9 @@ func registerRelayMCPTools(projectDir, relayBin string) {
 
 	writers := []mcpWriter{
 		{
+			// Claude Code reads project MCP servers from .mcp.json at the repo root.
 			name:      "Claude Code",
-			path:      filepath.Join(projectDir, ".claude", "mcp.json"),
+			path:      filepath.Join(projectDir, ".mcp.json"),
 			serverKey: "mcpServers",
 			entry:     stdEntry,
 			global:    false, // project-local — always create

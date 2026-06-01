@@ -92,9 +92,11 @@ The agent isn't calling Prism tools. Check in order:
 
 1. **Was `prism init` run in this directory?**
    ```bash
-   ls .claude/mcp.json .cursor/mcp.json 2>/dev/null
+   ls .mcp.json .cursor/mcp.json 2>/dev/null
    ```
-   If neither file exists, `prism init` wasn't run here.
+   If neither file exists, `prism init` wasn't run here. For Claude Code, also
+   verify the server is approved: run `claude mcp list` and look for prism. If
+   it shows ⏸ Pending, restart Claude Code and approve when prompted.
 
 2. **Did you restart the coding tool after `prism init`?**
    The MCP config is read at startup. New configs require a restart.
@@ -203,7 +205,7 @@ Per-file merge target is < 1 second. If you're seeing seconds:
 Detection looks at standard config locations. If your tool is installed unusually:
 
 ```bash
-relay mcp install-for claude-code    # writes .claude/mcp.json
+relay mcp install-for claude-code    # writes ~/.claude.json (global user config)
 relay mcp install-for cursor         # writes .cursor/mcp.json
 relay mcp install-for windsurf       # writes .windsurf/mcp.json
 relay mcp install-for continue       # writes .continue/config.json

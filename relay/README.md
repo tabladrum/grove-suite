@@ -180,7 +180,7 @@ Relay exposes 5 tools over MCP stdio, accessible from any MCP-capable AI agent (
 **Register with your IDE:**
 
 ```bash
-relay mcp install-for claude-code    # writes .claude/mcp.json
+relay mcp install-for claude-code    # writes ~/.claude.json (global user config)
 relay mcp install-for cursor         # writes .cursor/mcp.json
 relay mcp install-for windsurf       # writes .windsurf/mcp.json
 relay mcp install-for continue       # writes .continue/config.json

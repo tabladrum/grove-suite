@@ -309,7 +309,7 @@ grove serve --port 7778
 ### Prism savings shows 0 even after using the agent
 
 The agent isn't calling Prism tools. Check:
-1. `prism init` was run in this directory — look for `.claude/mcp.json` or `.cursor/mcp.json`
+1. `prism init` was run in this directory — look for `.mcp.json` (Claude Code) or `.cursor/mcp.json` (Cursor)
 2. The coding tool was restarted after `prism init`
 3. The CLAUDE.md / .cursorrules instructions tell the agent to use Prism
 

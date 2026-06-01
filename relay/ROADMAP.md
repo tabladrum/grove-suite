@@ -46,7 +46,7 @@ Single binary (laptop mode: SQLite + local Ed25519 key, no Redis) that exposes t
   - Intent tools: `relay_intent_open`, `relay_intent_update`, `relay_intent_close`, `relay_intent_list`
   - `relay mcp serve`; `relay mcp install-for {claude-code,cursor,codex,windsurf,continue,vscode,claude-desktop,zed,kiro}`
   - `relay init` auto-writes Pre-Flight Autopilot steering instructions to CLAUDE.md, .cursorrules, .github/copilot-instructions.md, AGENTS.md, GEMINI.md, .clinerules, .kiro/steering/, .devin/, .amp/
-  - `relay init` auto-registers MCP for Claude Code (.claude/mcp.json), GitHub Copilot / VS Code (.vscode/mcp.json), Cursor (.cursor/mcp.json), Codex CLI (~/.codex/config.toml), plus Claude Desktop / Windsurf / Zed / Kiro / Continue when installed
+  - `relay init` auto-registers MCP for Claude Code (.mcp.json at project root), GitHub Copilot / VS Code (.vscode/mcp.json), Cursor (.cursor/mcp.json), Codex CLI (~/.codex/config.toml), plus Claude Desktop / Windsurf / Zed / Kiro / Continue when installed
   - System-prompt fragment at `docs/agent-prompt.md`
 - [x] **MVP-L6** — Cert JSON-LD + replay + risk heatmap + profiles
   - `relay cert show [--jsonld] <id>`, `relay cert replay <id>`
