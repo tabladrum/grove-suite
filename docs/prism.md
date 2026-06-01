@@ -11,7 +11,7 @@ permalink: /prism/
 **Focused, graph-ranked context for any AI coding agent — 35–92% fewer tokens on first reads, ~99% on re-reads.**
 {: .fs-5 .fw-300 }
 
-[Install Prism](/installation){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Install Prism]({{ '/installation/' | relative_url }}){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View source](https://github.com/tabladrum/grove-suite/tree/main/prism){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
@@ -20,7 +20,7 @@ An AI coding agent that gets bad context produces bad code. Not because it's a b
 
 The naive approach is to dump related files into the context window and hope the agent figures out what matters. This fails in two directions at once: it wastes tokens on code that's nearby in the file tree but irrelevant to the task, and it misses code that *is* critical but has no obvious filename match. The agent hallucinates the gaps.
 
-Prism solves this. Given a task description, it queries [Grove's knowledge graph](/grove), scores every candidate across five signals, allocates a token budget across five categories, and returns exactly what matters — full source for the first read, signatures on the second, one-line references on the third.
+Prism solves this. Given a task description, it queries [Grove's knowledge graph]({{ '/grove/' | relative_url }}), scores every candidate across five signals, allocates a token budget across five categories, and returns exactly what matters — full source for the first read, signatures on the second, one-line references on the third.
 
 The agent gets more signal per token. Every time.
 
@@ -142,7 +142,7 @@ prism index     # initial index — delta indexing for subsequent runs
 prism savings
 ```
 
-[Full installation guide →](/installation)
+[Full installation guide →]({{ '/installation/' | relative_url }})
 
 ---
 
@@ -181,7 +181,7 @@ After install:
 
 ## Read More
 
-- [How Prism compares to Copilot semantic search, Claude Code, Cursor, Codex CLI](/comparisons#prism-vs-other-context-delivery)
-- [Why Grove Suite exists](/why)
+- [How Prism compares to Copilot semantic search, Claude Code, Cursor, Codex CLI]({{ '/comparisons/#prism-vs-other-context-delivery' | relative_url }})
+- [Why Grove Suite exists]({{ '/why/' | relative_url }})
 - [Full reference on GitHub](https://github.com/tabladrum/grove-suite/tree/main/prism)
-- [Configuration and troubleshooting](/troubleshooting#prism)
+- [Configuration and troubleshooting]({{ '/troubleshooting/#prism' | relative_url }})

@@ -11,7 +11,7 @@ permalink: /fuse/
 **Symbol-aware Git merge driver. Auto-resolves the conflicts that shouldn't exist.**
 {: .fs-5 .fw-300 }
 
-[Install Fuse](/installation){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Install Fuse]({{ '/installation/' | relative_url }}){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View source](https://github.com/tabladrum/grove-suite/tree/main/fuse){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
@@ -22,7 +22,7 @@ Git sees lines. It doesn't know your agent changed `Login()` while your develope
 
 Multiply that by a hundred agent PRs a week.
 
-Fuse replaces git's line-level merge with a symbol-aware one. It parses all three versions of a file with Tree-sitter, extracts symbols, queries [Grove](/grove) for cross-file blast radius, and merges at symbol granularity. Two changes to different symbols never conflict, regardless of where they appear in the file. The ones that *are* genuinely ambiguous get conflict markers plus an AI-ready handoff prompt — all the context an agent needs to resolve them in one pass.
+Fuse replaces git's line-level merge with a symbol-aware one. It parses all three versions of a file with Tree-sitter, extracts symbols, queries [Grove]({{ '/grove/' | relative_url }}) for cross-file blast radius, and merges at symbol granularity. Two changes to different symbols never conflict, regardless of where they appear in the file. The ones that *are* genuinely ambiguous get conflict markers plus an AI-ready handoff prompt — all the context an agent needs to resolve them in one pass.
 
 ---
 
@@ -116,13 +116,13 @@ AI-only merge tools (Continue's resolve-conflict, Cody's smart merge, various ag
 
 **Fuse uses a deterministic algorithm first, escalates to AI only when ambiguity is real.**
 
-[Full comparison →](/comparisons#fuse-vs-other-merge-tools)
+[Full comparison →]({{ '/comparisons/#fuse-vs-other-merge-tools' | relative_url }})
 
 ---
 
 ## Languages Supported
 
-Same languages as [Grove's parser](/grove#languages-supported):
+Same languages as [Grove's parser]({{ '/grove/#languages-supported' | relative_url }}):
 
 Go · TypeScript · TSX · JavaScript · Python · Java · Rust · C · C++ · C# · PHP
 
@@ -156,7 +156,7 @@ git add .gitattributes && git commit -m "Add Fuse merge driver"
 
 That's it. Your next `git merge` will use Fuse for any file matching the `.gitattributes` patterns. False conflicts disappear.
 
-[Full installation guide →](/installation)
+[Full installation guide →]({{ '/installation/' | relative_url }})
 
 ---
 
@@ -190,7 +190,7 @@ Phases 1–2 (Grove API + Tree-sitter parse) typically take 100–200 ms; phases
 
 ## Read More
 
-- [How Fuse compares to git merge, IntelliMerge, Plastic SCM, AI-only resolvers](/comparisons#fuse-vs-other-merge-tools)
-- [Why Grove Suite exists](/why)
+- [How Fuse compares to git merge, IntelliMerge, Plastic SCM, AI-only resolvers]({{ '/comparisons/#fuse-vs-other-merge-tools' | relative_url }})
+- [Why Grove Suite exists]({{ '/why/' | relative_url }})
 - [Full reference on GitHub](https://github.com/tabladrum/grove-suite/tree/main/fuse)
-- [Troubleshooting](/troubleshooting#fuse)
+- [Troubleshooting]({{ '/troubleshooting/#fuse' | relative_url }})

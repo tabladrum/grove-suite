@@ -10,7 +10,7 @@ permalink: /docs/
 
 **Welcome.** This is the home of the long-form documentation for Grove Suite — the infrastructure layer that makes AI coding agents production-safe.
 
-If you just want to install and try it, the [installation guide](/installation) has the five-minute path. This page exists for the people who need to understand it deeper before they bring it to their team, their CISO, their CFO, or their auditor.
+If you just want to install and try it, the [installation guide]({{ '/installation/' | relative_url }}) has the five-minute path. This page exists for the people who need to understand it deeper before they bring it to their team, their CISO, their CFO, or their auditor.
 
 ---
 

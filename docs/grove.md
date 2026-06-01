@@ -11,7 +11,7 @@ permalink: /grove/
 **Your codebase's persistent long-term memory — queryable by any AI agent.**
 {: .fs-5 .fw-300 }
 
-[Install Grove](/installation){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Install Grove]({{ '/installation/' | relative_url }}){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View source](https://github.com/tabladrum/grove-suite/tree/main/grove){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
@@ -104,7 +104,7 @@ Grove exposes **8 tools over MCP stdio** (Model Context Protocol) — accessible
 | `grove_icr` | Intent complexity rating |
 | `grove_conflicts` | Potential conflict hotspots |
 
-Most users don't run Grove directly — they install [Prism](/prism), which wraps Grove with token-optimized context delivery. But for custom agent integrations, you can connect directly via MCP, HTTP, or gRPC.
+Most users don't run Grove directly — they install [Prism]({{ '/prism/' | relative_url }}), which wraps Grove with token-optimized context delivery. But for custom agent integrations, you can connect directly via MCP, HTTP, or gRPC.
 
 ---
 
@@ -128,7 +128,7 @@ grove impact "validatePassword"
 grove serve --port 7777
 ```
 
-[Full installation guide →](/installation)
+[Full installation guide →]({{ '/installation/' | relative_url }})
 
 ---
 
@@ -142,7 +142,7 @@ Zero telemetry. Your code never leaves your machine.
 
 ## Read More
 
-- [How Grove compares to LSP, Sourcegraph, ctags, Stack Graphs](/comparisons#grove-vs-other-code-intelligence)
-- [Why Grove Suite exists](/why)
+- [How Grove compares to LSP, Sourcegraph, ctags, Stack Graphs]({{ '/comparisons/#grove-vs-other-code-intelligence' | relative_url }})
+- [Why Grove Suite exists]({{ '/why/' | relative_url }})
 - [Full reference on GitHub](https://github.com/tabladrum/grove-suite/tree/main/grove)
 - [Architecture and inter-product API contracts](https://github.com/tabladrum/grove-suite/blob/main/Architecture.md)

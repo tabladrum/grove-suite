@@ -11,7 +11,7 @@ permalink: /relay/
 **Certified delivery for AI coding agents. Every commit signed, tested, and traceable to the prompt that created it.**
 {: .fs-5 .fw-300 }
 
-[Install Relay](/installation){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Install Relay]({{ '/installation/' | relative_url }}){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View source](https://github.com/tabladrum/grove-suite/tree/main/relay){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
@@ -191,7 +191,7 @@ git add .relay/ && git commit -m "Add Relay configuration"
 # Your AI agent now calls relay_check before every PR. Automatically.
 ```
 
-[Full installation guide →](/installation)
+[Full installation guide →]({{ '/installation/' | relative_url }})
 
 ---
 
@@ -250,7 +250,7 @@ One binary, three modes — same config, same certificate format:
 
 ## Read More
 
-- [How Relay compares to CI/CD, CodeRabbit, Greptile, Sigstore, SLSA](/comparisons#relay-vs-other-delivery-tools)
-- [Why Grove Suite exists](/why)
+- [How Relay compares to CI/CD, CodeRabbit, Greptile, Sigstore, SLSA]({{ '/comparisons/#relay-vs-other-delivery-tools' | relative_url }})
+- [Why Grove Suite exists]({{ '/why/' | relative_url }})
 - [Full reference on GitHub](https://github.com/tabladrum/grove-suite/tree/main/relay)
-- [Troubleshooting](/troubleshooting#relay)
+- [Troubleshooting]({{ '/troubleshooting/#relay' | relative_url }})

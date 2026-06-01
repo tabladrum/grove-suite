@@ -53,7 +53,7 @@ The [AGENT_SETUP_PROMPT.md](https://raw.githubusercontent.com/tabladrum/grove-su
 
 ## Manual Setup
 
-Prefer to do it yourself? The [full installation guide](/installation) covers:
+Prefer to do it yourself? The [full installation guide]({{ '/installation/' | relative_url }}) covers:
 
 - Pre-built binaries for all platforms (macOS Apple Silicon / Intel, Linux amd64 / arm64, Windows)
 - Checksum verification
@@ -94,7 +94,7 @@ cd /path/to/grove-suite
 ./scripts/uninstall-grove-suite.sh /path/to/target/project
 ```
 
-For manual details, see the [installation guide uninstall section](/installation#uninstall).
+For manual details, see the [installation guide uninstall section]({{ '/installation/#uninstall' | relative_url }}).
 
 ---
 
@@ -108,4 +108,4 @@ For manual details, see the [installation guide uninstall section](/installation
 | VS Code shows duplicate Prism providers/tools | Use either Prism MCP or the Prism VS Code extension, not both. If using extension mode, remove `prism` from `.vscode/mcp.json` |
 | Agent can't reach GitHub API | Check network, or download manually from [GitHub Releases](https://github.com/tabladrum/grove-suite/releases) |
 
-Full troubleshooting: [/troubleshooting](/troubleshooting)
+Full troubleshooting: [Troubleshooting]({{ '/troubleshooting/' | relative_url }})

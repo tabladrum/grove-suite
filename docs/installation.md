@@ -10,6 +10,19 @@ permalink: /installation/
 
 Grove Suite ships four single-file binaries: `grove`, `prism`, `fuse`, and `relay`. Pick the installation method that fits your environment.
 
+## Agent Setup Prompt (Fastest)
+
+If you want the quickest path, use the agent-driven prompt first:
+
+[Open Agent Setup Guide]({{ '/setup/' | relative_url }}){: .btn .btn-primary .mr-2 }
+[Agent Setup Prompt File](https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md){: .btn }
+
+```bash
+claude "Follow the setup instructions at https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md"
+```
+
+Prefer manual installation? Use the options below.
+
 | Method | Best for | Speed |
 |--------|---------|-------|
 | [Pre-built binaries](#pre-built-binaries-from-github-releases) | Production use, CI, locked-down environments | 30 seconds |
@@ -388,7 +401,7 @@ Grove Suite doesn't make external HTTP calls during normal operation, so proxies
 
 ## Where to Go Next
 
-- **[Get up and running fast](/why#what-we-want-from-you)** — the 5-minute path with Prism
-- **[Documentation home](/README)** — full doc map
-- **[Troubleshooting](/troubleshooting)** — common operational issues
-- **[Compare to alternatives](/comparisons)** — Prism vs Copilot, Fuse vs git merge, Relay vs CI
+- **[Get up and running fast]({{ '/why/#what-we-want-from-you' | relative_url }})** — the 5-minute path with Prism
+- **[Documentation home]({{ '/' | relative_url }})** — full doc map
+- **[Troubleshooting]({{ '/troubleshooting/' | relative_url }})** — common operational issues
+- **[Compare to alternatives]({{ '/comparisons/' | relative_url }})** — Prism vs Copilot, Fuse vs git merge, Relay vs CI

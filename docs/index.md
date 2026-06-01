@@ -12,23 +12,23 @@ permalink: /
 **The infrastructure layer that makes AI coding agents production-safe.**
 {: .fs-6 .fw-300 }
 
-[Agent Setup](/setup/){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[Manual Install](/installation){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Agent Setup]({{ '/setup/' | relative_url }}){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Manual Install]({{ '/installation/' | relative_url }}){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View on GitHub](https://github.com/tabladrum/grove-suite){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
 
 ## Four pains. Four fixes.
 
-**Your agent burns tokens on the wrong code.** It reads the files you pointed at, guesses at what else matters, and spends your context budget on noise. → [Prism](/prism) delivers graph-ranked context: 35–92% fewer tokens on first reads, ~99% on re-reads.
+**Your agent burns tokens on the wrong code.** It reads the files you pointed at, guesses at what else matters, and spends your context budget on noise. → [Prism]({{ '/prism/' | relative_url }}) delivers graph-ranked context: 35–92% fewer tokens on first reads, ~99% on re-reads.
 
-**Your agent and your developer just conflicted on the same file. For the third time today.** Different functions, adjacent lines. Git declared a conflict anyway. → [Fuse](/fuse) understands symbols, not lines. ~85% of those conflicts auto-resolve.
+**Your agent and your developer just conflicted on the same file. For the third time today.** Different functions, adjacent lines. Git declared a conflict anyway. → [Fuse]({{ '/fuse/' | relative_url }}) understands symbols, not lines. ~85% of those conflicts auto-resolve.
 
-**Your agent opened a PR. CI found three issues. You sent it back. CI found two more. Repeat.** Quality gates live at the end of the pipeline; the agent is at the beginning. → [Relay](/relay) moves the gates into the agent loop. Sub-10s findings. Agent self-corrects before any PR.
+**Your agent opened a PR. CI found three issues. You sent it back. CI found two more. Repeat.** Quality gates live at the end of the pipeline; the agent is at the beginning. → [Relay]({{ '/relay/' | relative_url }}) moves the gates into the agent loop. Sub-10s findings. Agent self-corrects before any PR.
 
-**A security audit asks: what did the agent actually do, and who certified it was safe?** The PR says "refactor auth." The agent session is gone. → [Relay](/relay) commits the original prompt as a YAML intent. Every commit is Ed25519-signed. `relay cert replay` re-runs the gates at any time.
+**A security audit asks: what did the agent actually do, and who certified it was safe?** The PR says "refactor auth." The agent session is gone. → [Relay]({{ '/relay/' | relative_url }}) commits the original prompt as a YAML intent. Every commit is Ed25519-signed. `relay cert replay` re-runs the gates at any time.
 
-All four products share one foundation: [Grove](/grove) — a persistent knowledge graph of your codebase.
+All four products share one foundation: [Grove]({{ '/grove/' | relative_url }}) — a persistent knowledge graph of your codebase.
 
 ---
 
@@ -44,7 +44,7 @@ claude "Follow the setup instructions at https://raw.githubusercontent.com/tabla
 # https://raw.githubusercontent.com/tabladrum/grove-suite/main/AGENT_SETUP_PROMPT.md
 ```
 
-The agent detects your platform, fetches the latest release, asks which products you want, verifies checksums, and wires everything into your project. → [How it works](/setup/)
+The agent detects your platform, fetches the latest release, asks which products you want, verifies checksums, and wires everything into your project. → [How it works]({{ '/setup/' | relative_url }})
 
 **Manual install from source:**
 
@@ -59,18 +59,18 @@ prism index      # initial index
 prism savings    # watch token savings accumulate
 ```
 
-**Pre-built binaries?** [Installation guide](/installation) covers macOS, Linux, and Windows downloads from GitHub Releases.
+**Pre-built binaries?** [Installation guide]({{ '/installation/' | relative_url }}) covers macOS, Linux, and Windows downloads from GitHub Releases.
 
 ---
 
 ## Read More
 
-- [**Agent Setup**](/setup/) — let your AI agent install and configure everything automatically
-- [**Why Grove Suite**](/why) — the founder's pitch: problem, bet, what we deliberately didn't build
-- [**Comparisons**](/comparisons) — honest comparisons vs Copilot semantic search, Sourcegraph, AI merge tools, CodeRabbit, Sigstore, Devin
-- [**FAQ**](/faq) — top questions across technical, security, business, and audit perspectives
-- [**Troubleshooting**](/troubleshooting) — common issues, how to diagnose, how to fix
-- [**Documentation home**](/docs/) — the full doc map
+- [**Agent Setup**]({{ '/setup/' | relative_url }}) — let your AI agent install and configure everything automatically
+- [**Why Grove Suite**]({{ '/why/' | relative_url }}) — the founder's pitch: problem, bet, what we deliberately didn't build
+- [**Comparisons**]({{ '/comparisons/' | relative_url }}) — honest comparisons vs Copilot semantic search, Sourcegraph, AI merge tools, CodeRabbit, Sigstore, Devin
+- [**FAQ**]({{ '/faq/' | relative_url }}) — top questions across technical, security, business, and audit perspectives
+- [**Troubleshooting**]({{ '/troubleshooting/' | relative_url }}) — common issues, how to diagnose, how to fix
+- [**Documentation home**]({{ '/' | relative_url }}) — the full doc map
 
 ---
 
