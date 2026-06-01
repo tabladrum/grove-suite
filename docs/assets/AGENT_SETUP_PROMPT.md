@@ -446,28 +446,40 @@ relay init --stack=<stack> # pick the stack that matches your project;
 relay hook install        # installs pre-push backstop
 
 # Pre-download analyzer dependencies now so there is no first-use delay.
-# Use --with-sonar by default for deterministic behavior in new environments.
-# (Downloads JRE + sonarlint-ls.jar + plugins; roughly 500+ MB total.)
+# (Downloads JRE + sonarlint-ls.jar + plugins; roughly 500+ MB total with --with-sonar.)
+# Ask the user before running --with-sonar if bandwidth is a concern.
 relay tools install --with-sonar
 echo "Relay tools installed."
 
-# Semgrep and Ruff are Python packages; install them now.
+# govulncheck requires Go in PATH. Add it if missing:
+export PATH="/usr/local/go/bin:$PATH"
+
+# Semgrep and Ruff are Python packages; install via pipx (preferred).
+# If pipx is missing, install it first: brew install pipx (macOS) or pip install pipx.
 if command -v pipx &>/dev/null; then
   pipx install semgrep && echo "✅ semgrep installed"
-  pipx install ruff && echo "✅ ruff installed"
+  pipx install ruff    && echo "✅ ruff installed"
 elif command -v pip3 &>/dev/null; then
-  pip3 install --user semgrep && echo "✅ semgrep installed (pip3 --user)"
-  pip3 install --user ruff && echo "✅ ruff installed (pip3 --user)"
+  # Modern Python (3.12+) blocks pip system installs — try pipx first.
+  pip3 install --user semgrep && echo "✅ semgrep (pip3 --user)" \
+    || echo "ℹ️  pip3 blocked by system Python; run: brew install pipx && pipx install semgrep"
+  pip3 install --user ruff && echo "✅ ruff (pip3 --user)" \
+    || echo "ℹ️  pip3 blocked by system Python; run: brew install pipx && pipx install ruff"
 else
-  echo "ℹ️  semgrep: install manually with: pipx install semgrep"
-  echo "ℹ️  ruff: install manually with: pipx install ruff"
+  echo "ℹ️  pipx not found — install it first: brew install pipx"
+  echo "    then: pipx install semgrep && pipx install ruff"
 fi
 
-# Eslint is optional unless JS/TS analysis is enabled.
+# eslint is optional — only needed if JS/TS SAST is enabled in relay.yaml.
 # npm install -g eslint
 
-# Verify no analyzer is missing after install.
-relay doctor
+# Verify all tools after install.
+# relay doctor exits non-zero if any check needs attention — read its output
+# rather than treating a non-zero exit as a hard failure. Only stop if a
+# tool that is enabled AND required for your stack shows "missing".
+relay doctor || true
+# If govulncheck shows missing: ensure Go is on PATH and re-run relay tools install.
+# If eslint shows missing: safe to ignore for Go/Python projects.
 
 git add .relay/
 echo "Relay: initialized. Your agent will call relay_check before every commit."
@@ -509,6 +521,10 @@ if (Get-Command relay  -EA 0) { & relay version  && Write-Host "✅ relay ok"  |
 | `relay init --stack=auto` fails with "unknown stack" | Use `relay init --list-stacks` to see valid stack names, then `relay init --stack=<name>` |
 | `relay_check` passes but no SAST/secrets findings appear | Run `relay tools install` — analyzers are silently skipped when not pre-downloaded |
 | semgrep not running in relay_check | Install separately: `pipx install semgrep` |
+| `relay doctor` shows `govulncheck missing` | Go is not in PATH — run `export PATH="/usr/local/go/bin:$PATH"` then re-run `relay tools install` |
+| `relay doctor` shows `eslint missing` | Safe to ignore for Go/Python projects; only needed for JS/TS SAST. Install with `npm install -g eslint` if required |
+| `relay doctor` exits non-zero but output shows only `eslint missing` | Not a hard failure — relay doctor exits 1 whenever any check needs attention, even optional ones. Read the output to distinguish required vs optional gaps |
+| `pipx install semgrep` fails: "externally-managed-environment" | System Python blocks pip — install pipx first: `brew install pipx`, then retry |
 
 If anything fails, diagnose and fix before reporting done.
 
