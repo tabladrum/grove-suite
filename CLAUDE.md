@@ -57,9 +57,10 @@ Grove is the only component with its own storage and parser. All others import i
 - `internal/store/` — SQLite (WAL + FTS5); delta indexing skips files whose git blob SHA is unchanged
 - `internal/graph/` — In-memory `CodeGraph` with 8 edge types (defines, contains, imports, extends, implements, calls, uses-type, tests); BFS traversal
 - `internal/query/` — Intent→symbols (FTS5 + BFS), blast radius, deps, test selection, ICR computation
-- `internal/mcp/` — 8 MCP tools over JSON-RPC 2.0 stdio (primary) and HTTP+SSE
-- `internal/api/` — REST at `:7777`; gRPC at `:7778`
+- `internal/mcp/` — 8 MCP tools over JSON-RPC 2.0 stdio (the standalone `grove mcp` server). Wire format is newline-delimited JSON, per the MCP stdio transport.
 - `internal/embeddings/model2vec/` — potion-base-8M (29 MB) embedded via `go:embed`; pure-Go inference, no CGO
+
+The former HTTP (`:7777`) / gRPC (`:7778`) servers were removed with the daemon (see "Embedded Grove" above). Consumers use `pkg/grove` in-process; humans use the `grove` CLI / `grove mcp` stdio server.
 
 **Key constraints:**
 - Single binary, zero runtime dependencies (SQLite via `modernc.org/sqlite` — pure Go, no CGO conflict with tree-sitter)
