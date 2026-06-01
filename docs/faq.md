@@ -6,7 +6,7 @@ description: "Frequently asked questions — technical, security, business, and 
 permalink: /faq/
 ---
 
-# Grove Suite FAQ
+# Relay FAQ
 
 Top questions, grouped by who is asking them.
 
@@ -14,9 +14,9 @@ Top questions, grouped by who is asking them.
 
 ## General
 
-### What is Grove Suite, in one sentence?
+### What is Relay, in one sentence?
 
-Four open-source command-line tools — Grove, Prism, Fuse, Relay — that together form the infrastructure layer beneath AI coding agents: persistent code knowledge graph, token-optimized context delivery, symbol-aware merge resolution, and certified commit admission with full audit trail.
+Relay is certified delivery for AI coding agents: it captures the prompt, runs quality gates inside the agent loop, and issues an Ed25519-signed certificate binding prompt → gates → commit. It is built on three open-source command-line tools it embeds — Grove (code knowledge graph), Prism (token-optimized context), and Fuse (symbol-aware merge) — each usable on its own.
 
 ### Who built this and why?
 
@@ -281,7 +281,7 @@ This is the difference between "we had CI green at the time" (no longer verifiab
 
 It directly addresses several SOC 2 Type II controls:
 - CC4.1, CC4.2: ongoing monitoring of controls — every commit's cert is a control evidence record
-- CC6.1: logical access — Ed25519 keys per developer, bearer tokens for HTTP access
+- CC6.1: logical access — per-developer Ed25519 admission keys (mode 0600); the engine is in-process with no network access path
 - CC7.1: detection of vulnerabilities — Stage 2 SAST + dep audit on every commit
 - CC8.1: change management — every change is admitted via Relay, linked to an intent, signed
 

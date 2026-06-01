@@ -1,12 +1,12 @@
 ---
-title: Why Grove Suite
+title: Why Relay
 layout: default
 nav_order: 2
 description: "The founder's note — why Relay exists, why the open-source components beneath it exist, and what we deliberately didn't build."
 permalink: /why/
 ---
 
-# Why Grove Suite
+# Why Relay
 
 *A founder's note: Relay is the product. Grove, Prism, and Fuse are the open-source components Relay sits on — and that you can adopt independently.*
 

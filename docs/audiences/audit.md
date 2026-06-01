@@ -2,13 +2,13 @@
 title: Audit Brief
 layout: default
 nav_order: 4
-description: "How Grove Suite supports auditability, evidence collection, and replayable commit history."
+description: "How Relay supports auditability, evidence collection, and replayable commit history."
 permalink: /audiences/audit/
 ---
 
 # Audit Brief
 
-Grove Suite is designed to make AI-generated changes auditable after the fact, not just reviewable at the pull request stage.
+Relay is designed to make AI-generated changes auditable after the fact, not just reviewable at the pull request stage.
 
 ## What You Get
 

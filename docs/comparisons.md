@@ -8,7 +8,7 @@ permalink: /comparisons/
 
 # Comparisons
 
-*An honest look at how Grove Suite stacks up against the tools you might already be using or evaluating. We name names, we link to their docs, and we tell you where they are stronger than us.*
+*An honest look at how Relay — and its open-source components Grove, Prism, and Fuse — stack up against the tools you might already be using or evaluating. We name names, we link to their docs, and we tell you where they are stronger than us.*
 
 This is a living document. If you spot something inaccurate — especially about a competitor — open an issue.
 
