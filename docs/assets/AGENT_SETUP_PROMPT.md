@@ -65,9 +65,16 @@ Also ask:
 
 > Where should the binaries be installed?
 >
-> **1.** `/usr/local/bin` — system-wide, requires sudo (Linux/macOS default)
-> **2.** `~/bin` — current user only, no sudo required
+> **1.** `~/bin` *(recommended for agent-driven install — no sudo required)*
+> **2.** `/usr/local/bin` — system-wide; requires sudo. The agent will download
+>        and verify the binaries, then give you a single paste-ready terminal
+>        command to do the privileged move. You run that one command yourself.
 > **3.** Let me specify a path
+
+**Important:** AI agents cannot run `sudo` interactively. If you choose `/usr/local/bin`
+(or any path requiring elevated privileges), the agent will complete all steps up to
+the file move, then hand you a single command to run in your own terminal. All other
+steps — download, checksum verification, initialization — are fully automated.
 
 On Windows, ask for the target directory and confirm it is on `%PATH%`.
 
@@ -273,53 +280,83 @@ If any checksum fails, stop. Do not install the binary. Tell the user and sugges
 
 ### Step 7 — Install Binaries
 
-Move verified binaries to the install directory chosen in Step 1. Install Grove first.
+Install Grove first — the others depend on it. The method depends on the
+install directory chosen in Step 1.
 
-**Linux / macOS — `/usr/local/bin` (sudo):**
-```bash
-PRODUCT=grove   # repeat for each selected product
-FILENAME="${PRODUCT}-${VERSION}-${OS}-${ARCH}"
-sudo mv "/tmp/${FILENAME}" "/usr/local/bin/${PRODUCT}"
-sudo chmod +x "/usr/local/bin/${PRODUCT}"
-echo "Installed ${PRODUCT} to /usr/local/bin/"
-```
+---
 
-**Linux / macOS — `~/bin` (no sudo):**
+**Path A — `~/bin` (no sudo; agent runs this directly):**
+
 ```bash
 mkdir -p ~/bin
-PRODUCT=grove
-FILENAME="${PRODUCT}-${VERSION}-${OS}-${ARCH}"
-mv "/tmp/${FILENAME}" ~/bin/${PRODUCT}
-chmod +x ~/bin/${PRODUCT}
+for PRODUCT in grove prism fuse relay; do   # only selected products
+  FILENAME="${PRODUCT}-${VERSION}-${OS}-${ARCH}"
+  mv "/tmp/${FILENAME}" ~/bin/${PRODUCT}
+  chmod +x ~/bin/${PRODUCT}
+  echo "✅ ${PRODUCT} → ~/bin/${PRODUCT}"
+done
 ```
 
-After installing to `~/bin`, check whether it is on `$PATH`:
+Check `~/bin` is on `$PATH` (run this too):
 ```bash
-echo $PATH | grep -q "$HOME/bin" || {
+echo "$PATH" | grep -q "$HOME/bin" || {
   SHELL_RC="$HOME/.zshrc"
   [ -f "$HOME/.bashrc" ] && SHELL_RC="$HOME/.bashrc"
   echo 'export PATH="$HOME/bin:$PATH"' >> "$SHELL_RC"
   export PATH="$HOME/bin:$PATH"
-  echo "Added ~/bin to PATH in $SHELL_RC — restart your shell or run: source $SHELL_RC"
+  echo "Added ~/bin to PATH in ${SHELL_RC} — restart your shell or: source ${SHELL_RC}"
 }
 ```
 
-**macOS — remove Gatekeeper quarantine (required for downloaded binaries):**
+macOS — clear Gatekeeper quarantine:
 ```bash
-xattr -d com.apple.quarantine /usr/local/bin/grove 2>/dev/null || true
-xattr -d com.apple.quarantine /usr/local/bin/prism 2>/dev/null || true
-xattr -d com.apple.quarantine /usr/local/bin/fuse  2>/dev/null || true
-xattr -d com.apple.quarantine /usr/local/bin/relay 2>/dev/null || true
+for PRODUCT in grove prism fuse relay; do
+  xattr -d com.apple.quarantine ~/bin/${PRODUCT} 2>/dev/null || true
+done
 ```
 
-**Windows — move to target directory:**
+---
+
+**Path B — `/usr/local/bin` or any sudo-required path:**
+
+The agent cannot run `sudo` interactively. Do the following:
+
+1. Tell the user: *"All binaries are downloaded and checksum-verified in `/tmp/`.
+   Please run the command below in your terminal to complete the install, then
+   come back and I will continue with initialization."*
+
+2. Print this exact block for the user to paste into their terminal (substituting
+   the actual `$VERSION`, `$OS`, `$ARCH`, and the selected products):
+
+```bash
+# Paste this in your terminal:
+VERSION="v0.x.x"   # filled in by agent
+OS="darwin"        # filled in by agent
+ARCH="arm64"       # filled in by agent
+INSTALL_DIR="/usr/local/bin"
+
+for PRODUCT in grove prism fuse relay; do
+  sudo mv "/tmp/${PRODUCT}-${VERSION}-${OS}-${ARCH}" "${INSTALL_DIR}/${PRODUCT}"
+  sudo chmod +x "${INSTALL_DIR}/${PRODUCT}"
+  xattr -d com.apple.quarantine "${INSTALL_DIR}/${PRODUCT}" 2>/dev/null || true
+  echo "✅ ${PRODUCT} installed"
+done
+```
+
+3. Wait for the user to confirm they ran it before continuing to Step 8.
+
+---
+
+**Windows — move to target directory (agent runs this):**
 ```powershell
-$PRODUCT = "grove"  # repeat for each selected product
-$FILENAME = "$PRODUCT-$VERSION-windows-$ARCH.exe"
-$TARGET = "C:\Users\$env:USERNAME\bin"  # or user-specified path
+$PRODUCTS = @("grove","prism","fuse","relay")   # only selected products
+$TARGET = "$env:USERPROFILE\bin"                # or user-specified path
 New-Item -ItemType Directory -Force -Path $TARGET | Out-Null
-Move-Item "$env:TEMP\$FILENAME" "$TARGET\$PRODUCT.exe" -Force
-Write-Host "Installed $PRODUCT to $TARGET"
+foreach ($PRODUCT in $PRODUCTS) {
+  $FILENAME = "$PRODUCT-$VERSION-windows-$ARCH.exe"
+  Move-Item "$env:TEMP\$FILENAME" "$TARGET\$PRODUCT.exe" -Force
+  Write-Host "✅ $PRODUCT → $TARGET\$PRODUCT.exe"
+}
 ```
 
 ---
