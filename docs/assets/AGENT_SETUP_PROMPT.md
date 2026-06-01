@@ -381,6 +381,11 @@ prism index   # initial index (delta-aware — subsequent runs only touch change
 echo "Prism: initialized. Restart your AI coding tool to activate the MCP server."
 ```
 
+> **Claude Code users:** `prism init` writes `.mcp.json` at the project root.
+> When you restart Claude Code, it will detect this file and show a prompt:
+> **"Allow MCP servers from .mcp.json?"** — click **Allow** (or run `claude mcp list`
+> and approve the pending entry). The MCP server will not connect until approved.
+
 If the user chose **VS Code extension mode**:
 
 ```bash
@@ -484,6 +489,10 @@ relay doctor || true
 git add .relay/
 echo "Relay: initialized. Your agent will call relay_check before every commit."
 ```
+
+> **Claude Code users:** `relay init` also writes `.mcp.json` at the project root
+> (merging with Prism's entry if already present). When you restart Claude Code,
+> approve the pending `.mcp.json` MCP servers when prompted.
 
 **Start MCP servers** (do this after all products are initialized):
 
@@ -594,6 +603,14 @@ else { Write-Host "❌ Fuse not registered — run: fuse install" }
 if (Get-Command relay -EA 0) { & relay policy | Select-Object -First 10 }
 ```
 
+**Verify MCP server registration (Claude Code):**
+```bash
+claude mcp list
+# Expected: prism and relay listed as connected (green check).
+# If they show ⏸ Pending: restart Claude Code and approve when prompted.
+# If they don't appear: re-run prism init / relay init from the project root.
+```
+
 **Common failures and fixes:**
 
 | Symptom | Fix |
@@ -610,6 +627,7 @@ if (Get-Command relay -EA 0) { & relay policy | Select-Object -First 10 }
 | `relay doctor` shows `eslint missing` | Safe to ignore for Go/Python projects; only needed for JS/TS SAST. Install with `npm install -g eslint` if required |
 | `relay doctor` exits non-zero but output shows only `eslint missing` | Not a hard failure — relay doctor exits 1 whenever any check needs attention, even optional ones. Read the output to distinguish required vs optional gaps |
 | `pipx install semgrep` fails: "externally-managed-environment" | System Python blocks pip — install pipx first: `brew install pipx`, then retry |
+| Claude Code `claude mcp list` doesn't show prism/relay | Re-run `prism init` / `relay init` from the project root, then restart Claude Code and approve `.mcp.json` when prompted |
 
 If anything fails, diagnose and fix before reporting done.
 
