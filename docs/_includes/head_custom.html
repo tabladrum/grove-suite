@@ -1,11 +1,23 @@
 <!-- SVG favicon — works in all modern browsers -->
 <link rel="icon" type="image/svg+xml" href="{{ '/assets/images/logo-icon.svg' | relative_url }}">
-<!-- PNG fallback for older browsers -->
-<link rel="alternate icon" href="{{ '/assets/images/favicon.png' | relative_url }}" type="image/png">
+<!-- PNG fallback / Apple touch icon -->
+<link rel="apple-touch-icon" href="{{ '/assets/images/og-image.png' | relative_url }}">
 
-<!-- Open Graph / social preview -->
-<meta property="og:title"       content="{{ page.title | default: site.title }}">
-<meta property="og:description" content="{{ page.description | default: site.description }}">
-<meta property="og:image"       content="{{ '/assets/images/logo.svg' | absolute_url }}">
-<meta property="og:type"        content="website">
-<meta name="twitter:card"       content="summary">
+<!-- Open Graph — required for iMessage, WhatsApp, Slack, Twitter link previews -->
+<meta property="og:site_name"    content="Grove Suite">
+<meta property="og:title"        content="{{ page.title | default: site.title }}">
+<meta property="og:description"  content="{{ page.description | default: site.description }}">
+<meta property="og:url"          content="{{ page.url | absolute_url }}">
+<meta property="og:type"         content="website">
+<meta property="og:image"        content="{{ '/assets/images/og-image.png' | absolute_url }}">
+<meta property="og:image:type"   content="image/png">
+<meta property="og:image:width"  content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt"    content="Grove Suite — certified delivery infrastructure for AI coding agents">
+
+<!-- Twitter / X card -->
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="{{ page.title | default: site.title }}">
+<meta name="twitter:description" content="{{ page.description | default: site.description }}">
+<meta name="twitter:image"       content="{{ '/assets/images/og-image.png' | absolute_url }}">
+<meta name="twitter:image:alt"   content="Grove Suite — certified delivery infrastructure for AI coding agents">
