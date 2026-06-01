@@ -15,6 +15,9 @@ permissions:
 
 env:
   GO_VERSION: "1.26.3"
+  # Run JS-based actions on the Node 24 runtime (GitHub forces this 2026-06-16);
+  # silences the Node 20 deprecation warnings from upload-artifact et al.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   # ----------------------------------------------------------------------------

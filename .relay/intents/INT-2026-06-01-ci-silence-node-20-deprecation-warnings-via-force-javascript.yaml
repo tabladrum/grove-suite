@@ -1,0 +1,14 @@
+# Auto-Intent Capture artifact. The user's prompt that produced this code.
+# See docs/design.md §17. Do not hand-edit unless you know what you're doing.
+schema: relay.intent/v2
+id: INT-2026-06-01-ci-silence-node-20-deprecation-warnings-via-force-javascript
+status: committed
+title: 'CI: silence Node 20 deprecation warnings via FORCE_JAVASCRIPT_ACTIONS_TO_NODE24'
+description: Fix the Node.js 20 deprecation warnings across all GitHub Actions runs (especially release.yml, also ci.yml and pages.yml). The actions are already on their latest majors but still declare node20 internally (e.g. upload-artifact@v5, and upload-artifact@v3 transitively inside upload-pages-artifact), so version bumps don't help. Add the GitHub-recommended FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true env var at the workflow level to run JS actions on the Node 24 runtime, which GitHub forces on 2026-06-16 anyway.
+originated_from:
+    agent: claude-code
+    model: claude-opus-4-8
+    prompt_hash: 2338a79146b98ea695ba2896e4ef88fc7b11e125ae1975aee8cc7c53720b02ca
+created_at: 2026-06-01T19:53:45.834219Z
+committed_at: 2026-06-01T19:54:44.043817Z
+committed_by_agent: claude-code

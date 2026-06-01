@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Run JS-based actions on the Node 24 runtime (GitHub forces this 2026-06-16);
+# silences the Node 20 deprecation warnings from setup-go/upload-artifact et al.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   test:
     name: Test (${{ matrix.os }})
