@@ -32,7 +32,8 @@ fi
 # Remove suite binaries from common install locations.
 for p in \
   /usr/local/bin/grove /usr/local/bin/prism /usr/local/bin/fuse /usr/local/bin/relay \
-  /opt/homebrew/bin/grove /opt/homebrew/bin/prism /opt/homebrew/bin/fuse /opt/homebrew/bin/relay
+  /opt/homebrew/bin/grove /opt/homebrew/bin/prism /opt/homebrew/bin/fuse /opt/homebrew/bin/relay \
+  "$HOME/bin/grove" "$HOME/bin/prism" "$HOME/bin/fuse" "$HOME/bin/relay"
  do
   remove_path "$p"
 done
