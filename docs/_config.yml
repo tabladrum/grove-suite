@@ -2,6 +2,8 @@ title: Grove Suite
 description: The infrastructure layer that makes AI coding agents production-safe.
 theme: just-the-docs
 
+logo: "assets/images/logo.svg"
+
 url: https://tabladrum.github.io
 baseurl: /grove-suite
 

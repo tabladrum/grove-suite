@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 224 48" fill="none" role="img" aria-label="Grove Suite">
+  <title>Grove Suite</title>
+
+  <!-- ── Icon (48 × 48) ─────────────────────────────────────────── -->
+
+  <!-- Edges -->
+  <line x1="24" y1="8"  x2="11" y2="24" stroke="#166534" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.65"/>
+  <line x1="24" y1="8"  x2="37" y2="24" stroke="#166534" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.65"/>
+  <line x1="11" y1="24" x2="5"  y2="41" stroke="#166534" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.65"/>
+  <line x1="11" y1="24" x2="24" y2="41" stroke="#166534" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.65"/>
+  <line x1="37" y1="24" x2="24" y2="41" stroke="#166534" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.65"/>
+
+  <!-- Nodes -->
+  <circle cx="24" cy="8"  r="6"   fill="#0d3320"/>
+  <circle cx="11" cy="24" r="4.5" fill="#166534"/>
+  <circle cx="37" cy="24" r="4.5" fill="#166534"/>
+  <circle cx="5"  cy="41" r="3.5" fill="#22c55e"/>
+  <circle cx="24" cy="41" r="3.5" fill="#22c55e"/>
+
+  <!-- ── Wordmark ────────────────────────────────────────────────── -->
+
+  <!-- "Grove" — heavy, dark forest green -->
+  <text
+    x="60" y="27"
+    font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+    font-size="22"
+    font-weight="700"
+    letter-spacing="-0.3"
+    fill="#0d3320"
+    dominant-baseline="middle"
+  >Grove</text>
+
+  <!-- "Suite" — lighter weight, forest green, small-caps spaced -->
+  <text
+    x="130" y="27"
+    font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+    font-size="22"
+    font-weight="300"
+    letter-spacing="1"
+    fill="#166534"
+    dominant-baseline="middle"
+  >Suite</text>
+</svg>
