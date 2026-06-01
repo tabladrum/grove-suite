@@ -6,6 +6,16 @@
 
 # MCP config — written by prism init / relay init with absolute machine-specific paths
 .mcp.json
+.cursor/mcp.json
+.kiro/settings/mcp.json
+
+# Engine runtime state — local SQLite graph + shared-secret token
+.grove/
+**/.grove/
+
+# Build output — `go build -o bin/<name>` / `make build`; never commit binaries
+bin/
+**/bin/
 
 # OS
 .DS_Store

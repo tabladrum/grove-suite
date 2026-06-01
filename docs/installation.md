@@ -10,9 +10,35 @@ permalink: /installation/
 
 Grove Suite ships four single-file binaries: `grove`, `prism`, `fuse`, and `relay`. Pick the installation method that fits your environment.
 
-## Agent Setup Prompt (Fastest)
+## One-Command Install (Fastest)
 
-If you want the quickest path, use the agent-driven prompt first:
+No agent required — download, checksum-verify, and install all four binaries:
+
+```bash
+curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+```
+
+Initialize a project in the same step, or customize what gets installed:
+
+```bash
+# Install + index/initialize the current project
+GROVE_SUITE_PROJECT="$PWD" curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+
+# Install only Prism (+ Grove, which it depends on) into /usr/local/bin
+GROVE_SUITE_PRODUCTS="grove prism" GROVE_SUITE_INSTALL_DIR=/usr/local/bin \
+  curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+```
+
+Environment knobs: `GROVE_SUITE_VERSION` (default: latest), `GROVE_SUITE_PRODUCTS`,
+`GROVE_SUITE_INSTALL_DIR` (default: `~/bin`), `GROVE_SUITE_PROJECT`.
+
+After it finishes, open a new terminal and restart your AI coding tool so it picks
+up the MCP servers. Verify with `claude mcp list` (prism/relay should show ✓ Connected).
+
+## Agent Setup Prompt
+
+Prefer a guided, conversational install (the agent asks which products, where to
+install, VS Code extension mode)? Point your agent at the setup prompt:
 
 [Open Agent Setup Guide]({{ '/setup/' | relative_url }}){: .btn .btn-primary .mr-2 }
 [Agent Setup Prompt File](https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md){: .btn }
@@ -25,6 +51,7 @@ Prefer manual installation? Use the options below.
 
 | Method | Best for | Speed |
 |--------|---------|-------|
+| [One-command installer](#one-command-install-fastest) | Most users, CI, quick setup | 30 seconds |
 | [Pre-built binaries](#pre-built-binaries-from-github-releases) | Production use, CI, locked-down environments | 30 seconds |
 | [Build from source](#build-from-source) | Developers, contributors, custom builds | 5 minutes |
 | [Homebrew](#homebrew-macos--linux) | macOS / Linux users with Homebrew | 1 minute (planned) |

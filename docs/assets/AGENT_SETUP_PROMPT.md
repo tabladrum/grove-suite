@@ -6,6 +6,22 @@
 
 ## How to Use This File
 
+**Prefer one command? (no agent required)**
+```bash
+curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+```
+This downloads, checksum-verifies, and installs all four binaries to `~/bin`.
+To also initialize a project in the same step:
+```bash
+GROVE_SUITE_PROJECT="$PWD" curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+```
+Knobs: `GROVE_SUITE_VERSION`, `GROVE_SUITE_PRODUCTS`, `GROVE_SUITE_INSTALL_DIR`,
+`GROVE_SUITE_PROJECT`. After it finishes, restart your AI coding tool and verify
+with `claude mcp list`. The agent-driven flow below is best when you want
+guided choices (which products, install location, VS Code extension mode).
+
+---
+
 **Claude Code:**
 ```
 /read AGENT_SETUP_PROMPT.md  — then say "follow the setup instructions"
@@ -616,13 +632,37 @@ else { Write-Host "❌ Fuse not registered — run: fuse install" }
 if (Get-Command relay -EA 0) { & relay policy | Select-Object -First 10 }
 ```
 
-**Verify MCP server registration (Claude Code):**
+**Verify MCP servers actually CONNECT (Claude Code) — do not skip:**
+
+Registration is not enough — a server can be registered and still fail to
+connect. Verify the live connection and treat anything other than "Connected"
+as a failure to fix before reporting done:
+
 ```bash
-claude mcp list
-# Expected: prism and relay listed as connected (green check).
-# If they show ⏸ Pending: restart Claude Code and approve when prompted.
-# If they don't appear: re-run prism init / relay init from the project root.
+echo "--- MCP connectivity ---"
+MCP_OUT="$(claude mcp list 2>&1)"
+echo "$MCP_OUT"
+for SRV in prism relay; do
+  if echo "$MCP_OUT" | grep -qiE "^${SRV}:.*(✓|connected)"; then
+    echo "✅ ${SRV}: connected"
+  elif echo "$MCP_OUT" | grep -qi "${SRV}"; then
+    echo "❌ ${SRV}: registered but NOT connected — see fixes below"
+  fi
+done
 ```
+
+If a server shows **Failed to connect** (a ~30s timeout), inspect Claude Code's
+own MCP log — it records the precise error:
+
+```bash
+LOGDIR="$HOME/Library/Caches/claude-cli-nodejs"   # macOS (Linux: ~/.cache/claude-cli-nodejs)
+tail -n 5 "$(ls -t "$LOGDIR"/*/mcp-logs-prism/*.jsonl 2>/dev/null | head -1)" 2>/dev/null
+```
+
+A `connection timed out` error with binaries that otherwise run usually means a
+**wire-protocol mismatch**: MCP stdio requires newline-delimited JSON. This was
+a bug in grove-suite **before v0.3.0** — upgrade to the latest release if you
+see it. Expected after the fix: both `prism` and `relay` show **✓ Connected**.
 
 **Common failures and fixes:**
 
@@ -641,6 +681,8 @@ claude mcp list
 | `relay doctor` exits non-zero but output shows only `eslint missing` | Not a hard failure — relay doctor exits 1 whenever any check needs attention, even optional ones. Read the output to distinguish required vs optional gaps |
 | `pipx install semgrep` fails: "externally-managed-environment" | System Python blocks pip — install pipx first: `brew install pipx`, then retry |
 | Claude Code `claude mcp list` doesn't show prism/relay | Re-run `prism init` / `relay init` from the project root, then restart Claude Code and approve `.mcp.json` when prompted |
+| `claude mcp list` shows prism/relay **Failed to connect** (~30s timeout) but `prism version` works | Wire-protocol bug fixed in **v0.3.0** — upgrade to the latest release. MCP stdio requires newline-delimited JSON; older binaries emitted `Content-Length` framing that clients can't parse |
+| Same timeout persists after upgrade | Confirm the on-PATH binary is the new one (`which prism`; `prism version`), then fully restart your AI tool so it re-spawns the server |
 
 If anything fails, diagnose and fix before reporting done.
 

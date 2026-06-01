@@ -257,6 +257,9 @@ func cmdMCPInstallFor(args []string) int {
 		return 1
 	}
 	fmt.Printf("installed relay MCP entry into %s\n", configPath)
+	if spec.id == "claude-code" {
+		ensureClaudeCodeApproval("relay")
+	}
 	fmt.Println()
 	fmt.Printf("Restart %s to pick up the change. The agent will now have access to the relay_*\n", spec.label)
 	fmt.Println("tools, including Auto-Intent Capture. Run `relay daemon status` to confirm the")
@@ -275,6 +278,8 @@ func findClient(id string) (clientSpec, bool) {
 
 // buildRelayEntry constructs the MCP-server descriptor every client agrees
 // on. This is the smallest cross-client common subset: name, command, args.
+// "env" is intentionally omitted: an empty env map causes unnecessary diffs
+// on repeated relay init runs, which resets Claude Code's MCP approval state.
 func buildRelayEntry(relayBin, repo string) map[string]any {
 	args := []string{"mcp", "serve"}
 	if repo != "" {
@@ -283,7 +288,6 @@ func buildRelayEntry(relayBin, repo string) map[string]any {
 	return map[string]any{
 		"command": relayBin,
 		"args":    args,
-		"env":     map[string]string{},
 	}
 }
 
@@ -416,6 +420,50 @@ func writeJSON(path string, doc map[string]any) error {
 		return err
 	}
 	return os.Rename(tmp, path)
+}
+
+// ensureClaudeCodeApproval adds serverName to enabledMcpjsonServers in
+// ~/.claude/settings.json so Claude Code trusts the server without requiring
+// interactive re-approval after every `relay init` run.
+func ensureClaudeCodeApproval(serverName string) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	path := filepath.Join(home, ".claude", "settings.json")
+	var doc map[string]any
+	if raw, err := os.ReadFile(path); err == nil {
+		json.Unmarshal(raw, &doc) //nolint:errcheck
+	}
+	if doc == nil {
+		doc = map[string]any{}
+	}
+	var servers []any
+	if s, ok := doc["enabledMcpjsonServers"].([]any); ok {
+		servers = s
+	}
+	for _, s := range servers {
+		if s == serverName {
+			return // already approved
+		}
+	}
+	servers = append(servers, serverName)
+	doc["enabledMcpjsonServers"] = servers
+	data, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, append(data, '\n'), 0o644); err != nil {
+		return
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return
+	}
+	fmt.Printf("approved %s in Claude Code MCP settings\n", serverName)
 }
 
 // Touch runtime so older toolchains (go 1.21 and below) compile this file

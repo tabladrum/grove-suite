@@ -85,33 +85,23 @@ func framedRequest(t *testing.T, id any, method string, params any) []byte {
 	return []byte(fmt.Sprintf("Content-Length: %d\r\n\r\n%s", len(body), body))
 }
 
-// readFrames decodes every Content-Length-framed response off the wire.
+// readFrames decodes every response off the wire. The MCP stdio transport
+// emits newline-delimited compact JSON (one object per line).
 func readFrames(t *testing.T, raw []byte) []map[string]any {
 	t.Helper()
 	out := []map[string]any{}
-	for {
-		idx := bytes.Index(raw, []byte("\r\n\r\n"))
-		if idx < 0 {
-			return out
-		}
-		header := string(raw[:idx])
-		raw = raw[idx+4:]
-		var length int
-		for _, line := range strings.Split(header, "\r\n") {
-			if strings.HasPrefix(strings.ToLower(line), "content-length:") {
-				_, _ = fmt.Sscanf(line[len("Content-Length:"):], "%d", &length)
-			}
-		}
-		if length == 0 || len(raw) < length {
-			return out
+	for _, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
 		}
 		var msg map[string]any
-		if err := json.Unmarshal(raw[:length], &msg); err != nil {
-			t.Fatalf("decode: %v", err)
+		if err := json.Unmarshal([]byte(line), &msg); err != nil {
+			t.Fatalf("decode %q: %v", line, err)
 		}
-		raw = raw[length:]
 		out = append(out, msg)
 	}
+	return out
 }
 
 func serveOnce(t *testing.T, s *Server, in []byte) []map[string]any {

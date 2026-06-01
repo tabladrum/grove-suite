@@ -120,11 +120,12 @@ func registerRelayMCPTools(projectDir, relayBin string) {
 		tomlFmt   bool // true = config is TOML, not JSON (Codex CLI)
 	}
 
-	// Standard format: {"mcpServers": {"relay": {"command":..,"args":..,"env":{}}}}
+	// Standard format: {"mcpServers": {"relay": {"command":..,"args":..}}}
+	// "env" is intentionally omitted: an empty env map causes unnecessary diffs
+	// on repeated relay init runs, which resets Claude Code's MCP approval state.
 	stdEntry := map[string]any{
 		"command": relayBin,
 		"args":    args,
-		"env":     map[string]string{},
 	}
 	// VS Code format: {"servers": {"relay": {"type":"stdio","command":..,"args":..}}}
 	vscodeEntry := map[string]any{
@@ -132,12 +133,11 @@ func registerRelayMCPTools(projectDir, relayBin string) {
 		"command": relayBin,
 		"args":    args,
 	}
-	// Zed format: {"context_servers": {"relay": {"command": {"path":..,"args":..,"env":{}}}}}
+	// Zed format: {"context_servers": {"relay": {"command": {"path":..,"args":..}}}}
 	zedEntry := map[string]any{
 		"command": map[string]any{
 			"path": relayBin,
 			"args": args,
-			"env":  map[string]string{},
 		},
 	}
 
@@ -258,6 +258,9 @@ func registerRelayMCPTools(projectDir, relayBin string) {
 			continue
 		}
 		fmt.Printf("registered relay with %s: %s\n", w.name, w.path)
+		if w.name == "Claude Code" {
+			ensureClaudeCodeApproval("relay")
+		}
 	}
 }
 

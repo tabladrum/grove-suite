@@ -6,6 +6,22 @@
 
 ## How to Use This File
 
+**Prefer one command? (no agent required)**
+```bash
+curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+```
+This downloads, checksum-verifies, and installs all four binaries to `~/bin`.
+To also initialize a project in the same step:
+```bash
+GROVE_SUITE_PROJECT="$PWD" curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+```
+Knobs: `GROVE_SUITE_VERSION`, `GROVE_SUITE_PRODUCTS`, `GROVE_SUITE_INSTALL_DIR`,
+`GROVE_SUITE_PROJECT`. After it finishes, restart your AI coding tool and verify
+with `claude mcp list`. The agent-driven flow below is best when you want
+guided choices (which products, install location, VS Code extension mode).
+
+---
+
 **Claude Code:**
 ```
 /read AGENT_SETUP_PROMPT.md  — then say "follow the setup instructions"
@@ -65,9 +81,16 @@ Also ask:
 
 > Where should the binaries be installed?
 >
-> **1.** `/usr/local/bin` — system-wide, requires sudo (Linux/macOS default)
-> **2.** `~/bin` — current user only, no sudo required
+> **1.** `~/bin` *(recommended for agent-driven install — no sudo required)*
+> **2.** `/usr/local/bin` — system-wide; requires sudo. The agent will download
+>        and verify the binaries, then give you a single paste-ready terminal
+>        command to do the privileged move. You run that one command yourself.
 > **3.** Let me specify a path
+
+**Important:** AI agents cannot run `sudo` interactively. If you choose `/usr/local/bin`
+(or any path requiring elevated privileges), the agent will complete all steps up to
+the file move, then hand you a single command to run in your own terminal. All other
+steps — download, checksum verification, initialization — are fully automated.
 
 On Windows, ask for the target directory and confirm it is on `%PATH%`.
 
@@ -273,28 +296,25 @@ If any checksum fails, stop. Do not install the binary. Tell the user and sugges
 
 ### Step 7 — Install Binaries
 
-Move verified binaries to the install directory chosen in Step 1. Install Grove first.
+Install Grove first — the others depend on it. The method depends on the
+install directory chosen in Step 1.
 
-**Linux / macOS — `/usr/local/bin` (sudo):**
-```bash
-PRODUCT=grove   # repeat for each selected product
-FILENAME="${PRODUCT}-${VERSION}-${OS}-${ARCH}"
-sudo mv "/tmp/${FILENAME}" "/usr/local/bin/${PRODUCT}"
-sudo chmod +x "/usr/local/bin/${PRODUCT}"
-echo "Installed ${PRODUCT} to /usr/local/bin/"
-```
+---
 
-**Linux / macOS — `~/bin` (no sudo):**
+**Path A — `~/bin` (no sudo; agent runs this directly):**
+
 ```bash
 mkdir -p ~/bin
-PRODUCT=grove
-FILENAME="${PRODUCT}-${VERSION}-${OS}-${ARCH}"
-mv "/tmp/${FILENAME}" ~/bin/${PRODUCT}
-chmod +x ~/bin/${PRODUCT}
+for PRODUCT in grove prism fuse relay; do   # only selected products
+  FILENAME="${PRODUCT}-${VERSION}-${OS}-${ARCH}"
+  mv "/tmp/${FILENAME}" ~/bin/${PRODUCT}
+  chmod +x ~/bin/${PRODUCT}
+  echo "✅ ${PRODUCT} → ~/bin/${PRODUCT}"
+done
 ```
 
-After installing to `~/bin`, register the directory with the system so it is
-available to **all processes** (terminals, git hooks, GUI apps):
+Register `~/bin` with the system so it is available to **all processes**
+(terminals, git hooks, GUI apps):
 
 ```bash
 # macOS: register via path_helper — works for git hooks, GUI apps, /bin/sh
@@ -316,22 +336,55 @@ export PATH="$HOME/bin:$PATH"
 echo "~/bin is now on PATH for this session"
 ```
 
-**macOS — remove Gatekeeper quarantine (required for downloaded binaries):**
+macOS — clear Gatekeeper quarantine:
 ```bash
-xattr -d com.apple.quarantine /usr/local/bin/grove 2>/dev/null || true
-xattr -d com.apple.quarantine /usr/local/bin/prism 2>/dev/null || true
-xattr -d com.apple.quarantine /usr/local/bin/fuse  2>/dev/null || true
-xattr -d com.apple.quarantine /usr/local/bin/relay 2>/dev/null || true
+for PRODUCT in grove prism fuse relay; do
+  xattr -d com.apple.quarantine ~/bin/${PRODUCT} 2>/dev/null || true
+done
 ```
 
-**Windows — move to target directory:**
+---
+
+**Path B — `/usr/local/bin` or any sudo-required path:**
+
+The agent cannot run `sudo` interactively. Do the following:
+
+1. Tell the user: *"All binaries are downloaded and checksum-verified in `/tmp/`.
+   Please run the command below in your terminal to complete the install, then
+   come back and I will continue with initialization."*
+
+2. Print this exact block for the user to paste into their terminal (substituting
+   the actual `$VERSION`, `$OS`, `$ARCH`, and the selected products):
+
+```bash
+# Paste this in your terminal:
+VERSION="v0.x.x"   # filled in by agent
+OS="darwin"        # filled in by agent
+ARCH="arm64"       # filled in by agent
+INSTALL_DIR="/usr/local/bin"
+
+for PRODUCT in grove prism fuse relay; do
+  sudo mv "/tmp/${PRODUCT}-${VERSION}-${OS}-${ARCH}" "${INSTALL_DIR}/${PRODUCT}"
+  sudo chmod +x "${INSTALL_DIR}/${PRODUCT}"
+  xattr -d com.apple.quarantine "${INSTALL_DIR}/${PRODUCT}" 2>/dev/null || true
+  echo "✅ ${PRODUCT} installed"
+done
+```
+
+3. Wait for the user to confirm they ran it before continuing to Step 8.
+
+---
+
+**Windows — move to target directory (agent runs this):**
 ```powershell
-$PRODUCT = "grove"  # repeat for each selected product
-$FILENAME = "$PRODUCT-$VERSION-windows-$ARCH.exe"
-$TARGET = "C:\Users\$env:USERNAME\bin"  # or user-specified path
+$PRODUCTS = @("grove","prism","fuse","relay")   # only selected products
+$TARGET = "$env:USERPROFILE\bin"                # or user-specified path
 New-Item -ItemType Directory -Force -Path $TARGET | Out-Null
-Move-Item "$env:TEMP\$FILENAME" "$TARGET\$PRODUCT.exe" -Force
-Write-Host "Installed $PRODUCT to $TARGET"
+foreach ($PRODUCT in $PRODUCTS) {
+  $FILENAME = "$PRODUCT-$VERSION-windows-$ARCH.exe"
+  Move-Item "$env:TEMP\$FILENAME" "$TARGET\$PRODUCT.exe" -Force
+  Write-Host "✅ $PRODUCT → $TARGET\$PRODUCT.exe"
+}
 ```
 
 ---
@@ -426,28 +479,40 @@ relay init --stack=<stack> # pick the stack that matches your project;
 relay hook install        # installs pre-push backstop
 
 # Pre-download analyzer dependencies now so there is no first-use delay.
-# Use --with-sonar by default for deterministic behavior in new environments.
-# (Downloads JRE + sonarlint-ls.jar + plugins; roughly 500+ MB total.)
+# (Downloads JRE + sonarlint-ls.jar + plugins; roughly 500+ MB total with --with-sonar.)
+# Ask the user before running --with-sonar if bandwidth is a concern.
 relay tools install --with-sonar
 echo "Relay tools installed."
 
-# Semgrep and Ruff are Python packages; install them now.
+# govulncheck requires Go in PATH. Add it if missing:
+export PATH="/usr/local/go/bin:$PATH"
+
+# Semgrep and Ruff are Python packages; install via pipx (preferred).
+# If pipx is missing, install it first: brew install pipx (macOS) or pip install pipx.
 if command -v pipx &>/dev/null; then
   pipx install semgrep && echo "✅ semgrep installed"
-  pipx install ruff && echo "✅ ruff installed"
+  pipx install ruff    && echo "✅ ruff installed"
 elif command -v pip3 &>/dev/null; then
-  pip3 install --user semgrep && echo "✅ semgrep installed (pip3 --user)"
-  pip3 install --user ruff && echo "✅ ruff installed (pip3 --user)"
+  # Modern Python (3.12+) blocks pip system installs — try pipx first.
+  pip3 install --user semgrep && echo "✅ semgrep (pip3 --user)" \
+    || echo "ℹ️  pip3 blocked by system Python; run: brew install pipx && pipx install semgrep"
+  pip3 install --user ruff && echo "✅ ruff (pip3 --user)" \
+    || echo "ℹ️  pip3 blocked by system Python; run: brew install pipx && pipx install ruff"
 else
-  echo "ℹ️  semgrep: install manually with: pipx install semgrep"
-  echo "ℹ️  ruff: install manually with: pipx install ruff"
+  echo "ℹ️  pipx not found — install it first: brew install pipx"
+  echo "    then: pipx install semgrep && pipx install ruff"
 fi
 
-# Eslint is optional unless JS/TS analysis is enabled.
+# eslint is optional — only needed if JS/TS SAST is enabled in relay.yaml.
 # npm install -g eslint
 
-# Verify no analyzer is missing after install.
-relay doctor
+# Verify all tools after install.
+# relay doctor exits non-zero if any check needs attention — read its output
+# rather than treating a non-zero exit as a hard failure. Only stop if a
+# tool that is enabled AND required for your stack shows "missing".
+relay doctor || true
+# If govulncheck shows missing: ensure Go is on PATH and re-run relay tools install.
+# If eslint shows missing: safe to ignore for Go/Python projects.
 
 git add .relay/
 echo "Relay: initialized. Your agent will call relay_check before every commit."
@@ -457,37 +522,147 @@ echo "Relay: initialized. Your agent will call relay_check before every commit."
 > (merging with Prism's entry if already present). When you restart Claude Code,
 > approve the pending `.mcp.json` MCP servers when prompted.
 
+**Start MCP servers** (do this after all products are initialized):
+
+```bash
+# Grove HTTP server — required by Prism, Fuse, and Relay at runtime.
+# Start it in the background now so the smoke test can reach it.
+# In normal use, Prism/Fuse/Relay auto-start Grove if it is not running.
+grove serve . &
+GROVE_PID=$!
+sleep 2
+
+# Verify Grove is up before continuing.
+curl -sf http://localhost:7777/health > /dev/null \
+  && echo "✅ Grove MCP server running (pid $GROVE_PID)" \
+  || { echo "❌ Grove server failed to start — check grove serve output"; kill $GROVE_PID 2>/dev/null; }
+
+# Prism MCP server — agents (Claude Code, Cursor, etc.) start this automatically
+# via the MCP config written by `prism init`. No manual start needed after setup.
+# To verify the MCP binary works standalone:
+prism version && echo "✅ Prism MCP binary ok"
+```
+
 ---
 
 ### Step 9 — Smoke Test
 
-Run a smoke test for each installed binary:
+Test each installed product functionally — not just `version`, but real queries
+against the indexed project. Run from the project root with Grove already serving.
 
 **Linux / macOS:**
 ```bash
+echo ""
 echo "=== Grove Suite smoke test ==="
-grove version  && echo "✅ grove ok"  || echo "❌ grove failed"
-command -v prism &>/dev/null && { prism version && echo "✅ prism ok" || echo "❌ prism failed"; }
-command -v fuse  &>/dev/null && { fuse version  && echo "✅ fuse ok"  || echo "❌ fuse failed";  }
-command -v relay &>/dev/null && { relay version && echo "✅ relay ok" || echo "❌ relay failed"; }
+echo ""
+
+# ── Binary versions ──────────────────────────────────────────────────
+grove version  && echo "✅ grove binary ok"  || echo "❌ grove binary failed"
+command -v prism &>/dev/null && { prism version && echo "✅ prism binary ok" || echo "❌ prism binary failed"; }
+command -v fuse  &>/dev/null && { fuse version  && echo "✅ fuse binary ok"  || echo "❌ fuse binary failed";  }
+command -v relay &>/dev/null && { relay version && echo "✅ relay binary ok" || echo "❌ relay binary failed"; }
+echo ""
+
+# ── Grove: live query against the indexed project ────────────────────
+echo "--- Grove: symbol lookup ---"
+GROVE_RESULT=$(grove symbols "main" 2>/dev/null | head -5)
+[ -n "$GROVE_RESULT" ] \
+  && echo "✅ Grove query ok:" && echo "$GROVE_RESULT" \
+  || echo "❌ Grove query returned nothing — is Grove serving? Run: grove serve ."
+echo ""
+
+# ── Prism: context query ─────────────────────────────────────────────
+if command -v prism &>/dev/null; then
+  echo "--- Prism: context query ---"
+  PRISM_RESULT=$(prism query "main entry point" 2>/dev/null | head -5)
+  [ -n "$PRISM_RESULT" ] \
+    && echo "✅ Prism query ok:" && echo "$PRISM_RESULT" \
+    || echo "❌ Prism query returned nothing — run: prism index"
+  echo ""
+fi
+
+# ── Fuse: merge driver registration ─────────────────────────────────
+if command -v fuse &>/dev/null; then
+  echo "--- Fuse: driver registration ---"
+  # fuse install registers per-repo (local .git/config), not global
+  { git config merge.fuse.driver 2>/dev/null || git config --global merge.fuse.driver 2>/dev/null; } \
+    && echo "✅ Fuse merge driver registered" \
+    || echo "❌ Fuse not registered — run: fuse install"
+  echo ""
+fi
+
+# ── Relay: policy + doctor ───────────────────────────────────────────
+if command -v relay &>/dev/null; then
+  echo "--- Relay: policy gates ---"
+  relay policy 2>/dev/null | head -10 \
+    && echo "✅ Relay policy loaded" \
+    || echo "❌ Relay policy failed — run: relay init --stack=<stack>"
+  echo ""
+  echo "--- Relay: analyzer status ---"
+  relay doctor || true   # non-zero is expected if optional tools (eslint) are missing
+  echo ""
+fi
+
+echo "=== Smoke test complete ==="
 ```
 
 **Windows (PowerShell):**
 ```powershell
+Write-Host ""
 Write-Host "=== Grove Suite smoke test ==="
-& grove version  && Write-Host "✅ grove ok"  || Write-Host "❌ grove failed"
-if (Get-Command prism  -EA 0) { & prism version  && Write-Host "✅ prism ok"  || Write-Host "❌ prism failed" }
-if (Get-Command fuse   -EA 0) { & fuse version   && Write-Host "✅ fuse ok"   || Write-Host "❌ fuse failed"  }
-if (Get-Command relay  -EA 0) { & relay version  && Write-Host "✅ relay ok"  || Write-Host "❌ relay failed" }
+Write-Host ""
+
+# Binary versions
+& grove version  && Write-Host "✅ grove binary ok"  || Write-Host "❌ grove binary failed"
+if (Get-Command prism  -EA 0) { & prism version  && Write-Host "✅ prism binary ok"  || Write-Host "❌ prism binary failed" }
+if (Get-Command fuse   -EA 0) { & fuse version   && Write-Host "✅ fuse binary ok"   || Write-Host "❌ fuse binary failed"  }
+if (Get-Command relay  -EA 0) { & relay version  && Write-Host "✅ relay binary ok"  || Write-Host "❌ relay binary failed" }
+
+# Grove live query
+$groveResult = & grove symbols "main" 2>$null | Select-Object -First 5
+if ($groveResult) { Write-Host "✅ Grove query ok"; $groveResult }
+else { Write-Host "❌ Grove query returned nothing — is Grove serving?" }
+
+# Fuse driver
+$fuseDriver = git config --global merge.fuse.driver 2>$null
+if ($fuseDriver) { Write-Host "✅ Fuse merge driver registered" }
+else { Write-Host "❌ Fuse not registered — run: fuse install" }
+
+# Relay policy
+if (Get-Command relay -EA 0) { & relay policy | Select-Object -First 10 }
 ```
 
-**Verify MCP server registration (Claude Code):**
+**Verify MCP servers actually CONNECT (Claude Code) — do not skip:**
+
+Registration is not enough — a server can be registered and still fail to
+connect. Verify the live connection and treat anything other than "Connected"
+as a failure to fix before reporting done:
+
 ```bash
-claude mcp list
-# Expected: prism and relay listed as connected (green check).
-# If they show ⏸ Pending: restart Claude Code and approve when prompted.
-# If they don't appear: re-run prism init / relay init from the project root.
+echo "--- MCP connectivity ---"
+MCP_OUT="$(claude mcp list 2>&1)"
+echo "$MCP_OUT"
+for SRV in prism relay; do
+  if echo "$MCP_OUT" | grep -qiE "^${SRV}:.*(✓|connected)"; then
+    echo "✅ ${SRV}: connected"
+  elif echo "$MCP_OUT" | grep -qi "${SRV}"; then
+    echo "❌ ${SRV}: registered but NOT connected — see fixes below"
+  fi
+done
 ```
+
+If a server shows **Failed to connect** (a ~30s timeout), inspect Claude Code's
+own MCP log — it records the precise error:
+
+```bash
+LOGDIR="$HOME/Library/Caches/claude-cli-nodejs"   # macOS (Linux: ~/.cache/claude-cli-nodejs)
+tail -n 5 "$(ls -t "$LOGDIR"/*/mcp-logs-prism/*.jsonl 2>/dev/null | head -1)" 2>/dev/null
+```
+
+A `connection timed out` error with binaries that otherwise run usually means a
+**wire-protocol mismatch**: MCP stdio requires newline-delimited JSON. This was
+a bug in grove-suite **before v0.3.0** — upgrade to the latest release if you
+see it. Expected after the fix: both `prism` and `relay` show **✓ Connected**.
 
 **Common failures and fixes:**
 
@@ -501,7 +676,13 @@ claude mcp list
 | `relay init --stack=auto` fails with "unknown stack" | Use `relay init --list-stacks` to see valid stack names, then `relay init --stack=<name>` |
 | `relay_check` passes but no SAST/secrets findings appear | Run `relay tools install` — analyzers are silently skipped when not pre-downloaded |
 | semgrep not running in relay_check | Install separately: `pipx install semgrep` |
+| `relay doctor` shows `govulncheck missing` | Go is not in PATH — run `export PATH="/usr/local/go/bin:$PATH"` then re-run `relay tools install` |
+| `relay doctor` shows `eslint missing` | Safe to ignore for Go/Python projects; only needed for JS/TS SAST. Install with `npm install -g eslint` if required |
+| `relay doctor` exits non-zero but output shows only `eslint missing` | Not a hard failure — relay doctor exits 1 whenever any check needs attention, even optional ones. Read the output to distinguish required vs optional gaps |
+| `pipx install semgrep` fails: "externally-managed-environment" | System Python blocks pip — install pipx first: `brew install pipx`, then retry |
 | Claude Code `claude mcp list` doesn't show prism/relay | Re-run `prism init` / `relay init` from the project root, then restart Claude Code and approve `.mcp.json` when prompted |
+| `claude mcp list` shows prism/relay **Failed to connect** (~30s timeout) but `prism version` works | Wire-protocol bug fixed in **v0.3.0** — upgrade to the latest release. MCP stdio requires newline-delimited JSON; older binaries emitted `Content-Length` framing that clients can't parse |
+| Same timeout persists after upgrade | Confirm the on-PATH binary is the new one (`which prism`; `prism version`), then fully restart your AI tool so it re-spawns the server |
 
 If anything fails, diagnose and fix before reporting done.
 
