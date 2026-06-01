@@ -37,8 +37,8 @@ Relay's AGPL applies to the Relay product and its Relay-specific docs and source
 | **Team lead** rolling it out to your team | [Team lead guide](audiences/team-lead.md) |
 | **Engineering executive** building the business case | [Executive brief](audiences/executive.md) |
 | **CFO / finance** sizing the cost and savings | [Financial brief](audiences/financial.md) |
-| **CISO / security** evaluating the threat model | [Security brief](audiences/security.md) |
-| **Compliance / audit** evaluating evidence quality | [Audit brief](audiences/audit.md) |
+| **CISO / security** evaluating the threat model | [Security brief]({{ '/audiences/security/' | relative_url }}) |
+| **Compliance / audit** evaluating evidence quality | [Audit brief]({{ '/audiences/audit/' | relative_url }}) |
 | **Anyone** wanting the founder's pitch | [Why Grove Suite](why.md) |
 
 ---

@@ -224,7 +224,7 @@ Grove Suite is well-suited to regulated environments precisely because it runs l
 - Cryptographic admission certificates are reproducible — you can prove what gates passed at commit time
 - Static analysis findings, test results, and signed commits all live in your git history
 
-For specific compliance frameworks, see the [Audit brief](audiences/audit.md) when published.
+For specific compliance frameworks, see the [Audit brief]({{ '/audiences/audit/' | relative_url }}).
 
 ### Are the dependencies safe?
 
@@ -250,7 +250,7 @@ The signature attests to gates passing — not to the commit existing. This sepa
 
 ### What's the threat model?
 
-See [Security brief](audiences/security.md) when published. Summary:
+See [Security brief]({{ '/audiences/security/' | relative_url }}). Summary:
 - Threat: agent produces malicious code → Mitigation: Relay's gates run regardless of agent
 - Threat: attacker forges a Relay cert → Mitigation: Ed25519 signature with private key never leaving disk
 - Threat: dependency supply-chain attack → Mitigation: Stage 2 dep audit (govulncheck, npm audit, pip-audit) + Sigstore/SLSA on the build artifact (out of scope for Relay)
@@ -286,7 +286,7 @@ It directly addresses several SOC 2 Type II controls:
 - CC7.1: detection of vulnerabilities — Stage 2 SAST + dep audit on every commit
 - CC8.1: change management — every change is admitted via Relay, linked to an intent, signed
 
-A detailed mapping is in the [Audit brief](audiences/audit.md) when published.
+A detailed mapping is in the [Audit brief]({{ '/audiences/audit/' | relative_url }}).
 
 ### Does this help with EU AI Act compliance?
 
