@@ -1,9 +1,8 @@
-<!-- SVG favicon — works in all modern browsers -->
+<!-- Favicon -->
 <link rel="icon" type="image/svg+xml" href="{{ '/assets/images/logo-icon.svg' | relative_url }}">
-<!-- PNG fallback / Apple touch icon -->
 <link rel="apple-touch-icon" href="{{ '/assets/images/og-image.png' | relative_url }}">
 
-<!-- Open Graph — required for iMessage, WhatsApp, Slack, Twitter link previews -->
+<!-- Open Graph -->
 <meta property="og:site_name"    content="Grove Suite">
 <meta property="og:title"        content="{{ page.title | default: site.title }}">
 <meta property="og:description"  content="{{ page.description | default: site.description }}">
@@ -14,10 +13,114 @@
 <meta property="og:image:width"  content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt"    content="Grove Suite — certified delivery infrastructure for AI coding agents">
-
-<!-- Twitter / X card -->
 <meta name="twitter:card"        content="summary_large_image">
 <meta name="twitter:title"       content="{{ page.title | default: site.title }}">
 <meta name="twitter:description" content="{{ page.description | default: site.description }}">
 <meta name="twitter:image"       content="{{ '/assets/images/og-image.png' | absolute_url }}">
 <meta name="twitter:image:alt"   content="Grove Suite — certified delivery infrastructure for AI coding agents">
+
+<!-- Dark theme matching the landing page -->
+<style>
+  /* ── Core backgrounds ─────────────────────────────── */
+  body,
+  .main-content-wrap,
+  .main { background-color: #0e1117 !important; color: #c9d1d9 !important; }
+
+  .side-bar,
+  .site-nav,
+  .nav-list { background-color: #0b0f15 !important; }
+
+  .site-header {
+    background-color: rgba(11,15,21,0.96) !important;
+    border-bottom: 1px solid #1a2d22 !important;
+  }
+
+  /* ── Typography ────────────────────────────────────── */
+  h1, h2, h3, h4, h5, h6 { color: #e6edf3 !important; }
+  h1 { border-bottom: 1px solid #1e3a2f !important; }
+  p, li, td, th, label { color: #c9d1d9 !important; }
+
+  /* ── Links ─────────────────────────────────────────── */
+  a, a:visited { color: #22c55e !important; }
+  a:hover      { color: #4ade80 !important; }
+
+  /* ── Sidebar nav ───────────────────────────────────── */
+  .nav-list-link              { color: #8b9eb8 !important; }
+  .nav-list-link:hover        { color: #22c55e !important; background: rgba(34,197,94,.07) !important; }
+  .nav-list-link.active       { color: #22c55e !important; font-weight: 700 !important;
+                                 border-left: 3px solid #22c55e !important; }
+  .nav-list-expander svg      { fill: #8b9eb8 !important; }
+
+  /* ── Site title ────────────────────────────────────── */
+  .site-title, .site-title:visited { color: #e6edf3 !important; }
+
+  /* ── Search ────────────────────────────────────────── */
+  .search-input {
+    background: #161b27 !important; color: #e6edf3 !important;
+    border: 1px solid #1e3a2f !important;
+  }
+  .search-input:focus { border-color: #22c55e !important; box-shadow: 0 0 0 2px rgba(34,197,94,.15) !important; }
+  .search-results-wrap,
+  .search-result         { background: #0b0f15 !important; border-color: #1e3a2f !important; }
+  .search-result-title   { color: #22c55e !important; }
+  .search-result-preview { color: #8b9eb8 !important; }
+
+  /* ── Inline code ───────────────────────────────────── */
+  code {
+    background: #131a20 !important; color: #86efac !important;
+    border: 1px solid #1e3a2f !important; border-radius: 4px !important;
+  }
+
+  /* ── Code blocks ───────────────────────────────────── */
+  pre, pre.highlight,
+  div.highlighter-rouge,
+  figure.highlight {
+    background: #090d12 !important;
+    border: 1px solid #1e3a2f !important; border-radius: 6px !important;
+  }
+  pre code, pre.highlight code { background: transparent !important; border: none !important; color: #b0c8b0 !important; }
+
+  /* ── Tables ────────────────────────────────────────── */
+  table     { border-collapse: collapse !important; }
+  th        { background: #0b0f15 !important; color: #e6edf3 !important; border-bottom: 2px solid #22c55e !important; }
+  td        { border-bottom: 1px solid #1a2d22 !important; }
+  tr:nth-child(even) td { background: rgba(22,27,39,.5) !important; }
+
+  /* ── HR / dividers ─────────────────────────────────── */
+  hr { border-color: #1e3a2f !important; }
+
+  /* ── Blockquotes ───────────────────────────────────── */
+  blockquote {
+    border-left: 3px solid #22c55e !important;
+    background: #0b0f15 !important; color: #8b9eb8 !important;
+  }
+
+  /* ── Buttons ───────────────────────────────────────── */
+  .btn-primary { background: #16a34a !important; border-color: #16a34a !important; color: #f0fdf4 !important; }
+  .btn-primary:hover { background: #22c55e !important; }
+  .btn { border-color: #1e3a2f !important; color: #86efac !important; background: transparent !important; }
+  .btn:hover { border-color: #22c55e !important; color: #22c55e !important; }
+
+  /* ── Breadcrumb ────────────────────────────────────── */
+  .breadcrumb-nav-list-item a { color: #8b9eb8 !important; }
+  .breadcrumb-nav-list-item a:hover { color: #22c55e !important; }
+  .breadcrumb-nav-list-item + .breadcrumb-nav-list-item::before { color: #8b9eb8 !important; }
+
+  /* ── Footer / page nav ─────────────────────────────── */
+  .site-footer { border-top: 1px solid #1e3a2f !important; color: #8b9eb8 !important; background: #0b0f15 !important; }
+  .site-footer a { color: #22c55e !important; }
+  .page-nav { border-top: 1px solid #1e3a2f !important; }
+  .page-nav .nav-list-link { color: #22c55e !important; }
+
+  /* ── Callouts ──────────────────────────────────────── */
+  .callout { border-radius: 6px !important; }
+  .callout.tip     { background: rgba(34,197,94,.08) !important; border-color: #22c55e !important; }
+  .callout.note    { background: rgba(37,99,235,.08)  !important; border-color: #2563eb !important; }
+  .callout.warning { background: rgba(220,38,38,.08)  !important; border-color: #dc2626 !important; }
+
+  /* ── Aux / GitHub link ─────────────────────────────── */
+  .aux-nav-list-item a { color: #22c55e !important; }
+
+  /* ── Labels / badges ───────────────────────────────── */
+  .label { background: #1e3a2f !important; color: #86efac !important; }
+</style>

@@ -52,7 +52,6 @@ exclude:
   - Gemfile
   - Gemfile.lock
   - node_modules
-  - README.md  # rendered via index.md instead
 
 defaults:
   - scope:
