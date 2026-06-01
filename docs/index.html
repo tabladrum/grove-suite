@@ -1,0 +1,612 @@
+---
+layout: null
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grove Suite — Certified delivery for AI coding agents</title>
+  <meta name="description" content="The infrastructure layer beneath AI coding agents. Pre-commit gates, Ed25519-signed certificates, full audit replay. The layer nobody else built.">
+  <link rel="canonical" href="{{ '/' | absolute_url }}">
+  <link rel="icon" type="image/svg+xml" href="{{ '/assets/images/logo-icon.svg' | relative_url }}">
+  <link rel="apple-touch-icon" href="{{ '/assets/images/og-image.png' | relative_url }}">
+  <meta property="og:site_name"    content="Grove Suite">
+  <meta property="og:title"        content="Grove Suite — Certified delivery for AI coding agents">
+  <meta property="og:description"  content="The layer nobody else built — pre-commit gates, Ed25519-signed certificates, full audit replay.">
+  <meta property="og:url"          content="{{ '/' | absolute_url }}">
+  <meta property="og:type"         content="website">
+  <meta property="og:image"        content="{{ '/assets/images/og-image.png' | absolute_url }}">
+  <meta property="og:image:type"   content="image/png">
+  <meta property="og:image:width"  content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card"        content="summary_large_image">
+  <meta name="twitter:image"       content="{{ '/assets/images/og-image.png' | absolute_url }}">
+  <style>
+    :root {
+      --bg:      #0a2318;
+      --bg2:     #0d3320;
+      --border:  #166534;
+      --accent:  #22c55e;
+      --accent2: #16a34a;
+      --text:    #f0fdf4;
+      --muted:   #bbf7d0;
+      --dim:     #6ee7b7;
+      --mono:    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+      --sans:    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); overflow-x: hidden; }
+
+    /* ── NAV ───────────────────────────────────────────────────── */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem; height: 58px;
+      background: rgba(10,35,24,0.93);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(22,101,52,0.4);
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none; color: var(--text);
+      font-weight: 700; font-size: 1.05rem; letter-spacing: .02em;
+    }
+    .nav-links { display: flex; align-items: center; gap: .2rem; list-style: none; }
+    .nav-links a {
+      display: block; padding: .35rem .8rem; border-radius: 5px;
+      text-decoration: none; color: var(--muted);
+      font-size: .87rem; font-weight: 500;
+      transition: color .15s, background .15s;
+    }
+    .nav-links a:hover { color: var(--accent); background: rgba(34,197,94,.08); }
+    .nav-relay { color: var(--accent) !important; font-weight: 700 !important; }
+    .nav-cta { display: flex; gap: .5rem; }
+    .nav-cta a {
+      padding: .38rem 1rem; border-radius: 6px;
+      text-decoration: none; font-size: .84rem; font-weight: 600;
+      transition: all .15s;
+    }
+    .btn-outline { border: 1px solid var(--border); color: var(--muted); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-filled { background: var(--accent2); color: #f0fdf4; }
+    .btn-filled:hover { background: var(--accent); }
+
+    /* ── HERO ──────────────────────────────────────────────────── */
+    .hero {
+      position: relative; min-height: calc(100vh - 58px);
+      display: flex; align-items: center; overflow: hidden;
+      border-left: 6px solid var(--accent);
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(34,197,94,.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,197,94,.055) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+    /* radial vignette so grid fades at edges */
+    .hero::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(ellipse 80% 80% at 30% 50%, transparent 40%, var(--bg) 100%);
+    }
+    .hero-inner {
+      position: relative; z-index: 2;
+      width: 100%; max-width: 1320px; margin: 0 auto;
+      padding: 5rem 4rem 5rem 3.5rem;
+      display: grid; grid-template-columns: 1fr 480px; gap: 2rem; align-items: center;
+    }
+    .hero-brand {
+      display: flex; align-items: center; gap: 9px;
+      margin-bottom: 2rem; font-size: .95rem; font-weight: 600;
+      color: var(--muted); letter-spacing: .04em;
+    }
+    .hero-title {
+      font-size: clamp(2.6rem, 4.5vw, 4rem);
+      font-weight: 800; line-height: 1.08; letter-spacing: -.03em;
+      color: #fff; margin-bottom: .1em;
+    }
+    .hero-title .green { color: var(--accent); }
+    .hero-divider { width: 72px; height: 4px; background: var(--accent); border-radius: 2px; margin: 1.6rem 0; }
+    .hero-sub {
+      font-size: 1.15rem; line-height: 1.65; color: var(--muted);
+      max-width: 540px; margin-bottom: 2.2rem;
+    }
+    .hero-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 2.5rem; }
+    .chip {
+      display: inline-block; padding: .45rem 1.15rem; border-radius: 6px;
+      text-decoration: none; font-family: var(--mono);
+      font-size: .88rem; font-weight: 500; transition: all .15s;
+    }
+    .chip-relay { background: var(--border); border: 1.5px solid var(--accent); color: var(--accent); }
+    .chip-relay:hover { background: rgba(34,197,94,.18); }
+    .chip-plain { background: rgba(13,51,32,.7); border: 1.5px solid var(--border); color: var(--muted); }
+    .chip-plain:hover { border-color: var(--accent); color: var(--accent); }
+    .hero-cta { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 3rem; }
+    .btn-hero-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: .72rem 1.65rem; background: var(--accent); color: #052e16;
+      font-weight: 700; font-size: .95rem; border-radius: 7px;
+      text-decoration: none; transition: background .15s, transform .1s;
+    }
+    .btn-hero-primary:hover { background: #4ade80; transform: translateY(-1px); }
+    .btn-hero-secondary {
+      display: inline-flex; align-items: center;
+      padding: .72rem 1.45rem; border: 1.5px solid var(--border);
+      color: var(--muted); font-weight: 600; font-size: .95rem;
+      border-radius: 7px; text-decoration: none; transition: all .15s;
+    }
+    .btn-hero-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-hero-ghost {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: .72rem 1.2rem; color: var(--dim);
+      font-size: .92rem; border-radius: 7px;
+      text-decoration: none; transition: color .15s;
+    }
+    .btn-hero-ghost:hover { color: var(--text); }
+    .hero-meta {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 540px; font-family: var(--mono);
+      font-size: .78rem; color: var(--accent); opacity: .6;
+    }
+
+    /* ── HERO GRAPH ─────────────────────────────────────────────── */
+    .hero-graph { display: flex; align-items: center; justify-content: center; }
+    @keyframes nodepulse  { 0%,100%{opacity:.95} 50%{opacity:.55} }
+    @keyframes nodepulse2 { 0%,100%{opacity:.75} 50%{opacity:.35} }
+    @keyframes edgefade   { 0%,100%{opacity:.55} 50%{opacity:.25} }
+    .np  { animation: nodepulse  3.2s ease-in-out infinite; }
+    .np2 { animation: nodepulse2 4.1s ease-in-out infinite .9s; }
+    .ef  { animation: edgefade   5s   ease-in-out infinite 1.3s; }
+
+    /* ── SECTION SHARED ─────────────────────────────────────────── */
+    .section { padding: 5.5rem 0; }
+    .section-alt { background: var(--bg2); }
+    .section-inner { max-width: 1320px; margin: 0 auto; padding: 0 4rem; }
+    .section-label {
+      font-family: var(--mono); font-size: .76rem; font-weight: 600;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: .9rem;
+    }
+    .section-title {
+      font-size: clamp(1.75rem, 3vw, 2.5rem);
+      font-weight: 800; letter-spacing: -.02em; color: #fff;
+      margin-bottom: 1.4rem; line-height: 1.15;
+    }
+    .section-title .green { color: var(--accent); }
+
+    /* ── PROBLEM GRID ───────────────────────────────────────────── */
+    .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 2.5rem; }
+    .problem-card {
+      padding: 1.8rem; background: rgba(10,35,24,.6);
+      border: 1px solid rgba(22,101,52,.4); border-radius: 10px;
+    }
+    .problem-card p { color: var(--muted); line-height: 1.68; font-size: .98rem; }
+    .problem-card strong { color: #fff; }
+    .problem-fix {
+      margin-top: 1rem; padding-top: 1rem;
+      border-top: 1px solid rgba(22,101,52,.3);
+      color: var(--accent); font-size: .88rem; line-height: 1.5;
+    }
+    .problem-fix a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .problem-fix a:hover { text-decoration: underline; }
+    .problem-fix code { font-family: var(--mono); color: #86efac; font-size: .84rem; }
+
+    /* ── PRODUCTS GRID ──────────────────────────────────────────── */
+    .products-grid {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 1.25rem; margin-top: 2.5rem;
+    }
+    .product-card {
+      padding: 2rem; border-radius: 12px;
+      border: 1px solid rgba(22,101,52,.4); background: var(--bg2);
+      text-decoration: none; color: inherit; display: block;
+      transition: border-color .2s, transform .15s;
+    }
+    .product-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .product-card-relay {
+      border-color: var(--border);
+      background: linear-gradient(140deg, #0d3320 0%, #0a2318 100%);
+    }
+    .ptag {
+      display: inline-block; font-family: var(--mono); font-size: .75rem;
+      padding: .2rem .6rem; border-radius: 4px; margin-bottom: 1rem;
+    }
+    .ptag-relay { background: rgba(34,197,94,.12); color: var(--accent);  border: 1px solid rgba(34,197,94,.3); }
+    .ptag-other { background: rgba(13,51,32,.8);   color: #86efac; border: 1px solid rgba(22,101,52,.4); }
+    .product-card h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: .5rem; color: #fff; }
+    .product-card-relay h3 { font-size: 1.6rem; }
+    .product-card p { font-size: .88rem; color: var(--muted); line-height: 1.6; }
+    .product-card-relay p { font-size: .98rem; margin-bottom: 1.4rem; }
+    .pbullets { list-style: none; margin: .9rem 0 1.4rem; }
+    .pbullets li {
+      display: flex; gap: .5rem; align-items: flex-start;
+      color: var(--muted); font-size: .87rem; margin-bottom: .45rem;
+    }
+    .pbullets li::before { content: '→'; color: var(--accent); flex-shrink: 0; margin-top: .05em; }
+    .plink {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: .84rem; font-weight: 600; color: var(--accent); text-decoration: none;
+    }
+    .plink:hover { color: #4ade80; }
+
+    /* ── GET STARTED ────────────────────────────────────────────── */
+    .tabs { display: flex; border-bottom: 1px solid rgba(22,101,52,.3); margin-top: 2rem; }
+    .tab-btn {
+      padding: .65rem 1.3rem; font-size: .87rem; font-weight: 600;
+      color: var(--dim); background: none; border: none;
+      border-bottom: 2px solid transparent; cursor: pointer;
+      font-family: var(--sans); transition: color .15s, border-color .15s;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    pre.code-block {
+      background: #071a0f; border: 1px solid rgba(22,101,52,.35);
+      border-top: none; border-radius: 0 0 8px 8px;
+      padding: 1.6rem 1.8rem; font-family: var(--mono);
+      font-size: .86rem; line-height: 1.7; color: #bbf7d0; overflow-x: auto;
+    }
+    .c  { color: #4ade80; opacity: .65; }
+    .kw { color: #f0fdf4; }
+    .ag { color: #86efac; }
+
+    /* ── FOOTER ─────────────────────────────────────────────────── */
+    footer { padding: 2.5rem 0 2rem; border-top: 1px solid rgba(22,101,52,.2); }
+    .footer-inner {
+      max-width: 1320px; margin: 0 auto; padding: 0 4rem;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;
+    }
+    .footer-links { display: flex; gap: 1.4rem; flex-wrap: wrap; }
+    .footer-links a { color: var(--dim); text-decoration: none; font-size: .86rem; transition: color .15s; }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-meta { font-family: var(--mono); font-size: .76rem; color: var(--accent); opacity: .5; }
+
+    /* ── RESPONSIVE ─────────────────────────────────────────────── */
+    @media (max-width: 1024px) {
+      .hero-inner { grid-template-columns: 1fr; padding: 3.5rem 2.5rem; }
+      .hero-graph  { display: none; }
+      .products-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 700px) {
+      .nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      .problem-grid { grid-template-columns: 1fr; }
+      .products-grid { grid-template-columns: 1fr; }
+      .section-inner { padding: 0 1.5rem; }
+      .footer-inner { padding: 0 1.5rem; flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────────── -->
+<nav class="nav">
+  <a class="nav-brand" href="{{ '/' | relative_url }}">
+    <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
+      <line x1="24" y1="8" x2="10" y2="22" stroke="#22c55e" stroke-width="2.2"/>
+      <line x1="24" y1="8" x2="38" y2="22" stroke="#22c55e" stroke-width="2.2"/>
+      <line x1="10" y1="22" x2="6"  y2="40" stroke="#4ade80" stroke-width="1.8"/>
+      <line x1="24" y1="8" x2="24" y2="40" stroke="#4ade80" stroke-width="1.8"/>
+      <line x1="38" y1="22" x2="24" y2="40" stroke="#22c55e" stroke-width="1.8"/>
+      <circle cx="24" cy="8"  r="5.5" fill="#0d3320" stroke="#22c55e" stroke-width="2"/>
+      <circle cx="10" cy="22" r="4"   fill="#166534" stroke="#4ade80" stroke-width="1.5"/>
+      <circle cx="38" cy="22" r="4"   fill="#166534" stroke="#4ade80" stroke-width="1.5"/>
+      <circle cx="6"  cy="40" r="3"   fill="#22c55e"/>
+      <circle cx="24" cy="40" r="3"   fill="#22c55e"/>
+    </svg>
+    Grove Suite
+  </a>
+  <ul class="nav-links">
+    <li><a href="{{ '/relay/' | relative_url }}" class="nav-relay">Relay</a></li>
+    <li><a href="{{ '/grove/' | relative_url }}">Grove</a></li>
+    <li><a href="{{ '/prism/' | relative_url }}">Prism</a></li>
+    <li><a href="{{ '/fuse/' | relative_url }}">Fuse</a></li>
+    <li><a href="{{ '/docs/' | relative_url }}">Docs</a></li>
+    <li><a href="{{ '/faq/' | relative_url }}">FAQ</a></li>
+  </ul>
+  <div class="nav-cta">
+    <a class="btn-outline" href="https://github.com/tabladrum/grove-suite">GitHub ↗</a>
+    <a class="btn-filled"  href="{{ '/setup/' | relative_url }}">Agent Setup</a>
+  </div>
+</nav>
+
+<!-- ── HERO ─────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-inner">
+
+    <!-- Left: copy -->
+    <div>
+      <div class="hero-brand">
+        <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+          <line x1="24" y1="8" x2="10" y2="22" stroke="#22c55e" stroke-width="2.2"/>
+          <line x1="24" y1="8" x2="38" y2="22" stroke="#22c55e" stroke-width="2.2"/>
+          <line x1="10" y1="22" x2="6"  y2="40" stroke="#4ade80" stroke-width="1.8"/>
+          <line x1="24" y1="8" x2="24" y2="40" stroke="#4ade80" stroke-width="1.8"/>
+          <line x1="38" y1="22" x2="24" y2="40" stroke="#22c55e" stroke-width="1.8"/>
+          <circle cx="24" cy="8"  r="5" fill="#0d3320" stroke="#22c55e" stroke-width="2"/>
+          <circle cx="10" cy="22" r="4" fill="#166534" stroke="#4ade80" stroke-width="1.5"/>
+          <circle cx="38" cy="22" r="4" fill="#166534" stroke="#4ade80" stroke-width="1.5"/>
+          <circle cx="6"  cy="40" r="3" fill="#22c55e"/>
+          <circle cx="24" cy="40" r="3" fill="#22c55e"/>
+        </svg>
+        Grove Suite
+      </div>
+
+      <h1 class="hero-title">
+        Certified delivery<br>
+        <span class="green">for AI coding agents.</span>
+      </h1>
+
+      <div class="hero-divider"></div>
+
+      <p class="hero-sub">
+        The layer nobody else built — pre-commit gates,
+        Ed25519-signed certificates, full audit replay.
+        Every agent commit is verified, attributed, and reproducible.
+      </p>
+
+      <div class="hero-chips">
+        <a class="chip chip-relay" href="{{ '/relay/' | relative_url }}">Relay</a>
+        <a class="chip chip-plain" href="{{ '/grove/' | relative_url }}">Grove</a>
+        <a class="chip chip-plain" href="{{ '/prism/' | relative_url }}">Prism</a>
+        <a class="chip chip-plain" href="{{ '/fuse/' | relative_url }}">Fuse</a>
+      </div>
+
+      <div class="hero-cta">
+        <a class="btn-hero-primary"    href="{{ '/setup/' | relative_url }}">▶&nbsp; Agent Setup</a>
+        <a class="btn-hero-secondary"  href="{{ '/installation/' | relative_url }}">Manual Install</a>
+        <a class="btn-hero-ghost"      href="https://github.com/tabladrum/grove-suite">GitHub ↗</a>
+      </div>
+
+      <div class="hero-meta">
+        <span>tabladrum.github.io/grove-suite</span>
+        <span>MIT · AGPL-3.0 · Local-first · No telemetry</span>
+      </div>
+    </div>
+
+    <!-- Right: animated knowledge graph -->
+    <div class="hero-graph">
+      <svg width="460" height="430" viewBox="0 0 460 430" fill="none">
+        <!-- Faint rings -->
+        <circle cx="230" cy="215" r="190" stroke="rgba(34,197,94,.04)" stroke-width="1"/>
+        <circle cx="230" cy="215" r="125" stroke="rgba(34,197,94,.06)" stroke-width="1"/>
+
+        <!-- Edges -->
+        <g class="ef">
+          <line x1="230" y1="62"  x2="355" y2="150" stroke="#22c55e" stroke-width="2" opacity=".6"/>
+          <line x1="230" y1="62"  x2="115" y2="162" stroke="#2563eb" stroke-width="2" opacity=".55"/>
+          <line x1="355" y1="150" x2="405" y2="298" stroke="#166534" stroke-width="2" opacity=".55"/>
+          <line x1="115" y1="162" x2="72"  y2="308" stroke="#2563eb" stroke-width="2" opacity=".5"/>
+          <line x1="115" y1="162" x2="230" y2="290" stroke="#166534" stroke-width="2" opacity=".5"/>
+          <line x1="355" y1="150" x2="230" y2="290" stroke="#7c3aed" stroke-width="2" opacity=".45"/>
+          <line x1="230" y1="290" x2="405" y2="298" stroke="#22c55e" stroke-width="2" opacity=".45"/>
+          <line x1="72"  y1="308" x2="165" y2="400" stroke="#166534" stroke-width="2" opacity=".4"/>
+          <line x1="230" y1="290" x2="165" y2="400" stroke="#dc2626" stroke-width="2" opacity=".55"/>
+        </g>
+
+        <!-- Nodes -->
+        <g class="np">
+          <circle cx="230" cy="62"  r="23" fill="#0d3320" stroke="#22c55e" stroke-width="2.5"/>
+          <text x="230" y="97" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11.5" fill="#4ade80">auth.go</text>
+        </g>
+        <g class="np2">
+          <circle cx="355" cy="150" r="17" fill="#166534" stroke="#4ade80" stroke-width="2"/>
+          <text x="355" y="182" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#86efac">Login()</text>
+        </g>
+        <g class="np">
+          <circle cx="115" cy="162" r="17" fill="#166534" stroke="#4ade80" stroke-width="2"/>
+          <text x="115" y="194" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#86efac">validate()</text>
+        </g>
+        <g class="np2">
+          <circle cx="405" cy="298" r="15" fill="#1d4ed8" stroke="#60a5fa" stroke-width="2"/>
+          <text x="405" y="326" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#93c5fd">User</text>
+        </g>
+        <g class="np">
+          <circle cx="230" cy="290" r="20" fill="#065f46" stroke="#34d399" stroke-width="2"/>
+          <text x="230" y="323" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#6ee7b7">session.go</text>
+        </g>
+        <g class="np2">
+          <circle cx="72" cy="308" r="15" fill="#166534" stroke="#4ade80" stroke-width="2"/>
+          <text x="72" y="338" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10" fill="#86efac">NewSession()</text>
+        </g>
+        <g class="np">
+          <circle cx="165" cy="400" r="18" fill="#065f46" stroke="#34d399" stroke-width="2.5"/>
+          <text x="165" y="430" text-anchor="middle" font-family="ui-monospace,monospace" font-size="10.5" fill="#6ee7b7">auth_test.go</text>
+        </g>
+
+        <!-- Mini legend -->
+        <g opacity=".65">
+          <line x1="318" y1="368" x2="338" y2="368" stroke="#22c55e" stroke-width="2"/>
+          <text x="342" y="372" font-family="ui-sans-serif,sans-serif" font-size="10" fill="#4ade80">defines</text>
+          <line x1="318" y1="386" x2="338" y2="386" stroke="#2563eb" stroke-width="2"/>
+          <text x="342" y="390" font-family="ui-sans-serif,sans-serif" font-size="10" fill="#60a5fa">calls</text>
+          <line x1="318" y1="404" x2="338" y2="404" stroke="#dc2626" stroke-width="2"/>
+          <text x="342" y="408" font-family="ui-sans-serif,sans-serif" font-size="10" fill="#f87171">tests</text>
+          <line x1="318" y1="422" x2="338" y2="422" stroke="#7c3aed" stroke-width="2"/>
+          <text x="342" y="426" font-family="ui-sans-serif,sans-serif" font-size="10" fill="#a78bfa">imports</text>
+        </g>
+      </svg>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── PROBLEM ───────────────────────────────────────────────────── -->
+<section class="section section-alt" style="border-top:1px solid rgba(22,101,52,.3);border-bottom:1px solid rgba(22,101,52,.3)">
+  <div class="section-inner">
+    <div class="section-label">The problem</div>
+    <h2 class="section-title">AI agents write code.<br><span class="green">Nobody built what happens next.</span></h2>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <p><strong>Every agent still delivers through a PR → CI loop designed for humans.</strong>
+        When an agent opens a PR, CI finds issues, you send it back, CI finds more.
+        Each loop costs 5–15 minutes of human attention. The agent has lost context by the second loop.</p>
+        <div class="problem-fix">→ <a href="{{ '/relay/' | relative_url }}">Relay</a> moves quality gates into the agent loop. Sub-10s findings. The agent self-corrects before any PR.</div>
+      </div>
+      <div class="problem-card">
+        <p><strong>When an audit asks what the agent did — there's no answer.</strong>
+        The PR says "refactor auth." CI shows green. The agent session is gone,
+        the original prompt is gone. Nobody knows which gates ran or what the agent was actually asked to do.</p>
+        <div class="problem-fix">→ <a href="{{ '/relay/' | relative_url }}">Relay</a> commits the original prompt as a YAML intent. Every admission is Ed25519-signed. <code>relay cert replay</code> re-runs gates at any time.</div>
+      </div>
+      <div class="problem-card">
+        <p><strong>Agents burn tokens on the wrong code.</strong>
+        The agent reads the files you pointed at, guesses at what else matters,
+        and spends the context budget on noise. Critical dependencies are missing.</p>
+        <div class="problem-fix">→ <a href="{{ '/prism/' | relative_url }}">Prism</a> delivers graph-ranked context: 35–92% fewer tokens on first reads, ~99% on re-reads.</div>
+      </div>
+      <div class="problem-card">
+        <p><strong>Two agents just conflicted on adjacent lines of the same file.</strong>
+        Different functions. Different logic. Git declared a conflict anyway.
+        A developer spent 20 minutes resolving something that was never actually conflicting.</p>
+        <div class="problem-fix">→ <a href="{{ '/fuse/' | relative_url }}">Fuse</a> understands symbols, not lines. ~85% of those conflicts auto-resolve.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRODUCTS ──────────────────────────────────────────────────── -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-label">The suite</div>
+    <h2 class="section-title">Four products. One foundation.</h2>
+    <div class="products-grid">
+
+      <a class="product-card product-card-relay" href="{{ '/relay/' | relative_url }}">
+        <span class="ptag ptag-relay">relay · AGPL-3.0</span>
+        <h3>Relay</h3>
+        <p>Certified delivery for AI coding agents. No product in this space does what Relay does.</p>
+        <ul class="pbullets">
+          <li>Captures the original user prompt as a signed YAML intent</li>
+          <li>Runs build, tests, coverage, secrets, SAST, dep audit — pre-commit</li>
+          <li>Issues Ed25519-signed certificates proving which gates ran</li>
+          <li>Audit replay: re-run gates against any historical commit</li>
+          <li>MCP integration — agent calls <code style="font-family:var(--mono);color:#86efac;font-size:.82rem">relay_check</code> automatically</li>
+        </ul>
+        <span class="plink">Full docs →</span>
+      </a>
+
+      <a class="product-card" href="{{ '/grove/' | relative_url }}">
+        <span class="ptag ptag-other">grove · MIT</span>
+        <h3>Grove</h3>
+        <p>Persistent knowledge graph. The foundation for everything.</p>
+        <ul class="pbullets">
+          <li>11 languages, 8 edge types</li>
+          <li>SQLite WAL + FTS5</li>
+          <li>Delta SHA indexing</li>
+          <li>MCP + HTTP + gRPC</li>
+        </ul>
+        <span class="plink">Learn more →</span>
+      </a>
+
+      <a class="product-card" href="{{ '/prism/' | relative_url }}">
+        <span class="ptag ptag-other">prism · MIT</span>
+        <h3>Prism</h3>
+        <p>Graph-ranked context. 35–92% fewer tokens.</p>
+        <ul class="pbullets">
+          <li>5-signal ranking</li>
+          <li>Progressive disclosure</li>
+          <li>Session deduplication</li>
+          <li>VS Code extension</li>
+        </ul>
+        <span class="plink">Learn more →</span>
+      </a>
+
+      <a class="product-card" href="{{ '/fuse/' | relative_url }}">
+        <span class="ptag ptag-other">fuse · MIT</span>
+        <h3>Fuse</h3>
+        <p>Symbol-level merge. ~85% of false conflicts auto-resolve.</p>
+        <ul class="pbullets">
+          <li>AST-level 3-way merge</li>
+          <li>7-phase pipeline</li>
+          <li>Grove blast radius</li>
+          <li>2-minute install</li>
+        </ul>
+        <span class="plink">Learn more →</span>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── GET STARTED ───────────────────────────────────────────────── -->
+<section class="section section-alt" style="border-top:1px solid rgba(22,101,52,.3)">
+  <div class="section-inner">
+    <div class="section-label">Install</div>
+    <h2 class="section-title">Get started in minutes.</h2>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('agent',this)">Agent setup (recommended)</button>
+      <button class="tab-btn"        onclick="showTab('relay',this)">Relay only</button>
+      <button class="tab-btn"        onclick="showTab('all',this)">Full suite</button>
+    </div>
+
+    <div id="tab-agent" class="tab-panel active">
+<pre class="code-block"><span class="c"># In Claude Code — the agent detects your platform, fetches the latest release,</span>
+<span class="c"># verifies checksums, and wires everything into your project:</span>
+<span class="kw">claude</span> <span class="ag">"Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"</span>
+
+<span class="c"># In any other MCP agent — paste this URL and say "follow the setup instructions":</span>
+<span class="c"># https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md</span></pre>
+    </div>
+
+    <div id="tab-relay" class="tab-panel">
+<pre class="code-block"><span class="c"># Grove is required first (Relay depends on it)</span>
+<span class="kw">git clone</span> <span class="ag">https://github.com/tabladrum/grove-suite</span> <span class="kw">&amp;&amp; cd</span> grove-suite
+<span class="kw">cd</span> grove <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..
+<span class="kw">cd</span> relay <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..
+
+<span class="kw">cd</span> <span class="ag">/your/project</span>
+<span class="kw">relay init</span> <span class="ag">--stack=auto</span>   <span class="c"># scaffolds policy, generates Ed25519 key,</span>
+                           <span class="c"># writes agent instructions into CLAUDE.md, .cursorrules, etc.</span>
+<span class="kw">relay hook install</span>        <span class="c"># git pre-push backstop</span>
+<span class="kw">git add</span> .relay/ <span class="kw">&amp;&amp; git commit -m</span> <span class="ag">"Add Relay configuration"</span></pre>
+    </div>
+
+    <div id="tab-all" class="tab-panel">
+<pre class="code-block"><span class="kw">git clone</span> <span class="ag">https://github.com/tabladrum/grove-suite</span> <span class="kw">&amp;&amp; cd</span> grove-suite
+<span class="kw">cd</span> grove <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..   <span class="c"># foundation — required first</span>
+<span class="kw">cd</span> relay <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..   <span class="c"># certified delivery</span>
+<span class="kw">cd</span> prism <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..   <span class="c"># better context</span>
+<span class="kw">cd</span> fuse  <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..   <span class="c"># symbol-level merge</span>
+
+<span class="kw">cd</span> <span class="ag">/your/project</span>
+<span class="kw">relay init</span> <span class="ag">--stack=auto</span> <span class="kw">&amp;&amp; relay hook install</span>
+<span class="kw">prism init &amp;&amp; prism index</span>
+<span class="kw">fuse install</span>
+<span class="kw">echo</span> <span class="ag">"*.go merge=fuse"</span> >> .gitattributes</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <nav class="footer-links">
+      <a href="{{ '/relay/' | relative_url }}">Relay</a>
+      <a href="{{ '/grove/' | relative_url }}">Grove</a>
+      <a href="{{ '/prism/' | relative_url }}">Prism</a>
+      <a href="{{ '/fuse/' | relative_url }}">Fuse</a>
+      <a href="{{ '/why/' | relative_url }}">Why Grove Suite</a>
+      <a href="{{ '/comparisons/' | relative_url }}">Comparisons</a>
+      <a href="{{ '/faq/' | relative_url }}">FAQ</a>
+      <a href="{{ '/docs/' | relative_url }}">Docs</a>
+      <a href="https://github.com/tabladrum/grove-suite">GitHub ↗</a>
+    </nav>
+    <span class="footer-meta">Grove Suite &nbsp;·&nbsp; MIT &amp; AGPL-3.0 &nbsp;·&nbsp; Local-first &nbsp;·&nbsp; Zero telemetry</span>
+  </div>
+</footer>
+
+<script>
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(function(el) { el.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(el) { el.classList.remove('active'); });
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
