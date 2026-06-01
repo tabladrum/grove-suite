@@ -263,13 +263,15 @@ relay init --stack=go-microservice    # scaffolds .relay/, generates Ed25519 key
                                       # for every detected coding tool
 relay hook install                    # git pre-push backstop
 
-# Pre-download analyzer binaries so relay_check never silently skips them
-# on first use. Run this immediately after init — not just when the agent
-# first calls relay_check (which may be in the middle of a chat session).
-relay tools install                   # gitleaks, govulncheck, golangci-lint (~30 MB)
-relay tools install --with-sonar      # optional: Eclipse Temurin JRE + SonarLint jars (~500 MB)
-# Semgrep is a Python package — install separately if wanted:
+# Pre-download analyzer dependencies now so relay_check never silently skips
+# tools on first use. For deterministic behavior, install the full stack.
+relay tools install --with-sonar      # gitleaks, govulncheck, golangci-lint + JRE + SonarLint jars
+# Semgrep/Ruff are Python packages — install separately:
 # pipx install semgrep
+# pipx install ruff
+
+# Verify there are no missing analyzer dependencies.
+relay doctor
 
 git add .relay/ && git commit -m "Add Relay configuration"
 ```

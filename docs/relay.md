@@ -73,7 +73,7 @@ Prompt → intent captured as YAML → agent codes with Prism context
 | 5 | **Cryptographic audit** | `relay cert replay <id>` returns `byte_reproducible` / `tool_drift` / `config_drift`. |
 | 6 | **Intent trail** | User's prompt committed as YAML intent before coding starts. Linked via `Intent-ID:` trailer. |
 | 7 | **Agent wiring** | `relay init` auto-writes Pre-Flight Autopilot to CLAUDE.md / .cursorrules / .github/copilot-instructions.md / AGENTS.md / GEMINI.md / .clinerules. |
-| 8 | **Batteries-included** | Ships semgrep, gitleaks, govulncheck, eslint, ruff pre-bundled. SonarQube profile import. |
+| 8 | **Batteries-included workflow** | Relay installs pinned analyzer dependencies via `relay tools install --with-sonar`; Python/Node tools (semgrep/ruff/eslint) are installed via pipx/npm. SonarQube profile import included. |
 | 9 | **Policy profiles** | `soc2-baseline`, `pci-dss-baseline`, stack-strict variants. Per-gate `warn` / `enforce` / `off`. |
 
 ---
@@ -175,12 +175,15 @@ relay init --stack=go-microservice
 # Install the git pre-push backstop
 relay hook install
 
-# Pre-download all analyzer binaries NOW — avoids silent skips and delays
+# Pre-download analyzer dependencies NOW — avoids silent skips and delays
 # on first relay_check or pre-push hook invocation.
-relay tools install                   # gitleaks, govulncheck, golangci-lint (~30 MB)
-relay tools install --with-sonar      # optional: adds JRE + SonarLint jars (~500 MB)
-# Semgrep is a Python package — install separately if you want it:
+relay tools install --with-sonar      # gitleaks, govulncheck, golangci-lint + JRE + SonarLint jars
+# Semgrep and Ruff are Python packages — install them via pipx:
 # pipx install semgrep
+# pipx install ruff
+
+# Verify analyzer readiness.
+relay doctor
 
 # Commit the .relay/ config
 git add .relay/ && git commit -m "Add Relay configuration"

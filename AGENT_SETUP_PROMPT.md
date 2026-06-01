@@ -348,11 +348,6 @@ Ask the user which languages they use and only add those lines.
 
 **Relay (if selected):**
 
-First ask the user:
-> Would you like to install the SonarLint analysis stack? It adds ~500 MB (Eclipse
-> Temurin JRE + SonarLint Language Server + analyzer plugins) but enables SonarQube-
-> fidelity rules locally with no server. Skip if you only need secrets + SAST basics.
-
 Then run:
 ```bash
 relay init --list-stacks  # show available stacks: go-microservice, java-spring,
@@ -363,22 +358,29 @@ relay init --stack=<stack> # pick the stack that matches your project;
                           # .cursorrules / AGENTS.md / .clinerules automatically
 relay hook install        # installs pre-push backstop
 
-# Pre-download all analyzer binaries now so there is no delay on first use.
-# relay_check and the pre-push hook run these; without pre-downloading they
-# are silently skipped the first time, making checks appear to pass vacuously.
-relay tools install       # gitleaks, govulncheck, golangci-lint (lean set, ~30 MB)
-# If the user said yes to SonarLint above, run instead:
-# relay tools install --with-sonar  # also downloads JRE + sonarlint-ls.jar + plugins
+# Pre-download analyzer dependencies now so there is no first-use delay.
+# Use --with-sonar by default for deterministic behavior in new environments.
+# (Downloads JRE + sonarlint-ls.jar + plugins; roughly 500+ MB total.)
+relay tools install --with-sonar
 echo "Relay tools installed."
 
-# Semgrep cannot be bundled (Python package) — install it separately:
+# Semgrep and Ruff are Python packages; install them now.
 if command -v pipx &>/dev/null; then
   pipx install semgrep && echo "✅ semgrep installed"
+  pipx install ruff && echo "✅ ruff installed"
 elif command -v pip3 &>/dev/null; then
   pip3 install --user semgrep && echo "✅ semgrep installed (pip3 --user)"
+  pip3 install --user ruff && echo "✅ ruff installed (pip3 --user)"
 else
   echo "ℹ️  semgrep: install manually with: pipx install semgrep"
+  echo "ℹ️  ruff: install manually with: pipx install ruff"
 fi
+
+# Eslint is optional unless JS/TS analysis is enabled.
+# npm install -g eslint
+
+# Verify no analyzer is missing after install.
+relay doctor
 
 git add .relay/
 echo "Relay: initialized. Your agent will call relay_check before every commit."

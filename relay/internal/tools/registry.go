@@ -80,9 +80,9 @@ var Registry = map[string][]Release{
 		// Marked here so `tools list` reports it; Install() dispatches to
 		// installGoTool when Archive=="" and URL starts with "go://".
 		{
-			Name: "govulncheck", Version: "1.1.3",
+			Name: "govulncheck", Version: "1.3.0",
 			OS: "any", Arch: "any",
-			URL:        "go://golang.org/x/vuln/cmd/govulncheck@v1.1.3",
+			URL:        "go://golang.org/x/vuln/cmd/govulncheck@v1.3.0",
 			Archive:    ArchiveRaw,
 			BinaryPath: "govulncheck",
 		},
