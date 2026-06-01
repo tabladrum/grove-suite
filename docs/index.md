@@ -12,7 +12,8 @@ permalink: /
 **The infrastructure layer that makes AI coding agents production-safe.**
 {: .fs-6 .fw-300 }
 
-[Install](/installation){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Agent Setup](/setup/){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Manual Install](/installation){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View on GitHub](https://github.com/tabladrum/grove-suite){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
@@ -31,27 +32,40 @@ All four products share one foundation: [Grove](/grove) — a persistent knowled
 
 ---
 
-## Get Started in 5 Minutes
+## Get Started
+
+**Fastest — let your AI agent do it:**
 
 ```bash
-# Build Grove first — everything depends on it
+# In Claude Code:
+claude "Follow the setup instructions at https://raw.githubusercontent.com/tabladrum/grove-suite/main/SETUP.md"
+
+# In any other agent — paste this URL and say "follow the setup instructions":
+# https://raw.githubusercontent.com/tabladrum/grove-suite/main/SETUP.md
+```
+
+The agent detects your platform, fetches the latest release, asks which products you want, verifies checksums, and wires everything into your project. → [How it works](/setup/)
+
+**Manual install from source:**
+
+```bash
 git clone https://github.com/tabladrum/grove-suite && cd grove-suite
 cd grove && make install && cd ..
 cd prism && make install && cd ..
 
-# Wire into your project
 cd /your/project
 prism init       # detects Claude Code / Copilot / Cursor / Codex / Windsurf / Zed
 prism index      # initial index
 prism savings    # watch token savings accumulate
 ```
 
-**Want pre-built binaries instead?** [Installation guide](/installation) covers macOS, Linux, and Windows downloads from GitHub Releases.
+**Pre-built binaries?** [Installation guide](/installation) covers macOS, Linux, and Windows downloads from GitHub Releases.
 
 ---
 
 ## Read More
 
+- [**Agent Setup**](/setup/) — let your AI agent install and configure everything automatically
 - [**Why Grove Suite**](/why) — the founder's pitch: problem, bet, what we deliberately didn't build
 - [**Comparisons**](/comparisons) — honest comparisons vs Copilot semantic search, Sourcegraph, AI merge tools, CodeRabbit, Sigstore, Devin
 - [**FAQ**](/faq) — top questions across technical, security, business, and audit perspectives
