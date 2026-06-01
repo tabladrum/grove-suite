@@ -485,28 +485,113 @@ git add .relay/
 echo "Relay: initialized. Your agent will call relay_check before every commit."
 ```
 
+**Start MCP servers** (do this after all products are initialized):
+
+```bash
+# Grove HTTP server — required by Prism, Fuse, and Relay at runtime.
+# Start it in the background now so the smoke test can reach it.
+# In normal use, Prism/Fuse/Relay auto-start Grove if it is not running.
+grove serve . &
+GROVE_PID=$!
+sleep 2
+
+# Verify Grove is up before continuing.
+curl -sf http://localhost:7777/health > /dev/null \
+  && echo "✅ Grove MCP server running (pid $GROVE_PID)" \
+  || { echo "❌ Grove server failed to start — check grove serve output"; kill $GROVE_PID 2>/dev/null; }
+
+# Prism MCP server — agents (Claude Code, Cursor, etc.) start this automatically
+# via the MCP config written by `prism init`. No manual start needed after setup.
+# To verify the MCP binary works standalone:
+prism version && echo "✅ Prism MCP binary ok"
+```
+
 ---
 
 ### Step 9 — Smoke Test
 
-Run a smoke test for each installed binary:
+Test each installed product functionally — not just `version`, but real queries
+against the indexed project. Run from the project root with Grove already serving.
 
 **Linux / macOS:**
 ```bash
+echo ""
 echo "=== Grove Suite smoke test ==="
-grove version  && echo "✅ grove ok"  || echo "❌ grove failed"
-command -v prism &>/dev/null && { prism version && echo "✅ prism ok" || echo "❌ prism failed"; }
-command -v fuse  &>/dev/null && { fuse version  && echo "✅ fuse ok"  || echo "❌ fuse failed";  }
-command -v relay &>/dev/null && { relay version && echo "✅ relay ok" || echo "❌ relay failed"; }
+echo ""
+
+# ── Binary versions ──────────────────────────────────────────────────
+grove version  && echo "✅ grove binary ok"  || echo "❌ grove binary failed"
+command -v prism &>/dev/null && { prism version && echo "✅ prism binary ok" || echo "❌ prism binary failed"; }
+command -v fuse  &>/dev/null && { fuse version  && echo "✅ fuse binary ok"  || echo "❌ fuse binary failed";  }
+command -v relay &>/dev/null && { relay version && echo "✅ relay binary ok" || echo "❌ relay binary failed"; }
+echo ""
+
+# ── Grove: live query against the indexed project ────────────────────
+echo "--- Grove: symbol lookup ---"
+GROVE_RESULT=$(grove symbols "main" 2>/dev/null | head -5)
+[ -n "$GROVE_RESULT" ] \
+  && echo "✅ Grove query ok:" && echo "$GROVE_RESULT" \
+  || echo "❌ Grove query returned nothing — is Grove serving? Run: grove serve ."
+echo ""
+
+# ── Prism: context query ─────────────────────────────────────────────
+if command -v prism &>/dev/null; then
+  echo "--- Prism: context query ---"
+  PRISM_RESULT=$(prism query "main entry point" 2>/dev/null | head -5)
+  [ -n "$PRISM_RESULT" ] \
+    && echo "✅ Prism query ok:" && echo "$PRISM_RESULT" \
+    || echo "❌ Prism query returned nothing — run: prism index"
+  echo ""
+fi
+
+# ── Fuse: merge driver registration ─────────────────────────────────
+if command -v fuse &>/dev/null; then
+  echo "--- Fuse: driver registration ---"
+  git config --global merge.fuse.driver 2>/dev/null \
+    && echo "✅ Fuse merge driver registered in ~/.gitconfig" \
+    || echo "❌ Fuse not registered — run: fuse install"
+  echo ""
+fi
+
+# ── Relay: policy + doctor ───────────────────────────────────────────
+if command -v relay &>/dev/null; then
+  echo "--- Relay: policy gates ---"
+  relay policy 2>/dev/null | head -10 \
+    && echo "✅ Relay policy loaded" \
+    || echo "❌ Relay policy failed — run: relay init --stack=<stack>"
+  echo ""
+  echo "--- Relay: analyzer status ---"
+  relay doctor || true   # non-zero is expected if optional tools (eslint) are missing
+  echo ""
+fi
+
+echo "=== Smoke test complete ==="
 ```
 
 **Windows (PowerShell):**
 ```powershell
+Write-Host ""
 Write-Host "=== Grove Suite smoke test ==="
-& grove version  && Write-Host "✅ grove ok"  || Write-Host "❌ grove failed"
-if (Get-Command prism  -EA 0) { & prism version  && Write-Host "✅ prism ok"  || Write-Host "❌ prism failed" }
-if (Get-Command fuse   -EA 0) { & fuse version   && Write-Host "✅ fuse ok"   || Write-Host "❌ fuse failed"  }
-if (Get-Command relay  -EA 0) { & relay version  && Write-Host "✅ relay ok"  || Write-Host "❌ relay failed" }
+Write-Host ""
+
+# Binary versions
+& grove version  && Write-Host "✅ grove binary ok"  || Write-Host "❌ grove binary failed"
+if (Get-Command prism  -EA 0) { & prism version  && Write-Host "✅ prism binary ok"  || Write-Host "❌ prism binary failed" }
+if (Get-Command fuse   -EA 0) { & fuse version   && Write-Host "✅ fuse binary ok"   || Write-Host "❌ fuse binary failed"  }
+if (Get-Command relay  -EA 0) { & relay version  && Write-Host "✅ relay binary ok"  || Write-Host "❌ relay binary failed" }
+
+# Grove live query
+$groveResult = & grove symbols "main" 2>$null | Select-Object -First 5
+if ($groveResult) { Write-Host "✅ Grove query ok"; $groveResult }
+else { Write-Host "❌ Grove query returned nothing — is Grove serving?" }
+
+# Fuse driver
+$fuseDriver = git config --global merge.fuse.driver 2>$null
+if ($fuseDriver) { Write-Host "✅ Fuse merge driver registered" }
+else { Write-Host "❌ Fuse not registered — run: fuse install" }
+
+# Relay policy
+if (Get-Command relay -EA 0) { & relay policy | Select-Object -First 10 }
 ```
 
 **Common failures and fixes:**
