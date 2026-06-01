@@ -116,7 +116,7 @@ B2 is the better long-term shape. The wrapper is small (a few hundred LOC) and l
 - Real Sonar-rule analysis, locally, no server.
 - Quality profile XML import works exactly as connected mode does in the IDE.
 - Same rules a SonarQube Community Build server would apply.
-- Path is fully open source under LGPL-3.0 (compatible with Relay's BSL license at the process boundary).
+- Path is fully open source under LGPL-3.0 (compatible with Relay's AGPL-3.0 license at the process boundary).
 
 **What this costs:**
 - ~200–400MB additional install footprint when SonarLint is enabled (JRE + Core + analyzers).
@@ -219,7 +219,7 @@ These limitations are inherent to the LGPL Community-Edition rule set, not to Re
 - Bundled Eclipse Temurin JRE: GPL-2.0 with classpath exception. Bundleable; ship attribution per the OpenJDK assembly exception.
 - Quality profile XML (user-supplied): owned by the user. Relay does not assert any rights.
 
-Relay's own BSL license is unaffected because all SonarLint pieces run in their own JVM process.
+Relay's own AGPL-3.0 license is unaffected because all SonarLint pieces run in their own JVM process.
 
 ### 5.7 Maintenance burden
 

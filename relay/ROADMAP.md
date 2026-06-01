@@ -1,6 +1,6 @@
 # Relay Roadmap
 
-MIT licensed. Part of the Grove Suite. Requires Grove (`localhost:7777`) and Prism for context delivery.
+AGPL-3.0 licensed. Part of the Grove Suite. Requires Grove (`localhost:7777`) and Prism for context delivery.
 
 ---
 

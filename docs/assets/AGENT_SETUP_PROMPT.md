@@ -551,4 +551,4 @@ Then report a short uninstall summary to the user and confirm they can now rerun
 
 ---
 
-*Grove Suite is MIT licensed. No telemetry. Your code never leaves your machine.*
+*Grove, Prism, and Fuse are MIT licensed. Relay is AGPL-3.0 licensed. No telemetry. Your code never leaves your machine.*

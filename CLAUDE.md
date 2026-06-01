@@ -9,7 +9,7 @@ Guidance for Claude Code when working in this repository.
 | **Grove** | `grove` | Persistent code knowledge graph — Tree-sitter parsing, SQLite storage, BFS traversal, MCP server | 7777 (HTTP), 7778 (gRPC) | MIT |
 | **Prism** | `prism` | Token-optimized context delivery for AI agents — ranking, compression, session deduplication | 8888 | MIT |
 | **Fuse** | `fuse` | Semantic Git merge driver — symbol-level three-way merge, breaking change detection | 9999 (HTTP) | MIT |
-| **Relay** | `relay` | Certified delivery platform for autonomous coding agents — graph-aware certification, semantic merge, linear admission | 9000 (gRPC) | MIT |
+| **Relay** | `relay` | Certified delivery platform for autonomous coding agents — graph-aware certification, semantic merge, linear admission | 9000 (gRPC) | AGPL-3.0 |
 
 **Dependency order:** Grove has no suite dependencies. Prism, Fuse, and Relay each require a running Grove instance and auto-start it on startup if unreachable at `$GROVE_URL` (default `http://localhost:7777`). Build Grove first.
 

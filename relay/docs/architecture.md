@@ -18,7 +18,7 @@ Derived from `product-proposal.md` (§8, §9), the Codex/Gemini design reviews, 
 10. **Configuration in the repo.** Per-repo Relay configuration lives in `.relay/` inside the source repo (committed, PR-reviewed). Per-repo mutable state lives in `.relay/.cache/` (gitignored, written by `relay init`). The same configuration applies whether running on laptop, team server, or enterprise control plane. Org-wide baselines (enterprise mode) layer on top; user/host config holds only credentials and transport. The repo defines its own Relay rules, not the platform.
 11. **The prompt is the intent — captured automatically.** When the agent receives a code-change request from the developer, it calls `relay_intent_open` with the user's prompt before coding. Relay drafts an intent YAML at `.relay/.cache/intents/` and promotes it to `.relay/intents/` (committed) when the agent closes the intent. The intent file is part of the diff — reviewers see what the agent was asked to do; admission cross-validates the diff against the intent's `allowed_paths` and `acceptance_criteria`; auditors can replay it forever.
 12. **Privacy by default.** Laptop mode does not phone home. OpenTelemetry traces default off. Agent identity, prompt hash, intent content never leave the machine unless the developer explicitly enables sync to a team server.
-13. **Open core.** Grove, Prism, Fuse are MIT and embeddable. Relay is BSL and is the commercial control plane. The SonarLint Core integration runs as an LGPL-3.0 Java subprocess at process boundaries; redistributable.
+13. **Open core.** Grove, Prism, and Fuse are MIT and embeddable. Relay is AGPL-3.0. The SonarLint Core integration runs as an LGPL-3.0 Java subprocess at process boundaries; redistributable.
 
 ---
 

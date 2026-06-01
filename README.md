@@ -173,7 +173,7 @@ grove-suite/
 └── go.work             Go workspace
 ```
 
-All four products: MIT licensed · single binary · no runtime dependencies beyond Go 1.22+ and git.
+Licensing: Grove, Prism, and Fuse are MIT licensed. Relay is AGPL-3.0 licensed.
 
 ---
 

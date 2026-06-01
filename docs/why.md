@@ -116,7 +116,7 @@ A founder's most important sentence is "we don't do that." Here's ours.
 
 **Time to install:** Five minutes for Prism (the highest-impact single product). Twenty minutes for the full suite including Relay configuration. The `relay init` command auto-wires every detected AI tool in one step — no per-tool MCP config to hand-edit.
 
-**Operational cost:** Zero. No subscription. No cloud bill. No GPU. No rate limit. MIT license across all four products.
+**Operational cost:** Zero. No subscription. No cloud bill. No GPU. No rate limit. Grove, Prism, and Fuse are MIT licensed; Relay is AGPL-3.0 licensed.
 
 ---
 
@@ -126,7 +126,7 @@ We're building the open core of an infrastructure layer that, in the same way Da
 
 The path we see:
 
-**Today (Phase 1, shipped):** Grove + Prism + Fuse + Relay run locally on developer laptops. MIT licensed. Single binaries. The "laptop mode" experience.
+**Today (Phase 1, shipped):** Grove + Prism + Fuse + Relay run locally on developer laptops. Grove, Prism, and Fuse are MIT licensed; Relay is AGPL-3.0 licensed. Single binaries. The "laptop mode" experience.
 
 **Next (Phase 2, on the roadmap):** Team mode — same binaries, same configs, but backed by Postgres + Redis + KMS for shared state. Self-hosted, on-prem, air-gapped. Useful for teams that want a single audit trail across all developers.
 

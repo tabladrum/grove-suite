@@ -82,4 +82,4 @@ Built on [Tree-sitter](https://tree-sitter.github.io), [SQLite](https://sqlite.o
 
 ---
 
-*MIT licensed. Single binary per product. No cloud. No subscription. No GPU.*
+*Grove, Prism, and Fuse are MIT licensed. Relay is AGPL-3.0 licensed. Single binary per product. No cloud. No subscription. No GPU.*

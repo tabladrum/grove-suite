@@ -2,7 +2,7 @@
 
 > **Certified delivery for AI coding agents. Every commit signed, tested, and traceable to the prompt that created it.**
 
-**MIT licensed · Part of [Grove Suite](../README.md)**
+**AGPL-3.0 licensed · Part of [Grove Suite](../README.md)**
 
 ---
 

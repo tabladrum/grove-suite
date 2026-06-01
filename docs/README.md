@@ -14,6 +14,21 @@ If you just want to install and try it, the [installation guide]({{ '/installati
 
 ---
 
+## Licensing
+
+Grove Suite uses a split-license model on GitHub Pages:
+
+| Product | License |
+|---------|---------|
+| Grove | MIT |
+| Prism | MIT |
+| Fuse | MIT |
+| Relay | AGPL-3.0 |
+
+Relay's AGPL applies to the Relay product and its Relay-specific docs and source tree. The rest of the suite remains MIT licensed.
+
+---
+
 ## Read by Role
 
 | If you are a... | Start here |

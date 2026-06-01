@@ -193,7 +193,7 @@ This is the comparison everyone asks for. "If I just use Devin / Cursor Backgrou
 | Customizable policy gates | Yes (`.relay/policies/`) | Vendor-managed | Vendor-managed | Vendor-managed |
 | Cryptographic commit signing | Yes | No | No | No |
 | Intent capture / audit trail | Yes (committed YAML) | Internal logs | Internal logs | PR description |
-| MIT licensed | Yes | No (closed) | No (closed) | No (closed) |
+| Open-source licensed | Yes (MIT for Grove/Prism/Fuse, AGPL-3.0 for Relay) | No (closed) | No (closed) | No (closed) |
 | Cost | Free | $500/agent/month | $40/user/month | Bundled with Copilot Enterprise |
 
 **The two paradigms:**

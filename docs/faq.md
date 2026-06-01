@@ -25,13 +25,13 @@ A small team that was tired of watching AI coding agents — which are genuinely
 ### Is this production-ready?
 
 Phase 1 is built and tested. We run it on our own work daily. The benchmarks in each product's README are real numbers on real hardware. That said:
-- The MIT license is real: use at your own risk, no warranty, no SLA
+- The open-source licenses are real: use at your own risk, no warranty, no SLA
 - Phase 2 features (team mode with Postgres + Redis, agent execution platform) are on the roadmap, not shipped
 - Edge cases in unusual codebases will exist — please file issues
 
 ### What licenses?
 
-All four products are MIT licensed. The repository is at [github.com/tabladrum/grove-suite](https://github.com/tabladrum/grove-suite).
+Grove, Prism, and Fuse are MIT licensed. Relay is AGPL-3.0 licensed. The repository is at [github.com/tabladrum/grove-suite](https://github.com/tabladrum/grove-suite).
 
 ### Does it phone home?
 
@@ -190,7 +190,7 @@ Copilot Enterprise is a managed agent + features. Grove Suite is infrastructure 
 
 ### What's the path to commercialization?
 
-The four products are MIT licensed and will remain so. We expect the commercial path to be:
+Grove, Prism, and Fuse are MIT licensed. Relay is AGPL-3.0 licensed. We expect the commercial path to be:
 - Team mode (Postgres + Redis + KMS) — open-source binary, paid support for enterprise deployment
 - Agent execution platform (Phase 3) — paid product, self-hostable, with optional managed
 - Compliance attestation packs (SOC 2, FedRAMP, EU AI Act) — paid evidence-mapping consulting
