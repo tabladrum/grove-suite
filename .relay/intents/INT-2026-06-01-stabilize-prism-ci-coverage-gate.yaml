@@ -1,0 +1,11 @@
+# Auto-Intent Capture artifact. The user's prompt that produced this code.
+# See docs/design.md §17. Do not hand-edit unless you know what you're doing.
+schema: relay.intent/v2
+id: INT-2026-06-01-stabilize-prism-ci-coverage-gate
+status: committed
+title: Stabilize Prism CI coverage gate
+description: Monitor the CI fix any failures.
+originated_from:
+    prompt_hash: ede8b1b2fd306db6d5c76b75bee63b745f4a03b9261b8de4a26d8e724d7470ac
+created_at: 2026-06-01T17:58:37.468766Z
+committed_at: 2026-06-01T17:58:48.094123Z
