@@ -525,17 +525,9 @@ echo "Relay: initialized. Your agent will call relay_check before every commit."
 **Start MCP servers** (do this after all products are initialized):
 
 ```bash
-# Grove HTTP server — required by Prism, Fuse, and Relay at runtime.
-# Start it in the background now so the smoke test can reach it.
-# In normal use, Prism/Fuse/Relay auto-start Grove if it is not running.
-grove serve . &
-GROVE_PID=$!
-sleep 2
-
-# Verify Grove is up before continuing.
-curl -sf http://localhost:7777/health > /dev/null \
-  && echo "✅ Grove MCP server running (pid $GROVE_PID)" \
-  || { echo "❌ Grove server failed to start — check grove serve output"; kill $GROVE_PID 2>/dev/null; }
+# Grove is now an embedded library — Prism, Fuse, and Relay link it directly
+# and open the on-disk index in-process. No `grove serve` daemon, no ports,
+# no tokens. The CLI is still available for one-shot queries.
 
 # Prism MCP server — agents (Claude Code, Cursor, etc.) start this automatically
 # via the MCP config written by `prism init`. No manual start needed after setup.
@@ -568,7 +560,7 @@ echo "--- Grove: symbol lookup ---"
 GROVE_RESULT=$(grove symbols "main" 2>/dev/null | head -5)
 [ -n "$GROVE_RESULT" ] \
   && echo "✅ Grove query ok:" && echo "$GROVE_RESULT" \
-  || echo "❌ Grove query returned nothing — is Grove serving? Run: grove serve ."
+  || echo "❌ Grove query returned nothing — try `grove index .` first."
 echo ""
 
 # ── Prism: context query ─────────────────────────────────────────────
@@ -671,7 +663,7 @@ see it. Expected after the fix: both `prism` and `relay` show **✓ Connected**.
 | `command not found` | Install directory not on `$PATH` — add it and restart shell |
 | macOS "cannot be opened because the developer cannot be verified" | Run `xattr -d com.apple.quarantine $(which grove)` |
 | macOS `zsh: killed` (exit 137) when binary is in `/opt/homebrew/bin` | Run `codesign -f -s - $(which grove)` (repeat for each binary) |
-| `grove: connection refused` on Prism/Fuse/Relay | Run `grove serve` once; it auto-starts on subsequent calls |
+| `grove: connection refused` on Prism/Fuse/Relay | Should not happen in embedded mode — if you see this, you're on a pre-embedded build; upgrade |
 | `relay: key not found` | Run `relay init` from the project root |
 | `relay init --stack=auto` fails with "unknown stack" | Use `relay init --list-stacks` to see valid stack names, then `relay init --stack=<name>` |
 | `relay_check` passes but no SAST/secrets findings appear | Run `relay tools install` — analyzers are silently skipped when not pre-downloaded |
@@ -743,7 +735,7 @@ What this removes:
 - Relay-managed hooks and MCP registrations
 - Relay tool cache (`~/.relay/tools`) and user runtime/cache state
 - Project-local runtime state (`.grove`, `.git/fuse`, workspace MCP config files)
-- Lingering local processes (`grove serve`, relay MCP, etc.)
+- Lingering local processes (`prism mcp`, `relay mcp serve`, etc.)
 
 After uninstall, verify:
 

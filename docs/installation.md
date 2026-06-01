@@ -335,10 +335,10 @@ fuse version
 relay version
 
 # Start Grove and verify HTTP API
-grove serve --port 7777 &
-sleep 2
-curl http://localhost:7777/health
-# Expected: {"status":"ok"}
+# Grove is now an embedded library — Prism, Fuse, and Relay open the on-disk
+# index in-process. The CLI is still available for one-shot queries:
+grove index .
+grove symbols main
 
 # Use Prism to query (in a project that has been indexed)
 cd /your/project
@@ -401,16 +401,9 @@ Tree-sitter (used by Grove and Fuse) requires a C compiler.
 
 ### Port conflicts
 
-Default ports: Grove uses 7777 (HTTP) and 7778 (gRPC). Relay uses 9000.
-
-```bash
-# Find what's using port 7777
-lsof -i :7777
-
-# Run Grove on a different port
-grove serve --port 7778
-export GROVE_URL=http://localhost:7778
-```
+In the embedded model Grove no longer opens TCP ports. The only Grove‑Suite
+port you may need to manage is Relay's API server (default 9000). Configure it
+via `relay init` or the `RELAY_PORT` environment variable.
 
 ### Behind a corporate proxy
 

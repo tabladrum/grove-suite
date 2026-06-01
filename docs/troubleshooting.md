@@ -16,14 +16,12 @@ If your issue isn't here, the next stop is [GitHub Issues](https://github.com/ta
 
 ## Grove
 
-### Port 7777 is already in use
+### Embedded mode — no daemon, no ports
 
-```bash
-lsof -i :7777    # see what's there
-grove serve --port 7778
-```
-
-Then set `GROVE_URL=http://localhost:7778` for Prism, Fuse, and Relay. Or add it to your shell rc file.
+Grove is linked directly into Prism, Fuse, and Relay. It does not open TCP
+ports, does not write `.grove/.token`, and does not need `grove serve`. If you
+see old documentation or scripts referencing those, they're pre-embedded and
+should be ignored.
 
 ### Indexing is slow on a large repo
 
@@ -70,17 +68,9 @@ grove index .
 
 ### Bearer token errors
 
-```
-{"error":"unauthorized"}
-```
-
-Means a request is missing or has the wrong `Authorization: Bearer <token>` header. The token lives at `.grove/.token` (mode 0600).
-
-If you've copied a `.grove/` directory between machines, the token won't match Grove's expected one. Delete and re-generate:
-```bash
-rm .grove/.token
-grove serve .    # regenerates the token
-```
+In the embedded model there is no bearer token — every reader links Grove
+directly. If a tool still reports an auth error, you're on a pre-embedded
+build; upgrade to the latest release.
 
 ---
 
@@ -290,22 +280,9 @@ Re-running `relay certify` with pinned tools produces byte-reproducible certs fr
 
 ### Relay can't reach Grove
 
-```
-error: grove unreachable at http://localhost:7777
-```
-
-Relay auto-starts Grove if not running, but only if the `grove` binary is on the PATH.
-
-```bash
-which grove   # confirm it's installed
-grove serve   # start manually if needed
-```
-
-If you're running Grove on a non-default port, set `GROVE_URL`:
-```bash
-export GROVE_URL=http://localhost:7778
-relay certify .
-```
+In the embedded model Relay links Grove directly — there is nothing to reach.
+If you see a "grove unreachable" error, you're on a pre-embedded build;
+upgrade to the latest release.
 
 ### Intent capture is creating duplicate intents
 

@@ -211,8 +211,8 @@ None.
 
 ### How are secrets protected?
 
-- HTTP daemons bind to `127.0.0.1` only — no LAN exposure
-- Grove generates a 64-char random bearer token at `.grove/.token` (mode 0600) — every non-health request requires it
+- Grove is now an embedded library — there is no HTTP daemon, no port, and no bearer token to leak
+- Prism and Relay MCP servers run as local stdio processes; they never bind a TCP socket
 - The Ed25519 admission key for Relay lives at `~/.relay/keys/admission.ed25519` (mode 0600)
 - Credentials (Jira, GitHub) are environment variables only — never persisted to `.relay/relay.yaml`
 
@@ -254,7 +254,6 @@ See [Security brief]({{ '/audiences/security/' | relative_url }}). Summary:
 - Threat: agent produces malicious code → Mitigation: Relay's gates run regardless of agent
 - Threat: attacker forges a Relay cert → Mitigation: Ed25519 signature with private key never leaving disk
 - Threat: dependency supply-chain attack → Mitigation: Stage 2 dep audit (govulncheck, npm audit, pip-audit) + Sigstore/SLSA on the build artifact (out of scope for Relay)
-- Threat: leaked bearer token → Mitigation: token bound to `127.0.0.1`, rotate by deleting `.grove/.token`
 
 ---
 
@@ -300,11 +299,9 @@ This is not legal advice. Talk to your compliance team about which AI Act provis
 
 ### Grove won't start — port 7777 already in use
 
-```bash
-lsof -i :7777    # find what's using it
-grove serve --port 7778
-# or set GROVE_URL=http://localhost:7778 for other Grove Suite tools
-```
+Not applicable: Grove is now an embedded library and does not open any TCP
+port. If you see a tool referencing port 7777, you're on a pre-embedded build
+— upgrade to the latest release.
 
 ### Prism savings shows 0 even after using the agent
 

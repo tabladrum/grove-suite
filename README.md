@@ -1,20 +1,23 @@
-# Grove Suite
+# Relay
 
-**The missing infrastructure layer beneath AI coding agents.**
+**Certified delivery for AI coding agents.** Every AI-generated commit signed, tested, and traceable to the prompt that created it.
 
-AI agents can write code. They have no way to certify it's safe before it hits your main branch. No product has built that — until Relay.
+> Built on three open-source components — [Grove](grove/README.md) (code knowledge graph), [Prism](prism/README.md) (context delivery), [Fuse](fuse/README.md) (semantic merge) — all embedded into the Relay binary. No services to run. No ports to manage. One install.
 
-> **New?** Let your AI agent set everything up: `claude "Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"` — or paste [`AGENT_SETUP_PROMPT.md`](AGENT_SETUP_PROMPT.md) into any MCP-capable agent.
+```bash
+# Let your agent install everything:
+claude "Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"
+```
 
 ---
 
-## The Core Problem
+## The Problem
 
-AI coding agents are now writing a significant fraction of production code — GitHub's own data shows 41% of code in Copilot-enabled repos is AI-generated. That number is accelerating.
+AI coding agents are now writing a significant fraction of production code — GitHub reports 41% of code in Copilot-enabled repos is AI-generated, accelerating.
 
-Here's what nobody has built: **the delivery infrastructure on the other side.**
+Nobody has built the delivery infrastructure on the other side.
 
-Every agent — Devin, Cursor, GitHub Copilot Workspace, Claude Code — still delivers through the same PR → CI loop designed for humans writing code one commit at a time. When an agent opens a PR, CI finds issues, you send it back, CI finds more. Each iteration costs human attention to triage. The agent has lost context by then. You loop 3–5 times on work that should have been right the first time.
+Every agent — Devin, Cursor, Copilot Workspace, Claude Code — still pushes through a PR → CI loop designed for humans writing one commit at a time. CI catches issues, you send the work back, CI catches more. The agent has lost context. You loop 3–5 times on work that should have been right the first time.
 
 More critically: when a security audit asks *what did the agent do, and who verified it was safe?* — the PR says "refactor auth," CI shows green, the agent session is gone, the original prompt is gone. There is no answer.
 
@@ -22,129 +25,99 @@ More critically: when a security audit asks *what did the agent do, and who veri
 
 ---
 
-## Relay — Certified Delivery for AI Agents
+## What Relay Does
 
-*No product in this space does what Relay does.*
+An admission control layer between your AI agent and your main branch. Before agent-produced code touches main, Relay:
 
-**What it is:** An admission control layer that sits between your AI coding agent and your main branch. Before the agent's code touches main, Relay:
+1. **Captures the original user prompt** as a signed YAML intent in your repo — the record of what the agent was asked to do.
+2. **Runs quality gates in the agent loop** — build, tests, coverage, secrets scan, SAST, dependency audit — before any commit, in under 10 seconds.
+3. **Issues an Ed25519-signed certificate** proving which gates ran, which tool versions, what passed — permanently linked to the commit.
+4. **Enables audit replay** — `relay cert replay <id>` re-runs the same gates against a 6-month-old commit and tells you `byte_reproducible`, `tool_drift`, or `config_drift`.
 
-1. **Captures the original user prompt** as a signed YAML intent in your repo — the record of what the agent was asked to do
-2. **Runs quality gates in the agent loop** — build, tests, coverage, secrets scan, SAST, dependency audit — before any commit, in under 10 seconds
-3. **Issues an Ed25519-signed certificate** proving which gates ran, which versions of which tools, and what passed — permanently linked to the commit
-4. **Enables audit replay** — `relay cert replay <id>` re-runs the exact same gates against a 6-month-old commit and tells you `byte_reproducible`, `tool_drift`, or `config_drift`
-
-**What changes:** The agent self-corrects before opening a PR. The CI loop drops from 3–5 iterations to 0–1. Every commit has a cryptographic proof of quality that survives the agent session.
+The agent self-corrects before opening a PR. The CI loop drops from 3–5 iterations to 0–1. Every commit has a cryptographic proof of quality that survives the agent session.
 
 ```bash
 # What the agent sees, via MCP:
 relay_intent_open   → captures the user's prompt as a YAML artifact
 relay_check         → structured findings in < 10 s; agent self-corrects
 relay_submit        → Ed25519-signed admission certificate issued
-```
 
-```bash
 # What the auditor sees, six months later:
 relay cert show <id>     → original prompt + gates + toolchain versions + signature
 relay cert replay <id>   → re-run the gates; prove they still hold
 ```
 
-[Relay README →](relay/README.md)
+---
+
+## Why Relay Is Different
+
+| | Relay | CI (GitHub Actions, etc.) | CodeRabbit / Greptile | Sigstore / SLSA |
+|---|---|---|---|---|
+| Runs before the commit | Yes (in the agent loop) | No (after push) | No (after PR open) | No (build-time) |
+| Captures the original prompt | Yes (signed YAML) | No | No | No |
+| Replayable months later | Yes (`relay cert replay`) | No (logs expire) | No | Partial (provenance only) |
+| Signed by your private key | Yes (Ed25519) | No | No | Yes |
+| Knows your codebase graph | Yes (via Grove) | No | Partial | No |
+| Local-first, no cloud | Yes | Cloud-dependent | Cloud | Hybrid |
+
+Relay is the first tool to bind **prompt → certificate → commit** with cryptographic proof that survives the agent session.
+
+[Full Relay docs →](relay/README.md)
 
 ---
 
-## The Foundation — Grove
+## The Open-Source Foundation
 
-Relay's quality gates aren't naive. They're informed by a persistent knowledge graph of your codebase.
+Relay is built on three components. Each is useful on its own and independently licensed under MIT. You can adopt any of them without Relay.
 
-**[Grove](grove/README.md)** indexes your source files into a SQLite graph — 11 languages, 8 edge types (defines, calls, imports, extends, implements, uses-type, tests, contains), BFS traversal. When Relay runs tests, Grove selects the tests that actually cover the changed symbols — not all tests, not a guess. When Relay runs impact analysis, Grove returns the real blast radius in milliseconds.
+### [Grove](grove/README.md) — Code Knowledge Graph
 
-Grove is what makes Relay's certification *meaningful* instead of *mechanical*.
+Tree-sitter parser, SQLite-backed graph (11 languages, 8 edge types), BFS traversal, FTS5 search, delta indexing by git blob SHA. The substrate Relay uses for impact analysis and test selection.
 
-```bash
-grove index .                    # 10K-file monorepo in 34s cold; delta re-index in ms
-grove impact "validatePassword"  # blast radius across the entire codebase
-grove tests "Login"              # tests that cover this symbol, directly or transitively
-```
+**Independent use:** `grove index .`, then `grove impact "validatePassword"`, `grove tests "Login"`. MIT licensed. Embed it in your own tools — Grove is a Go library, not a daemon.
 
-Grove is also the foundation for Prism and Fuse. Without it, they degrade to filename guessing and line-level merge.
+### [Prism](prism/README.md) — Token-Optimized Context for AI Agents
 
----
+Graph-ranked context delivery: target symbols, dependencies, tests, and docs ranked by graph distance, semantic similarity, recency, test relevance, and edit frequency. 35–92% fewer tokens on first reads, ~99% on re-reads (SHA pointer instead of full source).
 
-## Prism — Context That Doesn't Waste Tokens
+**Independent use:** `prism init` auto-detects Claude Code / Copilot / Cursor / Codex / Windsurf / Zed and wires the MCP server. 5 minutes to install, visible savings on the first agent task. MIT licensed.
 
-AI agents work better when they understand what code is actually relevant. They work poorly when they read everything and run out of context.
+### [Fuse](fuse/README.md) — Semantic Git Merge Driver
 
-**[Prism](prism/README.md)** delivers graph-ranked context to any MCP-capable agent: the target symbols, their dependencies, their tests, and related documentation — ranked by graph distance, semantic similarity, recency, and edit frequency. On first reads, 35–92% fewer tokens. On re-reads within the same session, ~99% (SHA pointer instead of full source).
+Replaces git's line-based merge with symbol-level understanding. Parses the three-way merge as ASTs, resolves at the symbol boundary, queries Grove for cross-file breaking changes. ~85% of false git conflicts auto-resolve.
 
-```bash
-prism init      # auto-detects Claude Code / Copilot / Cursor / Codex / Windsurf / Zed
-prism savings   # watch token reduction accumulate in real time
-```
-
-Prism is the fastest path to visible value — 5 minutes to install, visible savings on the first agent task.
+**Independent use:** `fuse install`, then `*.go merge=fuse` in `.gitattributes`. MIT licensed.
 
 ---
 
-## Fuse — When Two Agents Edit the Same File
-
-As agent usage scales, so does parallel editing. Two agents touch the same file. Different functions. Adjacent lines. Git declares a conflict on code that never actually conflicted.
-
-**[Fuse](fuse/README.md)** replaces git's line-based merge with symbol-level understanding. It parses the three-way merge as ASTs, resolves at the symbol boundary, and uses Grove to check for cross-file breaking changes. ~85% of false git conflicts auto-resolve.
-
-```bash
-fuse install                        # registers driver in ~/.gitconfig
-echo "*.go merge=fuse" >> .gitattributes
-# git merge now resolves symbol-level conflicts automatically
-```
-
----
-
-## How They Fit Together
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         AI Coding Agent                             │
-│         (Claude Code · Cursor · Devin · Copilot Workspace)         │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │  MCP tools
-          ┌──────────────────┼──────────────────┐
-          ▼                  ▼                  ▼
-   ┌─────────────┐   ┌─────────────┐   ┌──────────────────────────┐
-   │    Prism    │   │    Fuse     │   │         Relay            │
-   │             │   │             │   │                          │
-   │ Graph-ranked│   │ Symbol-level│   │ Pre-commit gates         │
-   │ context     │   │ merge       │   │ Intent capture           │
-   │ 35–92% less │   │ ~85% auto-  │   │ Ed25519 certificates     │
-   │ tokens      │   │ resolve     │   │ Audit replay             │
-   └──────┬──────┘   └──────┬──────┘   └────────────┬─────────────┘
-          │                 │                        │
-          └─────────────────┼────────────────────────┘
-                            │  HTTP + bearer token
-                            ▼
-           ┌────────────────────────────────────────┐
-           │               Grove                    │
-           │  Tree-sitter · SQLite · BFS · Model2Vec │
-           │  11 languages · 8 edge types           │
-           └────────────────────────────────────────┘
-                            │
-                            ▼
-                     Your codebase
+                  AI Coding Agent
+        (Claude Code · Cursor · Copilot · Devin)
+                        │
+                        │  MCP
+                        ▼
+              ┌──────────────────┐
+              │      Relay       │  ← the product
+              │  Intent capture  │
+              │  Quality gates   │
+              │  Ed25519 certs   │
+              │  Audit replay    │
+              └─────────┬────────┘
+                        │  in-process (embedded)
+        ┌───────────────┼───────────────┐
+        ▼               ▼               ▼
+     Grove           Prism            Fuse
+   (knowledge      (context         (semantic
+     graph)         delivery)         merge)
+        │               │               │
+        └───────────────┼───────────────┘
+                        ▼
+                 Your codebase
 ```
 
----
-
-## Documentation
-
-| Who you are | What to read |
-|-------------|--------------|
-| **Developer** wanting to try it | [Get Started](#get-started) below |
-| **Understanding the big picture** | [Why Grove Suite](docs/why.md) |
-| **Evaluating against alternatives** | [Comparisons](docs/comparisons.md) — vs Copilot, Sourcegraph, CodeRabbit, Devin, Sigstore |
-| **CISO / security evaluation** | [FAQ — Security section](docs/faq.md#for-security--ciso) |
-| **Compliance / audit evidence** | [FAQ — Compliance section](docs/faq.md#for-compliance--audit) |
-| **Top questions** | [FAQ](docs/faq.md) |
-| **Inter-product API contracts** | [Architecture](Architecture.md) |
-| **Full doc map** | [docs/](docs/README.md) |
+**No daemons. No ports. No tokens.** Grove is compiled into Relay (and into Prism and Fuse when used standalone) as a Go library. Index data lives in `.grove/` per repo. SQLite handles concurrent readers.
 
 ---
 
@@ -153,44 +126,41 @@ echo "*.go merge=fuse" >> .gitattributes
 ### Fastest — let your agent do it
 
 ```bash
-# In Claude Code:
 claude "Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"
 ```
 
-The agent detects your platform, fetches the latest release, asks which products you want, verifies checksums, and wires everything into your project.
+The agent detects your platform, fetches the latest release, verifies checksums, and wires Relay into your project.
 
-### From source
+### Manual install
 
 ```bash
-git clone https://github.com/tabladrum/grove-suite && cd grove-suite
+# Pre-built binaries (macOS, Linux, Windows):
+curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
 
-# Grove must go first — everything else depends on it
-cd grove && make install && cd ..
-
-# Then any combination of:
-cd relay && make install && cd ..   # certified delivery — the main event
-cd prism && make install && cd ..   # token-efficient context
-cd fuse  && make install && cd ..   # symbol-level merge
+# Or from source:
+git clone https://github.com/tabladrum/grove-suite && cd grove-suite/relay && make install
 ```
 
 ### Initialize in your project
 
 ```bash
 cd /your/project
-
-# Relay — certified delivery + audit trail
-relay init --stack=auto   # detects Go / Node / Python; generates Ed25519 key;
-                          # writes agent instructions to CLAUDE.md, .cursorrules, etc.
+relay init --stack=auto   # detects Go/Node/Python; generates Ed25519 key;
+                          # writes agent instructions into CLAUDE.md, .cursorrules, etc.
 relay hook install        # git pre-push backstop
+```
 
-# Prism — better context
-prism init               # auto-detects your coding tool, writes MCP config
-prism index              # initial index; restart your coding tool
+Relay's MCP server is registered with every AI coding tool installed on your machine. Your agent's next session has `relay_intent_open`, `relay_check`, `relay_submit` available — and uses them automatically per the instructions in `CLAUDE.md`.
 
-# Fuse — symbol-level merge
+### Adopt the OSS components independently (optional)
+
+```bash
+# Better context for any AI agent, no Relay needed:
+prism init && prism index
+
+# Symbol-level git merge, no Relay needed:
 fuse install
 echo "*.go merge=fuse" >> .gitattributes
-echo "*.ts merge=fuse" >> .gitattributes
 ```
 
 ---
@@ -199,7 +169,7 @@ echo "*.ts merge=fuse" >> .gitattributes
 
 Benchmarks on real hardware (macOS, 2026-05-27):
 
-| Project | Files | Grove index | BFS query | Relay pre-flight |
+| Project | Files | Index (cold) | BFS query | Relay pre-flight |
 |---------|------:|------------:|----------:|-----------------:|
 | Small | 61 | 0.06 s | 6 ms | < 10 s |
 | Medium | 801 | 0.85 s | 6 ms | < 10 s |
@@ -210,29 +180,45 @@ Delta indexing: after the first run, unchanged files are never re-parsed. One-fi
 
 ---
 
+## Documentation
+
+| Who you are | What to read |
+|-------------|--------------|
+| Developer wanting to try Relay | [Get Started](#get-started) above |
+| Security / CISO evaluation | [FAQ — Security](docs/faq.md#for-security--ciso) · [Audiences: Security](docs/audiences/security.md) |
+| Compliance / audit evidence | [FAQ — Compliance](docs/faq.md#for-compliance--audit) · [Audiences: Audit](docs/audiences/audit.md) |
+| Adopting Grove / Prism / Fuse on their own | [Grove](grove/README.md) · [Prism](prism/README.md) · [Fuse](fuse/README.md) |
+| Comparisons | [vs Copilot, Sourcegraph, CodeRabbit, Devin, Sigstore](docs/comparisons.md) |
+| Architecture & internals | [Architecture.md](Architecture.md) |
+| Full doc map | [docs/](docs/README.md) |
+
+---
+
 ## Repository Layout
 
 ```
 grove-suite/
-├── grove/              Go — persistent code knowledge graph (foundation)
-├── relay/              Go — certified agent delivery (the main event)
-├── prism/              Go — token-optimized context delivery
-│   └── vscode-extension/  TypeScript — VS Code native extension
-├── fuse/               Go — semantic git merge driver
-├── astkit/             Go — shared AST utilities
-├── Architecture.md     Inter-product contracts and data flows
+├── relay/              the product — certified delivery (AGPL-3.0)
+├── grove/              code knowledge graph (MIT) — also embedded in Relay
+├── prism/              token-optimized context for AI agents (MIT)
+│   └── vscode-extension/  VS Code native extension
+├── fuse/               semantic git merge driver (MIT)
+├── astkit/             shared AST utilities (MIT)
+├── Architecture.md     inter-component contracts and data flows
 └── go.work             Go workspace
 ```
 
-Licensing: Grove, Prism, and Fuse are MIT. Relay is AGPL-3.0.
+**Licensing:** Relay is AGPL-3.0. Grove, Prism, and Fuse are MIT — adopt them independently in commercial products without obligation.
 
 ---
 
 ## Security
 
-All HTTP servers bind to `127.0.0.1`. Grove generates a 64-char random bearer token at `.grove/.token` (mode 0600) required on every non-health request. Relay's Ed25519 admission key is at `~/.relay/keys/admission.ed25519` (mode 0600), generated once on `relay init`. Zero telemetry. Your code never leaves your machine.
+- Relay's Ed25519 admission key is at `~/.relay/keys/admission.ed25519` (mode 0600), generated once on `relay init`.
+- Grove runs in-process as a library; index data is in `.grove/` per repo. No network ports, no shared secrets.
+- Zero telemetry. Your code never leaves your machine.
 
-See [Architecture.md](Architecture.md) for full inter-product API contracts and the security model.
+See [Architecture.md](Architecture.md) for the full security model.
 
 ---
 

@@ -1,0 +1,11 @@
+# Auto-Intent Capture artifact. The user's prompt that produced this code.
+# See docs/design.md §17. Do not hand-edit unless you know what you're doing.
+schema: relay.intent/v2
+id: INT-2026-06-01-embed-grove-into-prism-fuse-relay-remove-daemon
+status: committed
+title: Embed Grove into Prism/Fuse/Relay; remove daemon
+description: Pick deployment option A (embed Grove). Stop running Grove as a per-repo daemon. This kills the port/token nightmare permanently. Update all documents and implement it. Also rewrite the homepage and README around Relay as the product, with Grove/Prism/Fuse as components / standalone OSS. No backward compatibility needed.
+originated_from:
+    prompt_hash: a8289bf3b4e3ae0f7bf5e6f69c65959172bd1deab837a17474500fc961018183
+created_at: 2026-06-01T17:43:43.131258Z
+committed_at: 2026-06-01T17:44:15.493284Z

@@ -104,7 +104,7 @@ For manual details, see the [installation guide uninstall section]({{ '/installa
 |---------|-----|
 | `command not found` after install | Install dir not on `$PATH` — add it and restart shell |
 | macOS "developer cannot be verified" | `xattr -d com.apple.quarantine $(which grove)` |
-| `grove: connection refused` on Prism start | Run `grove serve` once; it auto-starts on subsequent calls |
+| `grove: connection refused` on Prism start | Should not happen in embedded mode — upgrade to the latest release |
 | VS Code shows duplicate Prism providers/tools | Use either Prism MCP or the Prism VS Code extension, not both. If using extension mode, remove `prism` from `.vscode/mcp.json` |
 | Agent can't reach GitHub API | Check network, or download manually from [GitHub Releases](https://github.com/tabladrum/grove-suite/releases) |
 

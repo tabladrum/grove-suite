@@ -1,5 +1,7 @@
 # Product Suite: Naming, Vision & Sequenced Roadmap
 
+> **Embedded mode:** Roadmap items below that describe `grove serve` as a per-repo daemon refer to the original design. Grove now ships as an embedded library inside Prism, Fuse, and Relay. The `grove` CLI and stdio MCP entry point (`grove mcp`) remain for standalone use.
+
 **Last Updated:** May 31, 2026
 **Status:** Grove, Prism, Fuse shipped. Relay Phase 1 (intake) + Phase 2A laptop MVP (MVP-L1 through L8) shipped, including agent wiring (`relay init`) and intent MCP tools. Phase 2A team mode in progress.
 

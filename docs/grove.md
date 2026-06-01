@@ -244,7 +244,7 @@ A real Grove graph for an authentication module — 8 nodes, 9 typed edges. Drag
 | Parse | Tree-sitter AST walkers for 11 languages + regex fallback for syntax-error recovery |
 | Store | SQLite WAL + FTS5 full-text search, delta indexing by git blob SHA |
 | Query | BFS graph traversal across 8 edge types, FTS5 keyword search, Model2Vec semantic similarity |
-| Serve | CLI · HTTP API (`:7777`) · gRPC (`:7778`) · MCP stdio for AI agents |
+| Serve | Embedded Go library (`grove/pkg/grove`) · CLI for one-shot queries · MCP stdio (`grove mcp`) for AI agents |
 | Scale | 10K-file monorepo in 34 seconds cold; delta re-index on a one-file change in milliseconds |
 
 ---
@@ -332,8 +332,7 @@ grove symbols "AuthService"
 # Get blast radius for a symbol
 grove impact "validatePassword"
 
-# Start the HTTP server (used by Prism, Fuse, Relay)
-grove serve --port 7777
+# Prism, Fuse, and Relay open Grove as an embedded library — no daemon to start.
 ```
 
 [Full installation guide →]({{ '/installation/' | relative_url }})
@@ -342,7 +341,9 @@ grove serve --port 7777
 
 ## Security
 
-Grove binds to `127.0.0.1` only — no LAN exposure. A 64-char random bearer token at `.grove/.token` (mode 0600, generated on first start) is required on every non-health request. Prism, Fuse, and Relay read this token automatically.
+Grove runs as an embedded library inside Prism, Fuse, and Relay — there is no
+TCP listener, no port, and no bearer token. Index data lives at `.grove/grove.db`
+locally; nothing leaves your machine.
 
 Zero telemetry. Your code never leaves your machine.
 

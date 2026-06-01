@@ -1,5 +1,7 @@
 # Grove Suite — Architecture
 
+> **Embedded mode:** Grove is now linked into Prism, Fuse, and Relay as a Go library (`grove/pkg/grove`). The HTTP/gRPC daemon and bearer-token model described below were the v1 design; the current implementation opens the on-disk index in-process. Sections that mention `:7777`, `:7778`, `GROVE_URL`, or `.grove/.token` are historical.
+
 ## Dependency Map
 
 Grove is the only product with its own storage. All others are clients.

@@ -55,8 +55,7 @@ rm -rf "$REPO_DIR/.grove" "$REPO_DIR/.git/fuse"
 rm -f "$REPO_DIR/.mcp.json" "$REPO_DIR/.claude/mcp.json" "$REPO_DIR/.cursor/mcp.json" "$REPO_DIR/.vscode/mcp.json" "$REPO_DIR/.kiro/settings/mcp.json"
 note "removed project-local suite state"
 
-# Stop lingering processes.
-pkill -f "grove serve" 2>/dev/null || true
+# Stop lingering processes (embedded mode: no grove daemon).
 pkill -f "prism" 2>/dev/null || true
 pkill -f "relay mcp serve" 2>/dev/null || true
 

@@ -6,14 +6,14 @@ layout: null
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Grove Suite — Certified delivery for AI coding agents</title>
-  <meta name="description" content="The infrastructure layer beneath AI coding agents. Pre-commit gates, Ed25519-signed certificates, full audit replay. The layer nobody else built.">
+  <title>Relay — Certified delivery for AI coding agents</title>
+  <meta name="description" content="Every AI-generated commit signed, tested, and traceable to the prompt that created it. Pre-commit gates, Ed25519-signed certificates, full audit replay. Local-first. Open source.">
   <link rel="canonical" href="{{ '/' | absolute_url }}">
   <link rel="icon" type="image/svg+xml" href="{{ '/assets/images/logo-icon.svg' | relative_url }}">
   <link rel="apple-touch-icon" href="{{ '/assets/images/og-image.png' | relative_url }}">
-  <meta property="og:site_name"    content="Grove Suite">
-  <meta property="og:title"        content="Grove Suite — Certified delivery for AI coding agents">
-  <meta property="og:description"  content="The layer nobody else built — pre-commit gates, Ed25519-signed certificates, full audit replay.">
+  <meta property="og:site_name"    content="Relay">
+  <meta property="og:title"        content="Relay — Certified delivery for AI coding agents">
+  <meta property="og:description"  content="Every AI-generated commit signed, tested, and traceable to the prompt that created it. Built on Grove + Prism + Fuse (MIT). Local-first.">
   <meta property="og:url"          content="{{ '/' | absolute_url }}">
   <meta property="og:type"         content="website">
   <meta property="og:image"        content="{{ '/assets/images/og-image.png' | absolute_url }}">
@@ -333,7 +333,7 @@ layout: null
           <circle cx="6"  cy="40" r="3" fill="#22c55e"/>
           <circle cx="24" cy="40" r="3" fill="#22c55e"/>
         </svg>
-        Grove Suite
+        Relay
       </div>
 
       <h1 class="hero-title">
@@ -344,9 +344,12 @@ layout: null
       <div class="hero-divider"></div>
 
       <p class="hero-sub">
-        The layer nobody else built — pre-commit gates,
-        Ed25519-signed certificates, full audit replay.
-        Every agent commit is verified, attributed, and reproducible.
+        Every AI-generated commit signed, tested, and traceable to the prompt that created it.
+        Pre-commit gates, Ed25519-signed certificates, full audit replay.
+        Built on <a href="{{ '/grove/' | relative_url }}" style="color:var(--accent);text-decoration:none">Grove</a>,
+        <a href="{{ '/prism/' | relative_url }}" style="color:var(--accent);text-decoration:none">Prism</a>, and
+        <a href="{{ '/fuse/' | relative_url }}" style="color:var(--accent);text-decoration:none">Fuse</a> — embedded.
+        One binary. No services to run.
       </p>
 
       <div class="hero-chips">
@@ -472,8 +475,8 @@ layout: null
 <!-- ── PRODUCTS ──────────────────────────────────────────────────── -->
 <section class="section">
   <div class="section-inner">
-    <div class="section-label">The suite</div>
-    <h2 class="section-title">Four products. One foundation.</h2>
+    <div class="section-label">The product &amp; its open-source foundation</div>
+    <h2 class="section-title">Relay is the product.<br><span class="green">Grove, Prism, and Fuse are open source you can adopt independently.</span></h2>
     <div class="products-grid">
 
       <a class="product-card product-card-relay" href="{{ '/relay/' | relative_url }}">
@@ -493,12 +496,12 @@ layout: null
       <a class="product-card" href="{{ '/grove/' | relative_url }}">
         <span class="ptag ptag-other">grove · MIT</span>
         <h3>Grove</h3>
-        <p>Persistent knowledge graph. The foundation for everything.</p>
+        <p>Code knowledge graph. Embedded in Relay; adopt standalone too.</p>
         <ul class="pbullets">
           <li>11 languages, 8 edge types</li>
           <li>SQLite WAL + FTS5</li>
           <li>Delta SHA indexing</li>
-          <li>MCP + HTTP + gRPC</li>
+          <li>Go library — no daemon</li>
         </ul>
         <span class="plink">Learn more →</span>
       </a>
@@ -555,10 +558,8 @@ layout: null
     </div>
 
     <div id="tab-relay" class="tab-panel">
-<pre class="code-block"><span class="c"># Grove is required first (Relay depends on it)</span>
-<span class="kw">git clone</span> <span class="ag">https://github.com/tabladrum/grove-suite</span> <span class="kw">&amp;&amp; cd</span> grove-suite
-<span class="kw">cd</span> grove <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..
-<span class="kw">cd</span> relay <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..
+<pre class="code-block"><span class="c"># Relay bundles Grove as a library — one binary, no services, no ports, no tokens.</span>
+<span class="kw">curl -fsSL</span> <span class="ag">https://tabladrum.github.io/grove-suite/assets/install.sh</span> <span class="kw">| GROVE_SUITE_PRODUCTS=relay bash</span>
 
 <span class="kw">cd</span> <span class="ag">/your/project</span>
 <span class="kw">relay init</span> <span class="ag">--stack=auto</span>   <span class="c"># scaffolds policy, generates Ed25519 key,</span>
@@ -568,16 +569,13 @@ layout: null
     </div>
 
     <div id="tab-all" class="tab-panel">
-<pre class="code-block"><span class="kw">git clone</span> <span class="ag">https://github.com/tabladrum/grove-suite</span> <span class="kw">&amp;&amp; cd</span> grove-suite
-<span class="kw">cd</span> grove <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..   <span class="c"># foundation — required first</span>
-<span class="kw">cd</span> relay <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..   <span class="c"># certified delivery</span>
-<span class="kw">cd</span> prism <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..   <span class="c"># better context</span>
-<span class="kw">cd</span> fuse  <span class="kw">&amp;&amp; make install &amp;&amp; cd</span> ..   <span class="c"># symbol-level merge</span>
+<pre class="code-block"><span class="c"># Each product is a standalone binary — install whichever you want.</span>
+<span class="kw">curl -fsSL</span> <span class="ag">https://tabladrum.github.io/grove-suite/assets/install.sh</span> <span class="kw">| bash</span>
 
 <span class="kw">cd</span> <span class="ag">/your/project</span>
-<span class="kw">relay init</span> <span class="ag">--stack=auto</span> <span class="kw">&amp;&amp; relay hook install</span>
-<span class="kw">prism init &amp;&amp; prism index</span>
-<span class="kw">fuse install</span>
+<span class="kw">relay init</span> <span class="ag">--stack=auto</span> <span class="kw">&amp;&amp; relay hook install</span>   <span class="c"># certified delivery</span>
+<span class="kw">prism init &amp;&amp; prism index</span>                       <span class="c"># token-efficient context</span>
+<span class="kw">fuse install</span>                                     <span class="c"># symbol-level merge</span>
 <span class="kw">echo</span> <span class="ag">"*.go merge=fuse"</span> >> .gitattributes</pre>
     </div>
   </div>

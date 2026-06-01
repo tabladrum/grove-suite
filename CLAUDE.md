@@ -2,16 +2,24 @@
 
 Guidance for Claude Code when working in this repository.
 
-## Suite Overview
+## Product Overview
 
-| Product | CLI | Role | Port | License |
-|---------|-----|------|------|---------|
-| **Grove** | `grove` | Persistent code knowledge graph — Tree-sitter parsing, SQLite storage, BFS traversal, MCP server | 7777 (HTTP), 7778 (gRPC) | MIT |
-| **Prism** | `prism` | Token-optimized context delivery for AI agents — ranking, compression, session deduplication | 8888 | MIT |
-| **Fuse** | `fuse` | Semantic Git merge driver — symbol-level three-way merge, breaking change detection | 9999 (HTTP) | MIT |
-| **Relay** | `relay` | Certified delivery platform for autonomous coding agents — graph-aware certification, semantic merge, linear admission | 9000 (gRPC) | AGPL-3.0 |
+| Component | CLI | Role | License |
+|---|---|---|---|
+| **Relay** | `relay` | **The product.** Certified delivery for AI coding agents — intent capture, pre-commit gates, Ed25519 admission certificates, audit replay. | AGPL-3.0 |
+| **Grove** | `grove` | Code knowledge graph — Tree-sitter parsing, SQLite storage, BFS traversal. **Embedded as a Go library** into Relay, Prism, and Fuse. Usable standalone via the `grove` CLI. | MIT |
+| **Prism** | `prism` | Token-optimized context delivery for AI agents — ranking, compression, session deduplication. Standalone OSS; embeds Grove. | MIT |
+| **Fuse** | `fuse` | Semantic Git merge driver — symbol-level three-way merge, breaking change detection. Standalone OSS; embeds Grove. | MIT |
 
-**Dependency order:** Grove has no suite dependencies. Prism, Fuse, and Relay each require a running Grove instance and auto-start it on startup if unreachable at `$GROVE_URL` (default `http://localhost:7777`). Build Grove first.
+## Architecture Decision — Embedded Grove (no daemon)
+
+**Grove is a Go library, not a service.** Prism, Fuse, and Relay link against `grove/pkg/grove` and call it in-process. There is no `grove serve`, no HTTP port, no shared-secret token, no `$GROVE_URL`. Each consumer opens `.grove/grove.db` directly via SQLite (WAL mode handles concurrent readers).
+
+Why: per-project Grove daemons created port collisions, per-repo token mismatches, and an opaque multi-process failure mode. The library model gives zero-config UX, hermetic per-product installs, and a single canonical place for the knowledge graph per repo.
+
+The `grove` CLI still ships for direct human use (`grove index`, `grove impact`, `grove tests`) and for the standalone `grove mcp` stdio server. The HTTP/gRPC servers are removed.
+
+**Dependency order:** Build Grove first — it produces the Go library that Prism, Fuse, and Relay link against (and the standalone `grove` binary).
 
 ## Build Commands
 
@@ -21,7 +29,7 @@ Each product is a Go 1.26 module with a consistent Makefile. From within any pro
 make build      # compile binary
 make test       # run all tests
 make lint       # lint
-make proto      # regenerate gRPC stubs (grove/ and relay/ only)
+make proto      # regenerate gRPC stubs (relay/ only)
 
 # Run a single test
 go test ./internal/parser/... -run TestGoExtractor
@@ -39,11 +47,12 @@ vsce package   # build .vsix
 
 ## Architecture
 
-### Grove — Core Graph Engine
+### Grove — Core Graph Engine (Go library)
 
-Grove is the only product with its own storage and parser. All others delegate graph operations to it.
+Grove is the only component with its own storage and parser. All others import its public API package `grove/pkg/grove`.
 
-**Internal packages:**
+**Packages:**
+- `pkg/grove/` — public API: `Engine` with methods `Index`, `Query`, `Impact`, `Deps`, `Symbols`, `Tests`, `Semantic`, `Status`. Stable surface that Prism/Fuse/Relay depend on.
 - `internal/parser/` — Tree-sitter engine; language-specific extractors in `strategies/`; all CGO usage is isolated here
 - `internal/store/` — SQLite (WAL + FTS5); delta indexing skips files whose git blob SHA is unchanged
 - `internal/graph/` — In-memory `CodeGraph` with 8 edge types (defines, contains, imports, extends, implements, calls, uses-type, tests); BFS traversal
@@ -60,13 +69,13 @@ Grove is the only product with its own storage and parser. All others delegate g
 
 ### Prism — Context Delivery Layer
 
-Pure client of Grove. Owns: 5-signal composite ranking (graph distance + semantic similarity + recency + test relevance + edit frequency), budget allocation across 5 categories (target 35%, deps 25%, tests 20%, doc 10%, summary 10%), progressive disclosure (full → signature → reference), O(1) LRU session deduplication.
+Imports `grove/pkg/grove` and calls it in-process. Owns: 5-signal composite ranking (graph distance + semantic similarity + recency + test relevance + edit frequency), budget allocation across 5 categories (target 35%, deps 25%, tests 20%, doc 10%, summary 10%), progressive disclosure (full → signature → reference), O(1) LRU session deduplication.
 
 Two integration paths: MCP mode (`prism serve`) and VS Code Extension (registers all 8 tools via `vscode.lm.registerTool`, no `prism serve` needed).
 
 ### Fuse — Merge Driver
 
-Operates at symbol granularity using its own Tree-sitter parsing of in-memory content (three versions of a file during a merge). Uses Grove for cross-file blast radius and breaking change detection (`grove_impact`, `grove_deps`, `grove_symbols`).
+Operates at symbol granularity using its own Tree-sitter parsing of in-memory content (three versions of a file during a merge). Imports `grove/pkg/grove` for cross-file blast radius and breaking change detection (`Engine.Impact`, `Engine.Deps`, `Engine.Symbols`).
 
 **7-phase IntelliMerge pipeline:** Context building (Grove) → Symbol extraction → Recency analysis → Project graph context → Breaking change detection → Conflict classification → Strategy selection.
 
@@ -74,30 +83,40 @@ Git driver contract: `fuse merge %O %A %B %P`, exit 0 (clean) or exit 1 (conflic
 
 ### Relay — Delivery Platform
 
+Imports `grove/pkg/grove` for impact analysis and test selection during certification.
+
 **External tools** (semgrep, gitleaks, govulncheck, eslint, ruff, sonarlint-ls, JRE) are downloaded on first use by `relay tools install`, not bundled. Pinned download URLs are in `internal/tools/registry.go`.
 
 **Three git repos:** `source-repo` (application code, linear main), `intent-store` (YAML intents, audit trail), `platform-config` (policies).
 
 **Redis is transient only** — `appendonly no`. All business state in git.
 
-## Inter-Product API Contracts
+## Inter-Component API — Go library (`grove/pkg/grove`)
 
-### Grove HTTP API
+Prism, Fuse, and Relay all consume Grove via the in-process Go API. No HTTP, no gRPC, no auth, no ports.
 
-| Endpoint | Method | Consumer |
-|----------|--------|----------|
-| `/health` | GET | Prism, Fuse, Relay (startup check) |
-| `/index` | POST `{"dir": string}` | All |
-| `/query` | POST `{"intent": string, "limit": int}` | Prism |
-| `/impact` | POST `{"file": string, "line": int}` | Fuse, Relay |
-| `/deps` | POST `{"file": string}` | Fuse, Prism, Relay |
-| `/symbols` | POST `{"query": string}` | Prism, Fuse |
-| `/status` | GET | Prism, Relay |
+```go
+import "github.com/tabladrum/grove-suite/grove/pkg/grove"
 
-### Startup contract (Prism, Fuse, Relay — identical)
-1. Check `$GROVE_URL/health` (default `http://localhost:7777`)
-2. If unreachable: `exec grove serve --port 7777`
-3. Wait ≤ 10 s; if still unreachable → fatal exit
+eng, err := grove.Open(ctx, grove.Config{RepoRoot: "/path/to/repo"})
+defer eng.Close()
+
+res, err := eng.Query(ctx, grove.QueryRequest{Intent: "login flow", Limit: 20})
+imp, err := eng.Impact(ctx, grove.ImpactRequest{File: "auth.go", Line: 42})
+```
+
+| Method | Consumer |
+|---|---|
+| `Index(ctx, dir)` | All |
+| `Query(ctx, intent, limit)` | Prism, Relay |
+| `Impact(ctx, file, line)` | Fuse, Relay |
+| `Deps(ctx, file)` | Fuse, Prism, Relay |
+| `Symbols(ctx, query)` | Prism, Fuse |
+| `Tests(ctx, symbol)` | Relay |
+| `Semantic(ctx, query)` | Prism |
+| `Status(ctx)` | Prism, Relay |
+
+The `grove` CLI is still useful for direct human use (`grove index`, `grove impact`, etc.) and for the standalone `grove mcp` stdio server.
 
 ## Testing
 
