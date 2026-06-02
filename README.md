@@ -1,3 +1,14 @@
+> **⚠️ This repository has moved.**
+> 
+> `tabladrum/grove-suite` is now **[`provasign`](https://github.com/provasign)**:
+> - 🚀 **[provasign/provasign](https://github.com/provasign/provasign)** — the product (was `relay/`)
+> - **[provasign/grove](https://github.com/provasign/grove)** — code knowledge graph (MIT)
+> - **[provasign/prism](https://github.com/provasign/prism)** — context delivery (MIT)  
+> - **[provasign/fuse](https://github.com/provasign/fuse)** — semantic merge driver (MIT)
+> - **[provasign/astkit](https://github.com/provasign/astkit)** — AST utilities (MIT)
+> 
+> Please update your bookmarks, Go imports, and clone URLs.
+
 # Provasign
 
 **Certified delivery for AI coding agents.** Every AI-generated commit signed, tested, and traceable to the prompt that created it.
