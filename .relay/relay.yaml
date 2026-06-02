@@ -1,9 +1,8 @@
-relay_version: "0.1"
+provasign_version: "0.1"
 stack: go-microservice
 
 # Go microservice defaults: full Stage-1 (build + go test -cover) plus all
 # Stage-2 gates. Coverage minimum defaults to 80%; raise further as habits
-# mature. Use `// relay:no-test-required` on irreducible diffs.
 policies:
   path:
     enabled: true
