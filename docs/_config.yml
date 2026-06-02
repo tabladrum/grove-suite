@@ -4,8 +4,8 @@ theme: just-the-docs
 
 logo: "assets/images/logo.svg"
 
-url: https://tabladrum.github.io
-baseurl: /grove-suite
+url: https://provasign.dev
+baseurl: ""
 
 permalink: pretty
 
