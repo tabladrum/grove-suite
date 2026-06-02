@@ -53,7 +53,7 @@ func resolveCommitRef(repoRoot, ref string) (string, bool) {
 // schema.org vocabulary that doesn't quite fit.
 func toJSONLD(c *core.Certificate) map[string]any {
 	out := map[string]any{
-		"@context":              "https://relay.dev/cert/v1",
+		"@context":              "https://provora.dev/cert/v1",
 		"@type":                 "CodeCertificate",
 		"id":                    c.ID,
 		"changeset_id":          c.ChangeSetID,

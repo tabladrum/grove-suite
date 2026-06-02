@@ -1,0 +1,14 @@
+# Auto-Intent Capture artifact. The user's prompt that produced this code.
+# See docs/design.md §17. Do not hand-edit unless you know what you're doing.
+schema: relay.intent/v2
+id: INT-2026-06-02-fix-cert-json-ld-context-relaydev-metas-domain-provoradev
+status: committed
+title: 'Fix cert JSON-LD @context: relay.dev (Meta''s domain) → provora.dev'
+description: The Relay certificate JSON-LD @context is https://relay.dev/cert/v1, but relay.dev is Meta's GraphQL Relay domain, not ours. Change it to https://provora.dev/cert/v1 (the chosen org brand namespace) in cert_l6.go and update the two test assertions in cert_l6_test.go.
+originated_from:
+    agent: claude-code
+    model: claude-opus-4-8
+    prompt_hash: 6e01c147732fc5773f9293e9ed382b006a046ed4b1319e240b817a644b6bb902
+created_at: 2026-06-02T00:24:38.195307Z
+committed_at: 2026-06-02T00:26:35.108658Z
+committed_by_agent: claude-code

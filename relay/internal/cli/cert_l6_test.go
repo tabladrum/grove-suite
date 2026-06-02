@@ -24,7 +24,7 @@ func TestToJSONLD_IncludesContextAndType(t *testing.T) {
 		Payload:             map[string]any{"risk_model_version": "v1"},
 	}
 	doc := toJSONLD(c)
-	if doc["@context"] != "https://relay.dev/cert/v1" {
+	if doc["@context"] != "https://provora.dev/cert/v1" {
 		t.Fatalf("@context: %v", doc["@context"])
 	}
 	if doc["@type"] != "CodeCertificate" {
@@ -103,7 +103,7 @@ func TestE2E_CertShowJSONLD(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &doc); err != nil {
 		t.Fatalf("output is not valid JSON: %v\n%s", err, out)
 	}
-	if doc["@context"] != "https://relay.dev/cert/v1" {
+	if doc["@context"] != "https://provora.dev/cert/v1" {
 		t.Fatalf("missing @context in JSON-LD output: %s", out)
 	}
 	if _, ok := doc["payload"]; !ok {
