@@ -3,13 +3,13 @@ title: Use Cases
 layout: default
 nav_order: 6
 has_children: true
-description: "What Relay is for: security, audit, change management, and end-to-end traceability of AI-generated code."
+description: "What Provasign is for: security, audit, change management, and end-to-end traceability of AI-generated code."
 permalink: /use-cases/
 ---
 
 # Use Cases
 
-Relay produces one artifact that serves four jobs at once: a signed, replayable record of what an AI agent was asked to do, what gates verified the output, and what was admitted.
+Provasign produces one artifact that serves four jobs at once: a signed, replayable record of what an AI agent was asked to do, what gates verified the output, and what was admitted.
 
 - **[Security]({{ '/use-cases/security/' | relative_url }})** — local-first, minimal attack surface, signed provenance without a managed cloud.
 - **[Audit]({{ '/use-cases/audit/' | relative_url }})** — reconstruct the evidence for any change months later: prompt, proof, replay.

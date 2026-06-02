@@ -2,7 +2,7 @@
 
 ## Symptoms
 
-After installing Grove Suite, the prism and relay MCP servers would not connect
+After installing Provasign, the prism and provasign MCP servers would not connect
 in Claude Code. `claude mcp list` showed either:
 - `✗ Failed to connect`
 - `⏸ Pending approval (run 'claude' to approve)`
@@ -39,14 +39,14 @@ in a new `claude` session. This is an invisible reset — no warning is shown.
 present and correct. Add an idempotency check: skip writing `.mcp.json` if the
 existing prism entry already points to the correct binary and args.
 
-### 3. `relay init` writes `.mcp.json` with `"env": {}` 
+### 3. `provasign init` writes `.mcp.json` with `"env": {}` 
 
-**Where:** `relay/internal/cli/mcp_install_commands.go` (or equivalent)  
-**Effect:** The relay entry in `.mcp.json` includes `"env": {}`. While harmless,
+**Where:** `provasign/internal/cli/mcp_install_commands.go` (or equivalent)  
+**Effect:** The provasign entry in `.mcp.json` includes `"env": {}`. While harmless,
 it differs from prism's format (no `env` key) and causes unnecessary diffs on
-repeated `relay init` runs, again triggering approval resets.
+repeated `provasign init` runs, again triggering approval resets.
 
-**Fix:** Omit `"env"` from relay's `.mcp.json` entry when it is empty.
+**Fix:** Omit `"env"` from provasign's `.mcp.json` entry when it is empty.
 
 ### 4. No post-install MCP connectivity verification
 
@@ -54,14 +54,14 @@ repeated `relay init` runs, again triggering approval resets.
 **Effect:** The smoke test runs `grove version`, `prism version`, etc. — it does
 not verify that MCP servers actually connect. Installation is declared complete
 while the MCP layer is broken, with no user-visible failure until the agent
-tries to use a Prism/Relay tool.
+tries to use a Prism/Provasign tool.
 
 **Fix:** Add a `claude mcp list` check to Step 9 with explicit pass/fail
 criteria, and add a "Pending approval" troubleshooting entry to the help table.
 
-### 5. `relay/bin/relay` binary committed in modified state
+### 5. `provasign/bin/provasign` binary committed in modified state
 
-**Where:** git tracked file `relay/bin/relay`  
+**Where:** git tracked file `provasign/bin/provasign`  
 **Effect:** The binary committed to the repo diverged from the released v0.2.3
 binary (different size: 21 MB repo vs 14 MB release). This could cause
 confusion during source builds and git operations.
@@ -74,10 +74,10 @@ should be in `.gitignore`, not committed.
 ### Session 1 (2026-06-01)
 
 1. Confirmed all four binaries exist in `~/bin/` at v0.2.3.
-2. Confirmed `~/bin` registered in `/etc/paths.d/grove-suite` but not in the
+2. Confirmed `~/bin` registered in `/etc/paths.d/provasign` but not in the
    current shell's `$PATH` (expected — only applies to new login sessions).
 3. Manually verified MCP protocol handshake (initialize → initialized →
-   tools/list) works for both prism and relay — the binaries are correct.
+   tools/list) works for both prism and provasign — the binaries are correct.
 4. Confirmed grove at `localhost:7777` is running and authenticated (token at
    `.grove/.token`).
 5. Found that editing `.mcp.json` (even to restore it) resets Claude Code's
@@ -87,15 +87,15 @@ should be in `.gitignore`, not committed.
 8. Wrote all source-code fixes for root causes 1–3 into the working tree
    (`prism/internal/cli/commands.go`, `prism/internal/grove/client.go`,
    `fuse/internal/cli/commands.go`, `fuse/internal/grove/client.go`,
-   `relay/internal/cli/mcp_install_commands.go`,
-   `relay/internal/cli/init_agent_wiring.go`).
+   `provasign/internal/cli/mcp_install_commands.go`,
+   `provasign/internal/cli/init_agent_wiring.go`).
 9. **Did NOT rebuild the binaries.** Session ended without running
    `go build` — the fixes existed only in source, not in `~/bin/`.
 
 ### Session 2 (2026-06-01)
 
 **Root cause of continued failure:** All source fixes from Session 1 were
-present and correct in the working tree, but `~/bin/prism`, `~/bin/relay`, and
+present and correct in the working tree, but `~/bin/prism`, `~/bin/provasign`, and
 `~/bin/fuse` were never rebuilt. The running binaries were still the pre-fix
 versions. MCP servers continued to fail for the same underlying reasons despite
 the code being fixed.
@@ -105,10 +105,10 @@ the code being fixed.
 ```bash
 cd prism  && /usr/local/go/bin/go build -o ~/bin/prism  ./cmd/prism
 cd fuse   && /usr/local/go/bin/go build -o ~/bin/fuse   ./cmd/fuse
-cd relay  && /usr/local/go/bin/go build -o ~/bin/relay  ./cmd/relay
+cd provasign  && /usr/local/go/bin/go build -o ~/bin/provasign  ./cmd/provasign
 ```
 
-Verified both `prism` and `relay` respond correctly to the MCP `initialize`
+Verified both `prism` and `provasign` respond correctly to the MCP `initialize`
 handshake after rebuild.
 
 **Note:** `make install` fails in this environment because `/usr/local/go/bin`
@@ -119,7 +119,7 @@ path `/usr/local/go/bin/go` for Go builds in this session.
 
 The five "root causes" in Sessions 1–2 were all real-but-secondary cleanups.
 **None of them was why MCP connection failed.** The Claude Code MCP logs
-(`~/Library/Caches/claude-cli-nodejs/<project>/mcp-logs-{prism,relay}/*.jsonl`)
+(`~/Library/Caches/claude-cli-nodejs/<project>/mcp-logs-{prism,provasign}/*.jsonl`)
 showed the true error:
 
 ```
@@ -129,7 +129,7 @@ Connection failed: MCP server "prism" connection timed out after 30000ms
 A 30s timeout = Claude sent `initialize` and never received a parseable reply.
 
 **THE BUG: wrong stdio wire framing.** All three stdio MCP servers (grove,
-prism, relay) wrote responses with LSP-style `Content-Length: N\r\n\r\n{json}`
+prism, provasign) wrote responses with LSP-style `Content-Length: N\r\n\r\n{json}`
 framing (copied from grove's server.go). But the **MCP stdio transport requires
 newline-delimited JSON** — one compact JSON object per line, no headers. Every
 newline-delimited MCP client (Claude Code, Cursor, VS Code, Copilot) reads the
@@ -151,12 +151,12 @@ client's requested version when supported (2024-11-05 / 2025-03-26 / 2025-06-18)
 else falls back to 2025-03-26. Previously each server hardcoded a version, a
 spec violation that stricter non-Claude clients may reject.
 
-Verified: `claude mcp list` shows both prism and relay **✓ Connected**; full
+Verified: `claude mcp list` shows both prism and provasign **✓ Connected**; full
 `initialize → notifications/initialized → tools/list` handshake succeeds for
 both with a newline-delimited client.
 
 **Files changed:** `grove/internal/mcp/server.go`,
-`prism/internal/mcp/server.go`, `relay/internal/api/mcp/server.go` (+ their
+`prism/internal/mcp/server.go`, `provasign/internal/api/mcp/server.go` (+ their
 `*_test.go` which had been asserting the buggy Content-Length framing).
 
 ## Required User Action After Fixes
@@ -166,14 +166,14 @@ After a fresh install from source:
    — `go` is not on PATH in the Claude Code shell environment).
 2. Start a new Claude Code session from the project root.
 3. When prompted "Allow MCP servers from .mcp.json?", click **Allow**.
-4. Verify with `claude mcp list` — both prism and relay should show as connected.
+4. Verify with `claude mcp list` — both prism and provasign should show as connected.
 
 ## Checklist: Fix is complete only when ALL of these are done
 
 - [ ] Source changes written (commands.go, client.go, mcp_install_commands.go, etc.)
 - [ ] `~/bin/prism` rebuilt from source
 - [ ] `~/bin/fuse` rebuilt from source
-- [ ] `~/bin/relay` rebuilt from source
+- [ ] `~/bin/provasign` rebuilt from source
 - [ ] New Claude Code session started
 - [ ] MCP servers approved (or already in `enabledMcpjsonServers`)
-- [ ] `claude mcp list` shows both prism and relay as connected
+- [ ] `claude mcp list` shows both prism and provasign as connected

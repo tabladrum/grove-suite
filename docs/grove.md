@@ -7,12 +7,12 @@ description: "Grove documentation has moved to the repository README."
 permalink: /grove/
 ---
 
-<meta http-equiv="refresh" content="0; url=https://github.com/tabladrum/grove-suite/tree/main/grove#readme">
+<meta http-equiv="refresh" content="0; url=https://github.com/provasign/provasign/tree/main/grove#readme">
 
 # Grove
 
-Grove is the embedded code knowledge graph behind [Relay]({{ '/relay/' | relative_url }}). Its documentation now lives in the repository:
+Grove is the embedded code knowledge graph behind [Provasign]({{ '/provasign/' | relative_url }}). Its documentation now lives in the repository:
 
-[Grove README on GitHub →](https://github.com/tabladrum/grove-suite/tree/main/grove#readme){: .btn .btn-primary }
+[Grove README on GitHub →](https://github.com/provasign/provasign/tree/main/grove#readme){: .btn .btn-primary }
 
 If you are not redirected automatically, follow the link above.

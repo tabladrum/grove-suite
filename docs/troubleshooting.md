@@ -2,7 +2,7 @@
 title: Troubleshooting
 layout: default
 nav_order: 12
-description: "Common issues with Relay — how to diagnose and fix them."
+description: "Common issues with Provasign — how to diagnose and fix them."
 permalink: /troubleshooting/
 ---
 
@@ -10,7 +10,7 @@ permalink: /troubleshooting/
 
 Common issues, how to diagnose, how to fix.
 
-If your issue isn't here, the next stop is [GitHub Issues](https://github.com/tabladrum/grove-suite/issues).
+If your issue isn't here, the next stop is [GitHub Issues](https://github.com/provasign/provasign/issues).
 
 ---
 
@@ -18,7 +18,7 @@ If your issue isn't here, the next stop is [GitHub Issues](https://github.com/ta
 
 ### Embedded mode — no daemon, no ports
 
-Grove is linked directly into Prism, Fuse, and Relay. It does not open TCP
+Grove is linked directly into Prism, Fuse, and Provasign. It does not open TCP
 ports, does not write `.grove/.token`, and does not need `grove serve`. If you
 see old documentation or scripts referencing those, they're pre-embedded and
 should be ignored.
@@ -188,48 +188,48 @@ Per-file merge target is < 1 second. If you're seeing seconds:
 
 ---
 
-## Relay
+## Provasign
 
-### `relay init` didn't detect my coding tool
+### `provasign init` didn't detect my coding tool
 
 Detection looks at standard config locations. If your tool is installed unusually:
 
 ```bash
-relay mcp install-for claude-code    # writes ~/.claude.json (global user config)
-relay mcp install-for cursor         # writes .cursor/mcp.json
-relay mcp install-for windsurf       # writes .windsurf/mcp.json
-relay mcp install-for continue       # writes .continue/config.json
+provasign mcp install-for claude-code    # writes ~/.claude.json (global user config)
+provasign mcp install-for cursor         # writes .cursor/mcp.json
+provasign mcp install-for windsurf       # writes .windsurf/mcp.json
+provasign mcp install-for continue       # writes .continue/config.json
 ```
 
 ### Stage 1 fails — build or tests aren't passing
 
 ```bash
-relay certify --verbose
+provasign certify --verbose
 ```
 
-The output shows the exact failing test or build error. Reproduce outside Relay:
+The output shows the exact failing test or build error. Reproduce outside Provasign:
 
 ```bash
 # For Go projects
-cd .relay/.cache/worktree && go test ./...
+cd .provasign/.cache/worktree && go test ./...
 
 # For Node
-cd .relay/.cache/worktree && npm test
+cd .provasign/.cache/worktree && npm test
 
 # For Python
-cd .relay/.cache/worktree && pytest
+cd .provasign/.cache/worktree && pytest
 ```
 
-If it passes outside Relay but fails inside, the issue is likely:
-- Worktree state — Relay uses a clean git worktree, so uncommitted changes aren't included
-- Toolchain — Relay uses whatever's on the PATH at `.relay/relay.yaml` evaluation time
+If it passes outside Provasign but fails inside, the issue is likely:
+- Worktree state — Provasign uses a clean git worktree, so uncommitted changes aren't included
+- Toolchain — Provasign uses whatever's on the PATH at `.provasign/provasign.yaml` evaluation time
 
 ### Stage 2 finds something I want to suppress
 
-Use a per-rule suppression in `.relay/policies/`:
+Use a per-rule suppression in `.provasign/policies/`:
 
 ```yaml
-# .relay/policies/sast.yaml
+# .provasign/policies/sast.yaml
 suppressions:
   - rule: G101
     file: internal/legacy/credentials.go
@@ -244,12 +244,12 @@ Suppressions are audited — every suppression is logged with the policy version
 git push --no-verify
 ```
 
-This is audited in `.relay/.cache/audit.log`. Used occasionally for emergency hotfixes, this is fine. Used constantly, it means your gates are too strict — adjust `.relay/relay.yaml`.
+This is audited in `.provasign/.cache/audit.log`. Used occasionally for emergency hotfixes, this is fine. Used constantly, it means your gates are too strict — adjust `.provasign/provasign.yaml`.
 
 ### Certificate verification fails
 
 ```
-relay cert verify abc123
+provasign cert verify abc123
 # verification failed: signature mismatch
 ```
 
@@ -260,35 +260,35 @@ Possible causes:
 
 To inspect the certificate manually:
 ```bash
-relay cert show --raw abc123
+provasign cert show --raw abc123
 ```
 
-### `relay cert replay` returns `tool_drift`
+### `provasign cert replay` returns `tool_drift`
 
 This means the gates would still pass, but with different tool versions than at the time of admission. The cert isn't *invalid* — it's not byte-reproducible because tools have moved.
 
 To get back to byte-reproducible:
 ```bash
-# Pin tool versions in .relay/relay.yaml
+# Pin tool versions in .provasign/provasign.yaml
 tools:
   semgrep: 1.42.0
   gitleaks: 8.18.2
   govulncheck: 1.1.0
 ```
 
-Re-running `relay certify` with pinned tools produces byte-reproducible certs from this point forward.
+Re-running `provasign certify` with pinned tools produces byte-reproducible certs from this point forward.
 
-### Relay can't reach Grove
+### Provasign can't reach Grove
 
-In the embedded model Relay links Grove directly — there is nothing to reach.
+In the embedded model Provasign links Grove directly — there is nothing to reach.
 If you see a "grove unreachable" error, you're on a pre-embedded build;
 upgrade to the latest release.
 
 ### Intent capture is creating duplicate intents
 
-`relay intent open` creates a new draft each call. If your wrapper is calling it on every iteration, you'll get duplicates. Capture the intent once at task start; reference it via `--id` in subsequent calls.
+`provasign intent open` creates a new draft each call. If your wrapper is calling it on every iteration, you'll get duplicates. Capture the intent once at task start; reference it via `--id` in subsequent calls.
 
-For agent-driven workflows, the recommended pattern is in [docs/agent-prompt.md](https://github.com/tabladrum/grove-suite/blob/main/relay/docs/agent-prompt.md).
+For agent-driven workflows, the recommended pattern is in [docs/agent-prompt.md](https://github.com/provasign/provasign/blob/main/provasign/docs/agent-prompt.md).
 
 ---
 
@@ -296,7 +296,7 @@ For agent-driven workflows, the recommended pattern is in [docs/agent-prompt.md]
 
 ### `make install` fails — Go not found
 
-Grove Suite requires Go 1.22+.
+Provasign requires Go 1.22+.
 
 ```bash
 # macOS
@@ -344,7 +344,7 @@ type -a prism
 Remove old installations and reinstall:
 ```bash
 rm $(which prism)
-cd /grove-suite/prism && make install
+cd /provasign/prism && make install
 ```
 
 ---
@@ -358,7 +358,7 @@ Each product writes structured logs.
 | Grove | stderr | `grove --verbose serve` |
 | Prism | stderr | `prism --verbose query ...` |
 | Fuse | `.git/fuse/audit.json` (decisions) + stderr | `fuse --verbose merge ...` |
-| Relay | `.relay/.cache/relay.log` | `relay --verbose certify` |
+| Provasign | `.provasign/.cache/provasign.log` | `provasign --verbose certify` |
 
 For bug reports, the relevant log + the command used + the platform (`uname -a`) usually suffices.
 
@@ -372,12 +372,12 @@ If something is fundamentally broken, the reset path:
 # Per-project reset (Grove only)
 rm -rf .grove
 
-# Per-project reset (Prism, Fuse, Relay all preserve project config)
-rm -rf .grove .git/fuse .relay/.cache
+# Per-project reset (Prism, Fuse, Provasign all preserve project config)
+rm -rf .grove .git/fuse .provasign/.cache
 
 # Per-user reset (re-init from scratch)
-rm -rf ~/.relay/keys ~/.cache/prism
-relay init --stack=<stack>   # regenerates Ed25519 key
+rm -rf ~/.provasign/keys ~/.cache/prism
+provasign init --stack=<stack>   # regenerates Ed25519 key
 ```
 
-**Never** run `rm -rf .relay/` — that destroys your committed configuration.
+**Never** run `rm -rf .provasign/` — that destroys your committed configuration.

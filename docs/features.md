@@ -2,7 +2,7 @@
 title: Features
 layout: default
 nav_order: 5
-description: "Relay's capabilities: in-loop pre-flight, full certification, Ed25519-signed admission, policy gates, risk heatmap, intent trail, and agent wiring."
+description: "Provasign's capabilities: in-loop pre-flight, full certification, Ed25519-signed admission, policy gates, risk heatmap, intent trail, and agent wiring."
 permalink: /features/
 ---
 
@@ -18,21 +18,21 @@ permalink: /features/
 
 | # | Capability | How it works |
 |---|---|---|
-| 1 | **In-loop pre-flight** | `relay_check`: SAST + Grove-selected affected unit tests. Sub-10s. Structured findings returned to the agent. |
-| 2 | **Full certification** | `relay_certify`: Stage 1 (build + tests + coverage) + Stage 2 (secrets, SAST, deps, linters). |
+| 1 | **In-loop pre-flight** | `provasign_check`: SAST + Grove-selected affected unit tests. Sub-10s. Structured findings returned to the agent. |
+| 2 | **Full certification** | `provasign_certify`: Stage 1 (build + tests + coverage) + Stage 2 (secrets, SAST, deps, linters). |
 | 3 | **Signed admission** | Linear commit with an Ed25519 signature over the changeset + config hash + toolchain + results. |
 | 4 | **Risk heatmap** | Versioned score: ICR + Stage 2 severity + coverage delta + touch intensity. |
-| 5 | **Cryptographic audit** | `relay cert replay <id>` → `byte_reproducible` / `tool_drift` / `config_drift`. |
+| 5 | **Cryptographic audit** | `provasign cert replay <id>` → `byte_reproducible` / `tool_drift` / `config_drift`. |
 | 6 | **Intent trail** | The user's prompt committed as a YAML intent before coding starts, linked via `Intent-ID:` trailer. |
-| 7 | **Agent wiring** | `relay init` writes Pre-Flight Autopilot instructions to CLAUDE.md / .cursorrules / .github/copilot-instructions.md / AGENTS.md / GEMINI.md / .clinerules. |
-| 8 | **Batteries-included** | `relay tools install` fetches pinned analyzers on demand; SonarQube profile import included. |
+| 7 | **Agent wiring** | `provasign init` writes Pre-Flight Autopilot instructions to CLAUDE.md / .cursorrules / .github/copilot-instructions.md / AGENTS.md / GEMINI.md / .clinerules. |
+| 8 | **Batteries-included** | `provasign tools install` fetches pinned analyzers on demand; SonarQube profile import included. |
 | 9 | **Policy profiles** | `soc2-baseline`, `pci-dss-baseline`, stack-strict variants. Per-gate `warn` / `enforce` / `off`. |
 
 ---
 
 ## Policy gates
 
-Every certification runs a set of gates; each returns `allow`, `warn`, or `deny`. The defaults merge with your `.relay/relay.yaml`.
+Every certification runs a set of gates; each returns `allow`, `warn`, or `deny`. The defaults merge with your `.provasign/provasign.yaml`.
 
 | Gate | What it enforces |
 |---|---|
@@ -43,7 +43,7 @@ Every certification runs a set of gates; each returns `allow`, `warn`, or `deny`
 | `size` | Change-size limits to keep admissions reviewable |
 | `coverage` | Coverage of the *changed* symbols, measured against Grove's `tests` edges |
 
-Discover what's active in a repo with `relay policy` (or the `relay_policy` MCP tool).
+Discover what's active in a repo with `provasign policy` (or the `provasign_policy` MCP tool).
 
 ---
 
@@ -52,9 +52,9 @@ Discover what's active in a repo with `relay policy` (or the `relay_policy` MCP 
 Each certificate is an Ed25519-signed record. The signed bytes cover the changeset id, intent id, base SHA, ICR, policy results, effective config hash, policy version, toolchain, signer key id, and timestamp. The **admitted commit SHA is excluded** from the signature — the cert is valid before the commit exists, and the (commit → cert) mapping lives in the engine store.
 
 ```bash
-relay cert verify <id>          # signature check
-relay cert replay <id>          # re-run gates → byte_reproducible / tool_drift / config_drift
-relay cert show --jsonld HEAD   # JSON-LD "AI code passport" for audit systems
+provasign cert verify <id>          # signature check
+provasign cert replay <id>          # re-run gates → byte_reproducible / tool_drift / config_drift
+provasign cert show --jsonld HEAD   # JSON-LD "AI code passport" for audit systems
 ```
 
 ---
@@ -62,7 +62,7 @@ relay cert show --jsonld HEAD   # JSON-LD "AI code passport" for audit systems
 ## Built-in profiles
 
 ```bash
-relay init --profile=<name>
+provasign init --profile=<name>
 ```
 
 | Profile | What it enforces |
@@ -78,19 +78,19 @@ relay init --profile=<name>
 
 ## Works with your agent
 
-`relay init` detects installed tools and writes the right MCP config and steering instructions for each — no per-tool hand-editing.
+`provasign init` detects installed tools and writes the right MCP config and steering instructions for each — no per-tool hand-editing.
 
 | Tool | Integration |
 |---|---|
-| **Claude Code** | `relay mcp install-for claude-code` |
-| **GitHub Copilot** (VS Code) | Detected by `relay init`, MCP config auto-written |
-| **Cursor** | `relay mcp install-for cursor` |
-| **Codex CLI** | Detected by `relay init` |
-| **Windsurf** | `relay mcp install-for windsurf` |
-| **Continue** | `relay mcp install-for continue` |
+| **Claude Code** | `provasign mcp install-for claude-code` |
+| **GitHub Copilot** (VS Code) | Detected by `provasign init`, MCP config auto-written |
+| **Cursor** | `provasign mcp install-for cursor` |
+| **Codex CLI** | Detected by `provasign init` |
+| **Windsurf** | `provasign mcp install-for windsurf` |
+| **Continue** | `provasign mcp install-for continue` |
 | **Any MCP-capable tool** | MCP stdio |
 
-The agent reads the Pre-Flight Autopilot instructions on startup and calls `relay_check` automatically before opening a PR.
+The agent reads the Pre-Flight Autopilot instructions on startup and calls `provasign_check` automatically before opening a PR.
 
 ---
 
@@ -98,12 +98,12 @@ The agent reads the Pre-Flight Autopilot instructions on startup and calls `rela
 
 | Tool | When the agent uses it |
 |---|---|
-| `relay_intent_open` | First — capture the user request as an intent |
-| `relay_check` | Before every review request |
-| `relay_explain` | On any verdict that isn't `allow` |
-| `relay_certify` / `relay_submit` | Only after `relay_check` returns allowed |
-| `relay_policy` | Discover which gates are active |
-| `relay_intent_close` | When the task is complete |
+| `provasign_intent_open` | First — capture the user request as an intent |
+| `provasign_check` | Before every review request |
+| `provasign_explain` | On any verdict that isn't `allow` |
+| `provasign_certify` / `provasign_submit` | Only after `provasign_check` returns allowed |
+| `provasign_policy` | Discover which gates are active |
+| `provasign_intent_close` | When the task is complete |
 
 ---
 

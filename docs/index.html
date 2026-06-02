@@ -6,13 +6,13 @@ layout: null
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Relay — Certified delivery for AI coding agents</title>
+  <title>Provasign — Certified delivery for AI coding agents</title>
   <meta name="description" content="Every AI-generated commit signed, tested, and traceable to the prompt that created it. Pre-commit gates, Ed25519-signed certificates, full audit replay. Local-first. Open source.">
   <link rel="canonical" href="{{ '/' | absolute_url }}">
   <link rel="icon" type="image/svg+xml" href="{{ '/assets/images/logo-icon.svg' | relative_url }}">
   <link rel="apple-touch-icon" href="{{ '/assets/images/og-image.png' | relative_url }}">
-  <meta property="og:site_name"    content="Relay">
-  <meta property="og:title"        content="Relay — Certified delivery for AI coding agents">
+  <meta property="og:site_name"    content="Provasign">
+  <meta property="og:title"        content="Provasign — Certified delivery for AI coding agents">
   <meta property="og:description"  content="Every AI-generated commit signed, tested, and traceable to the prompt that created it. Built on Grove + Prism + Fuse (MIT). Local-first.">
   <meta property="og:url"          content="{{ '/' | absolute_url }}">
   <meta property="og:type"         content="website">
@@ -62,7 +62,7 @@ layout: null
       transition: color .15s, background .15s;
     }
     .nav-links a:hover { color: var(--accent); background: rgba(34,197,94,.08); }
-    .nav-relay { color: var(--accent) !important; font-weight: 700 !important; }
+    .nav-provasign { color: var(--accent) !important; font-weight: 700 !important; }
     .nav-cta { display: flex; gap: .5rem; }
     .nav-cta a {
       padding: .38rem 1rem; border-radius: 6px;
@@ -120,8 +120,8 @@ layout: null
       text-decoration: none; font-family: var(--mono);
       font-size: .88rem; font-weight: 500; transition: all .15s;
     }
-    .chip-relay { background: var(--border); border: 1.5px solid var(--accent); color: var(--accent); }
-    .chip-relay:hover { background: rgba(34,197,94,.18); }
+    .chip-provasign { background: var(--border); border: 1.5px solid var(--accent); color: var(--accent); }
+    .chip-provasign:hover { background: rgba(34,197,94,.18); }
     .chip-plain { background: rgba(13,51,32,.7); border: 1.5px solid var(--border); color: var(--muted); }
     .chip-plain:hover { border-color: var(--accent); color: var(--accent); }
     .hero-cta { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 3rem; }
@@ -206,7 +206,7 @@ layout: null
       transition: border-color .2s, transform .15s;
     }
     .product-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .product-card-relay {
+    .product-card-provasign {
       border-color: rgba(34,197,94,.25);
       background: linear-gradient(140deg, #151f2e 0%, #0e1117 100%);
     }
@@ -214,12 +214,12 @@ layout: null
       display: inline-block; font-family: var(--mono); font-size: .75rem;
       padding: .2rem .6rem; border-radius: 4px; margin-bottom: 1rem;
     }
-    .ptag-relay { background: rgba(34,197,94,.12); color: var(--accent);  border: 1px solid rgba(34,197,94,.3); }
+    .ptag-provasign { background: rgba(34,197,94,.12); color: var(--accent);  border: 1px solid rgba(34,197,94,.3); }
     .ptag-other { background: rgba(13,51,32,.8);   color: #86efac; border: 1px solid rgba(22,101,52,.4); }
     .product-card h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: .5rem; color: #fff; }
-    .product-card-relay h3 { font-size: 1.6rem; }
+    .product-card-provasign h3 { font-size: 1.6rem; }
     .product-card p { font-size: .88rem; color: var(--muted); line-height: 1.6; }
-    .product-card-relay p { font-size: .98rem; margin-bottom: 1.4rem; }
+    .product-card-provasign p { font-size: .98rem; margin-bottom: 1.4rem; }
     .pbullets { list-style: none; margin: .9rem 0 1.4rem; }
     .pbullets li {
       display: flex; gap: .5rem; align-items: flex-start;
@@ -298,18 +298,18 @@ layout: null
       <circle cx="6"  cy="40" r="3"   fill="#22c55e"/>
       <circle cx="24" cy="40" r="3"   fill="#22c55e"/>
     </svg>
-    Grove Suite
+    Provasign
   </a>
   <ul class="nav-links">
-    <li><a href="{{ '/relay/' | relative_url }}" class="nav-relay">Relay</a></li>
-    <li><a href="https://github.com/tabladrum/grove-suite/tree/main/grove#readme">Grove</a></li>
-    <li><a href="https://github.com/tabladrum/grove-suite/tree/main/prism#readme">Prism</a></li>
-    <li><a href="https://github.com/tabladrum/grove-suite/tree/main/fuse#readme">Fuse</a></li>
+    <li><a href="{{ '/provasign/' | relative_url }}" class="nav-provasign">Provasign</a></li>
+    <li><a href="https://github.com/provasign/provasign/tree/main/grove#readme">Grove</a></li>
+    <li><a href="https://github.com/provasign/provasign/tree/main/prism#readme">Prism</a></li>
+    <li><a href="https://github.com/provasign/provasign/tree/main/fuse#readme">Fuse</a></li>
     <li><a href="{{ '/docs/' | relative_url }}">Docs</a></li>
     <li><a href="{{ '/faq/' | relative_url }}">FAQ</a></li>
   </ul>
   <div class="nav-cta">
-    <a class="btn-outline" href="https://github.com/tabladrum/grove-suite">GitHub ↗</a>
+    <a class="btn-outline" href="https://github.com/provasign/provasign">GitHub ↗</a>
     <a class="btn-filled"  href="{{ '/setup/' | relative_url }}">Agent Setup</a>
   </div>
 </nav>
@@ -333,7 +333,7 @@ layout: null
           <circle cx="6"  cy="40" r="3" fill="#22c55e"/>
           <circle cx="24" cy="40" r="3" fill="#22c55e"/>
         </svg>
-        Relay
+        Provasign
       </div>
 
       <h1 class="hero-title">
@@ -346,27 +346,27 @@ layout: null
       <p class="hero-sub">
         Every AI-generated commit signed, tested, and traceable to the prompt that created it.
         Pre-commit gates, Ed25519-signed certificates, full audit replay.
-        Built on <a href="https://github.com/tabladrum/grove-suite/tree/main/grove#readme" style="color:var(--accent);text-decoration:none">Grove</a>,
-        <a href="https://github.com/tabladrum/grove-suite/tree/main/prism#readme" style="color:var(--accent);text-decoration:none">Prism</a>, and
-        <a href="https://github.com/tabladrum/grove-suite/tree/main/fuse#readme" style="color:var(--accent);text-decoration:none">Fuse</a> — embedded.
+        Built on <a href="https://github.com/provasign/provasign/tree/main/grove#readme" style="color:var(--accent);text-decoration:none">Grove</a>,
+        <a href="https://github.com/provasign/provasign/tree/main/prism#readme" style="color:var(--accent);text-decoration:none">Prism</a>, and
+        <a href="https://github.com/provasign/provasign/tree/main/fuse#readme" style="color:var(--accent);text-decoration:none">Fuse</a> — embedded.
         One binary. No services to run.
       </p>
 
       <div class="hero-chips">
-        <a class="chip chip-relay" href="{{ '/relay/' | relative_url }}">Relay</a>
-        <a class="chip chip-plain" href="https://github.com/tabladrum/grove-suite/tree/main/grove#readme">Grove</a>
-        <a class="chip chip-plain" href="https://github.com/tabladrum/grove-suite/tree/main/prism#readme">Prism</a>
-        <a class="chip chip-plain" href="https://github.com/tabladrum/grove-suite/tree/main/fuse#readme">Fuse</a>
+        <a class="chip chip-provasign" href="{{ '/provasign/' | relative_url }}">Provasign</a>
+        <a class="chip chip-plain" href="https://github.com/provasign/provasign/tree/main/grove#readme">Grove</a>
+        <a class="chip chip-plain" href="https://github.com/provasign/provasign/tree/main/prism#readme">Prism</a>
+        <a class="chip chip-plain" href="https://github.com/provasign/provasign/tree/main/fuse#readme">Fuse</a>
       </div>
 
       <div class="hero-cta">
         <a class="btn-hero-primary"    href="{{ '/setup/' | relative_url }}">▶&nbsp; Agent Setup</a>
         <a class="btn-hero-secondary"  href="{{ '/installation/' | relative_url }}">Manual Install</a>
-        <a class="btn-hero-ghost"      href="https://github.com/tabladrum/grove-suite">GitHub ↗</a>
+        <a class="btn-hero-ghost"      href="https://github.com/provasign/provasign">GitHub ↗</a>
       </div>
 
       <div class="hero-meta">
-        <span>tabladrum.github.io/grove-suite</span>
+        <span>provasign.dev</span>
         <span>MIT · AGPL-3.0 · Local-first · No telemetry</span>
       </div>
     </div>
@@ -448,25 +448,25 @@ layout: null
         <p><strong>Every agent still delivers through a PR → CI loop designed for humans.</strong>
         When an agent opens a PR, CI finds issues, you send it back, CI finds more.
         Each loop costs 5–15 minutes of human attention. The agent has lost context by the second loop.</p>
-        <div class="problem-fix">→ <a href="{{ '/relay/' | relative_url }}">Relay</a> moves quality gates into the agent loop. Sub-10s findings. The agent self-corrects before any PR.</div>
+        <div class="problem-fix">→ <a href="{{ '/provasign/' | relative_url }}">Provasign</a> moves quality gates into the agent loop. Sub-10s findings. The agent self-corrects before any PR.</div>
       </div>
       <div class="problem-card">
         <p><strong>When an audit asks what the agent did — there's no answer.</strong>
         The PR says "refactor auth." CI shows green. The agent session is gone,
         the original prompt is gone. Nobody knows which gates ran or what the agent was actually asked to do.</p>
-        <div class="problem-fix">→ <a href="{{ '/relay/' | relative_url }}">Relay</a> commits the original prompt as a YAML intent. Every admission is Ed25519-signed. <code>relay cert replay</code> re-runs gates at any time.</div>
+        <div class="problem-fix">→ <a href="{{ '/provasign/' | relative_url }}">Provasign</a> commits the original prompt as a YAML intent. Every admission is Ed25519-signed. <code>provasign cert replay</code> re-runs gates at any time.</div>
       </div>
       <div class="problem-card">
         <p><strong>Agents burn tokens on the wrong code.</strong>
         The agent reads the files you pointed at, guesses at what else matters,
         and spends the context budget on noise. Critical dependencies are missing.</p>
-        <div class="problem-fix">→ <a href="https://github.com/tabladrum/grove-suite/tree/main/prism#readme">Prism</a> delivers graph-ranked context: 35–92% fewer tokens on first reads, ~99% on re-reads.</div>
+        <div class="problem-fix">→ <a href="https://github.com/provasign/provasign/tree/main/prism#readme">Prism</a> delivers graph-ranked context: 35–92% fewer tokens on first reads, ~99% on re-reads.</div>
       </div>
       <div class="problem-card">
         <p><strong>Two agents just conflicted on adjacent lines of the same file.</strong>
         Different functions. Different logic. Git declared a conflict anyway.
         A developer spent 20 minutes resolving something that was never actually conflicting.</p>
-        <div class="problem-fix">→ <a href="https://github.com/tabladrum/grove-suite/tree/main/fuse#readme">Fuse</a> understands symbols, not lines. ~85% of those conflicts auto-resolve.</div>
+        <div class="problem-fix">→ <a href="https://github.com/provasign/provasign/tree/main/fuse#readme">Fuse</a> understands symbols, not lines. ~85% of those conflicts auto-resolve.</div>
       </div>
     </div>
   </div>
@@ -476,27 +476,27 @@ layout: null
 <section class="section">
   <div class="section-inner">
     <div class="section-label">The product &amp; its open-source foundation</div>
-    <h2 class="section-title">Relay is the product.<br><span class="green">Grove, Prism, and Fuse are open source you can adopt independently.</span></h2>
+    <h2 class="section-title">Provasign is the product.<br><span class="green">Grove, Prism, and Fuse are open source you can adopt independently.</span></h2>
     <div class="products-grid">
 
-      <a class="product-card product-card-relay" href="{{ '/relay/' | relative_url }}">
-        <span class="ptag ptag-relay">relay · AGPL-3.0</span>
-        <h3>Relay</h3>
-        <p>Certified delivery for AI coding agents. No product in this space does what Relay does.</p>
+      <a class="product-card product-card-provasign" href="{{ '/provasign/' | relative_url }}">
+        <span class="ptag ptag-provasign">provasign · AGPL-3.0</span>
+        <h3>Provasign</h3>
+        <p>Certified delivery for AI coding agents. No product in this space does what Provasign does.</p>
         <ul class="pbullets">
           <li>Captures the original user prompt as a signed YAML intent</li>
           <li>Runs build, tests, coverage, secrets, SAST, dep audit — pre-commit</li>
           <li>Issues Ed25519-signed certificates proving which gates ran</li>
           <li>Audit replay: re-run gates against any historical commit</li>
-          <li>MCP integration — agent calls <code style="font-family:var(--mono);color:#86efac;font-size:.82rem">relay_check</code> automatically</li>
+          <li>MCP integration — agent calls <code style="font-family:var(--mono);color:#86efac;font-size:.82rem">provasign_check</code> automatically</li>
         </ul>
         <span class="plink">Full docs →</span>
       </a>
 
-      <a class="product-card" href="https://github.com/tabladrum/grove-suite/tree/main/grove#readme">
+      <a class="product-card" href="https://github.com/provasign/provasign/tree/main/grove#readme">
         <span class="ptag ptag-other">grove · MIT</span>
         <h3>Grove</h3>
-        <p>Code knowledge graph. Embedded in Relay; adopt standalone too.</p>
+        <p>Code knowledge graph. Embedded in Provasign; adopt standalone too.</p>
         <ul class="pbullets">
           <li>11 languages, 8 edge types</li>
           <li>SQLite WAL + FTS5</li>
@@ -506,7 +506,7 @@ layout: null
         <span class="plink">Learn more →</span>
       </a>
 
-      <a class="product-card" href="https://github.com/tabladrum/grove-suite/tree/main/prism#readme">
+      <a class="product-card" href="https://github.com/provasign/provasign/tree/main/prism#readme">
         <span class="ptag ptag-other">prism · MIT</span>
         <h3>Prism</h3>
         <p>Graph-ranked context. 35–92% fewer tokens.</p>
@@ -519,7 +519,7 @@ layout: null
         <span class="plink">Learn more →</span>
       </a>
 
-      <a class="product-card" href="https://github.com/tabladrum/grove-suite/tree/main/fuse#readme">
+      <a class="product-card" href="https://github.com/provasign/provasign/tree/main/fuse#readme">
         <span class="ptag ptag-other">fuse · MIT</span>
         <h3>Fuse</h3>
         <p>Symbol-level merge. ~85% of false conflicts auto-resolve.</p>
@@ -544,36 +544,36 @@ layout: null
 
     <div class="tabs">
       <button class="tab-btn active" onclick="showTab('agent',this)">Agent setup (recommended)</button>
-      <button class="tab-btn"        onclick="showTab('relay',this)">Relay only</button>
+      <button class="tab-btn"        onclick="showTab('provasign',this)">Provasign only</button>
       <button class="tab-btn"        onclick="showTab('all',this)">Full suite</button>
     </div>
 
     <div id="tab-agent" class="tab-panel active">
 <pre class="code-block"><span class="c"># In Claude Code — the agent detects your platform, fetches the latest release,</span>
 <span class="c"># verifies checksums, and wires everything into your project:</span>
-<span class="kw">claude</span> <span class="ag">"Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"</span>
+<span class="kw">claude</span> <span class="ag">"Follow the setup instructions at https://provasign.dev/assets/AGENT_SETUP_PROMPT.md"</span>
 
 <span class="c"># In any other MCP agent — paste this URL and say "follow the setup instructions":</span>
-<span class="c"># https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md</span></pre>
+<span class="c"># https://provasign.dev/assets/AGENT_SETUP_PROMPT.md</span></pre>
     </div>
 
-    <div id="tab-relay" class="tab-panel">
-<pre class="code-block"><span class="c"># Relay bundles Grove as a library — one binary, no services, no ports, no tokens.</span>
-<span class="kw">curl -fsSL</span> <span class="ag">https://tabladrum.github.io/grove-suite/assets/install.sh</span> <span class="kw">| GROVE_SUITE_PRODUCTS=relay bash</span>
+    <div id="tab-provasign" class="tab-panel">
+<pre class="code-block"><span class="c"># Provasign bundles Grove as a library — one binary, no services, no ports, no tokens.</span>
+<span class="kw">curl -fsSL</span> <span class="ag">https://provasign.dev/assets/install.sh</span> <span class="kw">| GROVE_SUITE_PRODUCTS=provasign bash</span>
 
 <span class="kw">cd</span> <span class="ag">/your/project</span>
-<span class="kw">relay init</span> <span class="ag">--stack=auto</span>   <span class="c"># scaffolds policy, generates Ed25519 key,</span>
+<span class="kw">provasign init</span> <span class="ag">--stack=auto</span>   <span class="c"># scaffolds policy, generates Ed25519 key,</span>
                            <span class="c"># writes agent instructions into CLAUDE.md, .cursorrules, etc.</span>
-<span class="kw">relay hook install</span>        <span class="c"># git pre-push backstop</span>
-<span class="kw">git add</span> .relay/ <span class="kw">&amp;&amp; git commit -m</span> <span class="ag">"Add Relay configuration"</span></pre>
+<span class="kw">provasign hook install</span>        <span class="c"># git pre-push backstop</span>
+<span class="kw">git add</span> .provasign/ <span class="kw">&amp;&amp; git commit -m</span> <span class="ag">"Add Provasign configuration"</span></pre>
     </div>
 
     <div id="tab-all" class="tab-panel">
 <pre class="code-block"><span class="c"># Each product is a standalone binary — install whichever you want.</span>
-<span class="kw">curl -fsSL</span> <span class="ag">https://tabladrum.github.io/grove-suite/assets/install.sh</span> <span class="kw">| bash</span>
+<span class="kw">curl -fsSL</span> <span class="ag">https://provasign.dev/assets/install.sh</span> <span class="kw">| bash</span>
 
 <span class="kw">cd</span> <span class="ag">/your/project</span>
-<span class="kw">relay init</span> <span class="ag">--stack=auto</span> <span class="kw">&amp;&amp; relay hook install</span>   <span class="c"># certified delivery</span>
+<span class="kw">provasign init</span> <span class="ag">--stack=auto</span> <span class="kw">&amp;&amp; provasign hook install</span>   <span class="c"># certified delivery</span>
 <span class="kw">prism init &amp;&amp; prism index</span>                       <span class="c"># token-efficient context</span>
 <span class="kw">fuse install</span>                                     <span class="c"># symbol-level merge</span>
 <span class="kw">echo</span> <span class="ag">"*.go merge=fuse"</span> >> .gitattributes</pre>
@@ -585,17 +585,17 @@ layout: null
 <footer>
   <div class="footer-inner">
     <nav class="footer-links">
-      <a href="{{ '/relay/' | relative_url }}">Relay</a>
-      <a href="https://github.com/tabladrum/grove-suite/tree/main/grove#readme">Grove</a>
-      <a href="https://github.com/tabladrum/grove-suite/tree/main/prism#readme">Prism</a>
-      <a href="https://github.com/tabladrum/grove-suite/tree/main/fuse#readme">Fuse</a>
-      <a href="{{ '/why/' | relative_url }}">Why Grove Suite</a>
+      <a href="{{ '/provasign/' | relative_url }}">Provasign</a>
+      <a href="https://github.com/provasign/provasign/tree/main/grove#readme">Grove</a>
+      <a href="https://github.com/provasign/provasign/tree/main/prism#readme">Prism</a>
+      <a href="https://github.com/provasign/provasign/tree/main/fuse#readme">Fuse</a>
+      <a href="{{ '/why/' | relative_url }}">Why Provasign</a>
       <a href="{{ '/comparisons/' | relative_url }}">Comparisons</a>
       <a href="{{ '/faq/' | relative_url }}">FAQ</a>
       <a href="{{ '/docs/' | relative_url }}">Docs</a>
-      <a href="https://github.com/tabladrum/grove-suite">GitHub ↗</a>
+      <a href="https://github.com/provasign/provasign">GitHub ↗</a>
     </nav>
-    <span class="footer-meta">Grove Suite &nbsp;·&nbsp; MIT &amp; AGPL-3.0 &nbsp;·&nbsp; Local-first &nbsp;·&nbsp; Zero telemetry</span>
+    <span class="footer-meta">Provasign &nbsp;·&nbsp; MIT &amp; AGPL-3.0 &nbsp;·&nbsp; Local-first &nbsp;·&nbsp; Zero telemetry</span>
   </div>
 </footer>
 

@@ -6,7 +6,7 @@ description: "Frequently asked questions — technical, security, business, and 
 permalink: /faq/
 ---
 
-# Relay FAQ
+# Provasign FAQ
 
 Top questions, grouped by who is asking them.
 
@@ -14,13 +14,13 @@ Top questions, grouped by who is asking them.
 
 ## General
 
-### What is Relay, in one sentence?
+### What is Provasign, in one sentence?
 
-Relay is certified delivery for AI coding agents: it captures the prompt, runs quality gates inside the agent loop, and issues an Ed25519-signed certificate binding prompt → gates → commit. It is built on three open-source command-line tools it embeds — Grove (code knowledge graph), Prism (token-optimized context), and Fuse (symbol-aware merge) — each usable on its own.
+Provasign is certified delivery for AI coding agents: it captures the prompt, runs quality gates inside the agent loop, and issues an Ed25519-signed certificate binding prompt → gates → commit. It is built on three open-source command-line tools it embeds — Grove (code knowledge graph), Prism (token-optimized context), and Fuse (symbol-aware merge) — each usable on its own.
 
 ### Who built this and why?
 
-A small team that was tired of watching AI coding agents — which are genuinely good at writing code — get bottlenecked by infrastructure that was designed for humans. PRs, line-based merge, post-hoc CI. We built Grove Suite as the replacement infrastructure: local-first, open-source, and designed for the volume and accountability requirements of agent-driven development.
+A small team that was tired of watching AI coding agents — which are genuinely good at writing code — get bottlenecked by infrastructure that was designed for humans. PRs, line-based merge, post-hoc CI. We built Provasign as the replacement infrastructure: local-first, open-source, and designed for the volume and accountability requirements of agent-driven development.
 
 ### Is this production-ready?
 
@@ -31,23 +31,23 @@ Phase 1 is built and tested. We run it on our own work daily. The benchmarks in 
 
 ### What licenses?
 
-Grove, Prism, and Fuse are MIT licensed. Relay is AGPL-3.0 licensed. The repository is at [github.com/tabladrum/grove-suite](https://github.com/tabladrum/grove-suite).
+Grove, Prism, and Fuse are MIT licensed. Provasign is AGPL-3.0 licensed. The repository is at [github.com/provasign/provasign](https://github.com/provasign/provasign).
 
 ### Does it phone home?
 
-No. There is zero telemetry. No analytics. No "improving our models with your usage." Relay runs entirely on your machine. Grove is embedded in-process — there is no daemon, no port, and no socket between components. The only network calls are:
-- Downloading pinned analyzer tools on first use (`relay tools install`)
+No. There is zero telemetry. No analytics. No "improving our models with your usage." Provasign runs entirely on your machine. Grove is embedded in-process — there is no daemon, no port, and no socket between components. The only network calls are:
+- Downloading pinned analyzer tools on first use (`provasign tools install`)
 - Optional, opt-in calls to external embedding APIs (off by default — local Model2Vec is the default)
 
 ### How do I install all four?
 
 ```bash
-git clone https://github.com/tabladrum/grove-suite
-cd grove-suite
+git clone https://github.com/provasign/provasign
+cd provasign
 cd grove && make install && cd ..
 cd prism && make install && cd ..
 cd fuse  && make install && cd ..
-cd relay && make install && cd ..
+cd provasign && make install && cd ..
 ```
 
 Grove must be installed first — the other three depend on it. They auto-start Grove if it isn't running.
@@ -57,7 +57,7 @@ Grove must be installed first — the other three depend on it. They auto-start 
 No. You can install only what you need. The minimum useful subset:
 - **Just Prism (+ Grove):** Better context for your agent. 5-minute install. Saves 35–92% tokens on first reads.
 - **Just Fuse (+ Grove):** Symbol-level merge. 2-minute install. Solves false git conflicts.
-- **Just Relay (+ Grove):** Certified admission. 10-minute install. Eliminates the CI-loop with agents.
+- **Just Provasign (+ Grove):** Certified admission. 10-minute install. Eliminates the CI-loop with agents.
 
 Grove is the only hard dependency.
 
@@ -108,11 +108,11 @@ Confirmed working today:
 - Kiro
 - Continue
 
-`prism init` and `relay init` auto-detect installed tools and write their MCP configs.
+`prism init` and `provasign init` auto-detect installed tools and write their MCP configs.
 
 ### I use [tool not in the list]. Will it work?
 
-If it speaks MCP (Model Context Protocol over stdio), almost certainly. Point it at `prism mcp <dir>` or `relay mcp serve` and the tools will appear.
+If it speaks MCP (Model Context Protocol over stdio), almost certainly. Point it at `prism mcp <dir>` or `provasign mcp serve` and the tools will appear.
 
 ### Does this work alongside my existing tools (LSP, ctags, etc.)?
 
@@ -128,15 +128,15 @@ Start with **Prism alone**, on opt-in basis. Five-minute install, no shared infr
 
 Then add **Fuse** as a per-repo opt-in via `.gitattributes`. Each developer who wants symbol-merge runs `fuse install` once on their laptop. Doesn't affect anyone who hasn't.
 
-Add **Relay** last, and start with `relay check` in warning mode. After your team is comfortable with the findings, switch gates to enforce. The `relay init` command writes Pre-Flight Autopilot instructions to your repo's agent files (CLAUDE.md, .cursorrules, etc.) so the agent calls Relay automatically.
+Add **Provasign** last, and start with `provasign check` in warning mode. After your team is comfortable with the findings, switch gates to enforce. The `provasign init` command writes Pre-Flight Autopilot instructions to your repo's agent files (CLAUDE.md, .cursorrules, etc.) so the agent calls Provasign automatically.
 
 ### Does it require special CI configuration?
 
-Not initially. Relay can run as a git pre-push hook with zero CI changes. When you want CI to enforce the same gates Relay runs locally, point CI at `relay certify` — same config, same gates, same results.
+Not initially. Provasign can run as a git pre-push hook with zero CI changes. When you want CI to enforce the same gates Provasign runs locally, point CI at `provasign certify` — same config, same gates, same results.
 
 ### How do I prevent developers from bypassing the hook?
 
-Use `relay hook install --enforce` to refuse `--no-verify` pushes. For team-scale enforcement, point your remote (GitHub branch protection, GitLab push rules) at the same `relay.yaml` config — the gates run server-side too.
+Use `provasign hook install --enforce` to refuse `--no-verify` pushes. For team-scale enforcement, point your remote (GitHub branch protection, GitLab push rules) at the same `provasign.yaml` config — the gates run server-side too.
 
 ### What's the upgrade path from "individual laptops" to "team-wide"?
 
@@ -146,15 +146,15 @@ Phase 2 (on the roadmap): Same binary, same config, but pointing at a shared Pos
 
 ### How does it work with code review?
 
-Relay doesn't replace human code review. It moves the *mechanical* gates (build, tests, coverage, secrets, SAST, deps) out of the post-PR loop and into the agent loop. Human review focuses on what humans are good at: architectural fit, business logic, intent.
+Provasign doesn't replace human code review. It moves the *mechanical* gates (build, tests, coverage, secrets, SAST, deps) out of the post-PR loop and into the agent loop. Human review focuses on what humans are good at: architectural fit, business logic, intent.
 
-CodeRabbit-style AI review still adds value on top — Grove Suite doesn't try to replicate it.
+CodeRabbit-style AI review still adds value on top — Provasign doesn't try to replicate it.
 
 ---
 
 ## For Engineering Executives
 
-### What problem is Grove Suite actually solving?
+### What problem is Provasign actually solving?
 
 The bottleneck in AI-assisted development has moved. It's not the agent's code quality anymore — agents are good. It's:
 1. Context delivery (agents work with too little information)
@@ -162,14 +162,14 @@ The bottleneck in AI-assisted development has moved. It's not the agent's code q
 3. CI loop churn (agents iterate against CI findings 3–5×)
 4. Audit gap (no record of what the agent was asked to do)
 
-Grove Suite addresses all four.
+Provasign addresses all four.
 
 ### Is there a business case I can present?
 
-Yes — see [Why Relay → What This Costs You]({{ '/why/#what-this-costs-you' | relative_url }}). The headline numbers:
+Yes — see [Why Provasign → What This Costs You]({{ '/why/#what-this-costs-you' | relative_url }}). The headline numbers:
 - Token cost per developer drops 30–60% for any agent using Prism
 - Merge time on parallel agent PRs drops to near-zero for incremental conflicts
-- CI-loop iterations per PR drop from 3–5 to 0–1 with Relay in the agent loop
+- CI-loop iterations per PR drop from 3–5 to 0–1 with Provasign in the agent loop
 - Audit prep time drops dramatically — every commit has a signed cert linked to the prompt
 
 ### What's the ROI argument?
@@ -185,11 +185,11 @@ These are estimates, not guarantees. The right move is to measure on your team w
 
 ### How is this different from Copilot Enterprise?
 
-Copilot Enterprise is a managed agent + features. Grove Suite is infrastructure beneath any agent. They are not substitutes — they are complementary. You can run Copilot Enterprise on top of Prism + Fuse + Relay. The agent gets better context (Prism), causes fewer merge conflicts (Fuse), and produces certified commits (Relay) — without changing the developer's chosen agent.
+Copilot Enterprise is a managed agent + features. Provasign is infrastructure beneath any agent. They are not substitutes — they are complementary. You can run Copilot Enterprise on top of Prism + Fuse + Provasign. The agent gets better context (Prism), causes fewer merge conflicts (Fuse), and produces certified commits (Provasign) — without changing the developer's chosen agent.
 
 ### What's the path to commercialization?
 
-Grove, Prism, and Fuse are MIT licensed. Relay is AGPL-3.0 licensed. We expect the commercial path to be:
+Grove, Prism, and Fuse are MIT licensed. Provasign is AGPL-3.0 licensed. We expect the commercial path to be:
 - Team mode (Postgres + Redis + KMS) — open-source binary, paid support for enterprise deployment
 - Agent execution platform (Phase 3) — paid product, self-hostable, with optional managed
 - Compliance attestation packs (SOC 2, FedRAMP, EU AI Act) — paid evidence-mapping consulting
@@ -202,7 +202,7 @@ Today, no paid path exists. We are intentionally pre-revenue.
 
 ### Where does my code go?
 
-Nowhere. Relay is 100% local. The Grove engine is embedded in-process — no daemon, no listening port. No outbound network calls except downloading pinned analyzer tools on first use, and optional opt-in embedding APIs (off by default).
+Nowhere. Provasign is 100% local. The Grove engine is embedded in-process — no daemon, no listening port. No outbound network calls except downloading pinned analyzer tools on first use, and optional opt-in embedding APIs (off by default).
 
 ### What about telemetry?
 
@@ -211,13 +211,13 @@ None.
 ### How are secrets protected?
 
 - Grove is now an embedded library — there is no HTTP daemon, no port, and no bearer token to leak
-- Prism and Relay MCP servers run as local stdio processes; they never bind a TCP socket
-- The Ed25519 admission key for Relay lives at `<repo>/.relay/keys/signing.ed25519.key` (mode 0600), or `~/.relay/keys/` with `--user`
-- Credentials (Jira, GitHub) are environment variables only — never persisted to `.relay/relay.yaml`
+- Prism and Provasign MCP servers run as local stdio processes; they never bind a TCP socket
+- The Ed25519 admission key for Provasign lives at `<repo>/.provasign/keys/signing.ed25519.key` (mode 0600), or `~/.provasign/keys/` with `--user`
+- Credentials (Jira, GitHub) are environment variables only — never persisted to `.provasign/provasign.yaml`
 
 ### What if my codebase is in a regulated environment (HIPAA, FedRAMP, etc.)?
 
-Grove Suite is well-suited to regulated environments precisely because it runs locally. The full code path:
+Provasign is well-suited to regulated environments precisely because it runs locally. The full code path:
 - Source code never leaves your machine
 - Index data lives in `.grove/grove.db` on your laptop (or your team's self-hosted server in Phase 2)
 - Cryptographic admission certificates are reproducible — you can prove what gates passed at commit time
@@ -227,7 +227,7 @@ For specific compliance frameworks, see [Use Cases → Audit]({{ '/use-cases/aud
 
 ### Are the dependencies safe?
 
-Grove Suite is built on:
+Provasign is built on:
 - Go 1.22+ (compiled into static binaries — no Go runtime needed at runtime)
 - Tree-sitter (C library, vendored)
 - SQLite (embedded via `modernc.org/sqlite` — pure Go, no CGO)
@@ -238,31 +238,31 @@ Each product's `go.mod` is auditable. We avoid heavy dependency trees deliberate
 
 ### How does the Ed25519 signing chain work?
 
-1. `relay init` generates an Ed25519 keypair at `<repo>/.relay/keys/signing.ed25519.key` (mode 0600); the public half is `signing.ed25519.pub`
-2. On each admission, Relay computes CanonicalBytes over: ChangeSet + effective config hash + toolchain versions + test results + findings
+1. `provasign init` generates an Ed25519 keypair at `<repo>/.provasign/keys/signing.ed25519.key` (mode 0600); the public half is `signing.ed25519.pub`
+2. On each admission, Provasign computes CanonicalBytes over: ChangeSet + effective config hash + toolchain versions + test results + findings
 3. Ed25519 signature is computed before the commit SHA exists
-4. After signing, Relay creates the commit; the commit SHA is recorded in the trailer
-5. `relay cert verify <id>` re-validates the signature
-6. `relay cert replay <id>` re-runs the gates against current tools and returns `byte_reproducible` / `tool_drift` / `config_drift`
+4. After signing, Provasign creates the commit; the commit SHA is recorded in the trailer
+5. `provasign cert verify <id>` re-validates the signature
+6. `provasign cert replay <id>` re-runs the gates against current tools and returns `byte_reproducible` / `tool_drift` / `config_drift`
 
 The signature attests to gates passing — not to the commit existing. This separation is what enables auditable replay.
 
 ### Can someone else verify a certificate on their machine?
 
-In laptop mode, not yet. `relay cert verify` and `relay cert replay` need both the certificate store (`.relay/engine.db`) and the signing key — both local and gitignored — so verification runs on the machine that produced the admission. **Independent, cross-machine verification by an auditor, a CI runner, or a reviewer on a fresh clone is a Relay server (team) mode capability** (shared certificate store + KMS-backed signer), which is on the roadmap. See [Deployment modes]({{ '/architecture/#deployment-modes' | relative_url }}).
+In laptop mode, not yet. `provasign cert verify` and `provasign cert replay` need both the certificate store (`.provasign/engine.db`) and the signing key — both local and gitignored — so verification runs on the machine that produced the admission. **Independent, cross-machine verification by an auditor, a CI runner, or a reviewer on a fresh clone is a Provasign server (team) mode capability** (shared certificate store + KMS-backed signer), which is on the roadmap. See [Deployment modes]({{ '/architecture/#deployment-modes' | relative_url }}).
 
 ### What's the threat model?
 
 See [Use Cases → Security]({{ '/use-cases/security/' | relative_url }}). Summary:
-- Threat: agent produces malicious code → Mitigation: Relay's gates run regardless of agent
-- Threat: attacker forges a Relay cert → Mitigation: Ed25519 signature with private key never leaving disk
-- Threat: dependency supply-chain attack → Mitigation: Stage 2 dep audit (govulncheck, npm audit, pip-audit) + Sigstore/SLSA on the build artifact (out of scope for Relay)
+- Threat: agent produces malicious code → Mitigation: Provasign's gates run regardless of agent
+- Threat: attacker forges a Provasign cert → Mitigation: Ed25519 signature with private key never leaving disk
+- Threat: dependency supply-chain attack → Mitigation: Stage 2 dep audit (govulncheck, npm audit, pip-audit) + Sigstore/SLSA on the build artifact (out of scope for Provasign)
 
 ---
 
 ## For Compliance / Audit
 
-### What evidence does Grove Suite produce?
+### What evidence does Provasign produce?
 
 For every admitted commit:
 - The original user prompt, captured as a YAML intent in the repo
@@ -273,10 +273,10 @@ For every admitted commit:
 
 ### Can I audit a 6-month-old commit?
 
-Yes. `relay cert show <id-or-ref>` displays the full certificate. `relay cert replay <id>` re-runs the gates and returns one of:
+Yes. `provasign cert show <id-or-ref>` displays the full certificate. `provasign cert replay <id>` re-runs the gates and returns one of:
 - `byte_reproducible` — current tools + config match the cert's gates
 - `tool_drift` — tool versions have changed; gates would pass but not bit-identically
-- `config_drift` — your `.relay/relay.yaml` has changed since the cert was created
+- `config_drift` — your `.provasign/provasign.yaml` has changed since the cert was created
 
 This is the difference between "we had CI green at the time" (no longer verifiable after CI logs roll off) and "we have a cryptographic record we can re-validate today."
 
@@ -286,13 +286,13 @@ It directly addresses several SOC 2 Type II controls:
 - CC4.1, CC4.2: ongoing monitoring of controls — every commit's cert is a control evidence record
 - CC6.1: logical access — per-developer Ed25519 admission keys (mode 0600); the engine is in-process with no network access path
 - CC7.1: detection of vulnerabilities — Stage 2 SAST + dep audit on every commit
-- CC8.1: change management — every change is admitted via Relay, linked to an intent, signed
+- CC8.1: change management — every change is admitted via Provasign, linked to an intent, signed
 
 A detailed mapping is in [Use Cases → Audit]({{ '/use-cases/audit/' | relative_url }}).
 
 ### Does this help with EU AI Act compliance?
 
-The EU AI Act's high-risk activation in August 2026 creates documentation and traceability requirements for AI-generated artifacts in regulated industries. Relay's intent-capture + signed-admission flow gives you the traceability artefact the act requires: a record of what the AI was asked to do, what gates verified the output, and a cryptographic proof you can show an auditor.
+The EU AI Act's high-risk activation in August 2026 creates documentation and traceability requirements for AI-generated artifacts in regulated industries. Provasign's intent-capture + signed-admission flow gives you the traceability artefact the act requires: a record of what the AI was asked to do, what gates verified the output, and a cryptographic proof you can show an auditor.
 
 This is not legal advice. Talk to your compliance team about which AI Act provisions apply to you.
 
@@ -323,17 +323,17 @@ cat .gitattributes
 
 If your file extension is included, the conflict may be genuinely ambiguous — Fuse intentionally falls back to conflict markers when confidence < 0.70. Read `.git/fuse/conflict-<hash>.md` for the structured handoff.
 
-### Relay certify is failing
+### Provasign certify is failing
 
-The first thing to check: `relay certify --verbose` shows which stage failed.
-- Stage 1 fail: build or tests failed. Run them outside Relay to confirm.
-- Stage 2 fail: a SAST or secrets finding above your gate threshold. `relay explain <finding-id>` shows the rule and fix.
+The first thing to check: `provasign certify --verbose` shows which stage failed.
+- Stage 1 fail: build or tests failed. Run them outside Provasign to confirm.
+- Stage 2 fail: a SAST or secrets finding above your gate threshold. `provasign explain <finding-id>` shows the rule and fix.
 
-### relay init didn't detect my coding tool
+### provasign init didn't detect my coding tool
 
 The detection is based on global configs and executables. If your tool is installed in an unusual location, run:
 ```bash
-relay mcp install-for <tool>   # claude-code, cursor, windsurf, continue
+provasign mcp install-for <tool>   # claude-code, cursor, windsurf, continue
 ```
 
 ### The pre-push hook is blocking my push and I need to push now
@@ -341,10 +341,10 @@ relay mcp install-for <tool>   # claude-code, cursor, windsurf, continue
 The hook is a backstop, not the only enforcement. To bypass for one push:
 ```bash
 git push --no-verify
-# This is detected and audited — see .relay/.cache/audit.log
+# This is detected and audited — see .provasign/.cache/audit.log
 ```
 
-Use sparingly. If you find yourself bypassing often, the gates may be too strict — adjust `.relay/relay.yaml`.
+Use sparingly. If you find yourself bypassing often, the gates may be too strict — adjust `.provasign/provasign.yaml`.
 
 ### My index is stale — what triggers a re-index?
 
@@ -358,4 +358,4 @@ grove index .
 
 ## Anything else?
 
-Open an issue at [github.com/tabladrum/grove-suite/issues](https://github.com/tabladrum/grove-suite/issues) or add to this FAQ via PR.
+Open an issue at [github.com/provasign/provasign/issues](https://github.com/provasign/provasign/issues) or add to this FAQ via PR.

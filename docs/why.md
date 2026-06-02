@@ -1,14 +1,14 @@
 ---
-title: Why Relay
+title: Why Provasign
 layout: default
 nav_order: 2
-description: "The founder's note — why Relay exists, why the open-source components beneath it exist, and what we deliberately didn't build."
+description: "The founder's note — why Provasign exists, why the open-source components beneath it exist, and what we deliberately didn't build."
 permalink: /why/
 ---
 
-# Why Relay
+# Why Provasign
 
-*A founder's note: Relay is the product. Grove, Prism, and Fuse are the open-source components Relay sits on — and that you can adopt independently.*
+*A founder's note: Provasign is the product. Grove, Prism, and Fuse are the open-source components Provasign sits on — and that you can adopt independently.*
 
 ---
 
@@ -22,7 +22,7 @@ Pull requests were invented for humans reviewing humans. Continuous integration 
 
 When the infrastructure beneath a workload changes by 100×, you don't fix it with better dashboards on the old infrastructure. You build new infrastructure.
 
-That's what Relay is. Built on three smaller open-source pieces — Grove, Prism, Fuse — that each fix one upstream bottleneck.
+That's what Provasign is. Built on three smaller open-source pieces — Grove, Prism, Fuse — that each fix one upstream bottleneck.
 
 ---
 
@@ -34,7 +34,7 @@ You give an agent a task. It opens the files you pointed at. It greps for a few 
 
 This isn't an agent capability problem. It's a context delivery problem. The agent is operating with a fraction of the information your senior engineer has — and the agent is being asked to make decisions at the same level.
 
-**What we built:** [Grove]({{ '/architecture/' | relative_url }}) — a persistent knowledge graph of your codebase, embedded directly in Relay. 11 languages parsed with Tree-sitter, 8 edge types (defines, contains, imports, extends, implements, calls, uses-type, tests), BFS traversal, FTS5 full-text search, delta indexing by git blob SHA. **[Prism]({{ '/other-tools/' | relative_url }})** sits on top: graph-ranked context delivery with 5 signals (graph distance, semantic similarity, recency, test relevance, edit frequency), token budget allocation across 5 categories, and progressive disclosure — full source on the first read, sha-pointer on the next. **35–92% fewer tokens on first reads. ~99% on re-reads.**
+**What we built:** [Grove]({{ '/architecture/' | relative_url }}) — a persistent knowledge graph of your codebase, embedded directly in Provasign. 11 languages parsed with Tree-sitter, 8 edge types (defines, contains, imports, extends, implements, calls, uses-type, tests), BFS traversal, FTS5 full-text search, delta indexing by git blob SHA. **[Prism]({{ '/other-tools/' | relative_url }})** sits on top: graph-ranked context delivery with 5 signals (graph distance, semantic similarity, recency, test relevance, edit frequency), token budget allocation across 5 categories, and progressive disclosure — full source on the first read, sha-pointer on the next. **35–92% fewer tokens on first reads. ~99% on re-reads.**
 
 ### 2. Two agents touching the same file create false conflicts
 
@@ -57,7 +57,7 @@ Each loop is 5–15 minutes of human attention to triage and re-trigger. The age
 
 The fundamental issue: **quality gates live at the end of the pipeline. The agent is at the beginning.**
 
-**What we built:** [Relay]({{ '/how-it-works/' | relative_url }}) — `relay_check` runs the quality gates in the agent's loop, returns structured findings (file, line, rule, severity, fix-hint) in under 10 seconds. The agent self-corrects before opening a PR. When the code is ready, `relay_certify` runs the full suite — build, full test suite, coverage, secrets scanning, SAST, dependency audit — and produces a single result.
+**What we built:** [Provasign]({{ '/how-it-works/' | relative_url }}) — `provasign_check` runs the quality gates in the agent's loop, returns structured findings (file, line, rule, severity, fix-hint) in under 10 seconds. The agent self-corrects before opening a PR. When the code is ready, `provasign_certify` runs the full suite — build, full test suite, coverage, secrets scanning, SAST, dependency audit — and produces a single result.
 
 ### 4. The audit trail doesn't exist
 
@@ -67,7 +67,7 @@ The PR says "refactor authentication." Three commits, one human reviewer's LGTM,
 
 This is a compliance problem today. With the EU AI Act high-risk activation in August 2026 and increasing scrutiny under SOC 2 / FedRAMP, it becomes a regulatory problem.
 
-**What we built:** [Relay]({{ '/use-cases/audit/' | relative_url }}) commits the user's original natural-language prompt as a YAML intent before coding starts. Every admitted commit carries an Ed25519 signature over the exact ChangeSet, effective config hash, toolchain versions, test results, and findings. The cert is linked to the commit via `Intent-ID:` trailer. `relay cert replay <id>` re-runs the gates at any time and returns `byte_reproducible` / `tool_drift` / `config_drift`. **The audit trail is cryptographic, not narrative.**
+**What we built:** [Provasign]({{ '/use-cases/audit/' | relative_url }}) commits the user's original natural-language prompt as a YAML intent before coding starts. Every admitted commit carries an Ed25519 signature over the exact ChangeSet, effective config hash, toolchain versions, test results, and findings. The cert is linked to the commit via `Intent-ID:` trailer. `provasign cert replay <id>` re-runs the gates at any time and returns `byte_reproducible` / `tool_drift` / `config_drift`. **The audit trail is cryptographic, not narrative.**
 
 ---
 
@@ -75,13 +75,13 @@ This is a compliance problem today. With the EU AI Act high-risk activation in A
 
 A founder's most important sentence is "we don't do that." Here's ours.
 
-**We are not an agent.** We don't compete with Cursor, Claude Code, Copilot, Devin, or Codex CLI. Grove Suite is infrastructure underneath all of them. The more agents your team uses, the more useful Grove Suite gets.
+**We are not an agent.** We don't compete with Cursor, Claude Code, Copilot, Devin, or Codex CLI. Provasign is infrastructure underneath all of them. The more agents your team uses, the more useful Provasign gets.
 
 **We are not a code review tool.** CodeRabbit and Greptile do AI review of human PRs. We do something different: we put the gates *before* the PR so the agent self-corrects, then *cryptographically certify* what passed. We can sit alongside a review tool; we're not trying to replace it.
 
 **We are not a cloud service.** Everything runs on your machine. No telemetry. No "phone home." Your code never leaves your laptop unless you push it. The Model2Vec embedding model (29 MB) is compiled into the Grove binary — no inference server, no GPU, no API key, no rate limit.
 
-**We are not a CI replacement.** Relay can run as a pre-push hook and CI can still run after the push. They check different things at different points. Over time, as confidence builds, you can move more gates into the agent loop — but you don't have to switch overnight.
+**We are not a CI replacement.** Provasign can run as a pre-push hook and CI can still run after the push. They check different things at different points. Over time, as confidence builds, you can move more gates into the agent loop — but you don't have to switch overnight.
 
 **We are not finished.** Phase 1 is built and tested. Phase 2 (the agent execution platform for teams that want self-hosted, governance-aware agent execution) is on the roadmap, not shipped. Phase 3 (branchless main, intent-as-review-artifact) is a vision, not a product.
 
@@ -89,19 +89,19 @@ A founder's most important sentence is "we don't do that." Here's ours.
 
 ## Who This Is For
 
-**You will get value from Grove Suite if:**
+**You will get value from Provasign if:**
 
 - You use AI coding agents daily — your team is running ≥1 agent-produced PR per developer per week
 - You're hitting context limits — agents are forgetting things, hallucinating helpers, missing tests
 - You're hitting merge friction — git conflicts on agent PRs are a recurring time sink
 - You're hitting CI churn — agents and humans are looping through PR→CI→fix→PR cycles
 - You have a compliance story to maintain — SOC 2, ISO 27001, EU AI Act, FedRAMP, internal audit
-- You care about working offline / not sending source to a vendor — Grove Suite runs 100% locally
+- You care about working offline / not sending source to a vendor — Provasign runs 100% locally
 
-**You probably don't need Grove Suite yet if:**
+**You probably don't need Provasign yet if:**
 
 - You're a solo developer with one agent and ten files — your context fits in the window, conflicts don't happen, audit is your own memory
-- You're not yet using AI agents in production — the pain Grove Suite removes is the pain of agent-volume scale
+- You're not yet using AI agents in production — the pain Provasign removes is the pain of agent-volume scale
 - You're committed to a fully managed agent service that owns the pipeline (e.g., Devin running its own infrastructure) — wait until you want to bring agent work in-house
 
 ---
@@ -112,27 +112,27 @@ A founder's most important sentence is "we don't do that." Here's ours.
 
 **CPU:** Indexing is parallel and uses all available cores; cold index on a 5,000-file repo takes about 12 seconds on a 2024 MacBook. Incremental reindex on a single-file change: milliseconds. Query latency: 6–60 ms depending on project size.
 
-**Memory:** Grove's resident set scales with the in-memory graph — 30 MB for a small project, 200 MB for a 10,000-file monorepo. Prism, Fuse, and Relay each use ~12–30 MB.
+**Memory:** Grove's resident set scales with the in-memory graph — 30 MB for a small project, 200 MB for a 10,000-file monorepo. Prism, Fuse, and Provasign each use ~12–30 MB.
 
-**Time to install:** Five minutes for Prism (the highest-impact single product). Twenty minutes for the full suite including Relay configuration. The `relay init` command auto-wires every detected AI tool in one step — no per-tool MCP config to hand-edit.
+**Time to install:** Five minutes for Prism (the highest-impact single product). Twenty minutes for the full suite including Provasign configuration. The `provasign init` command auto-wires every detected AI tool in one step — no per-tool MCP config to hand-edit.
 
-**Operational cost:** Zero. No subscription. No cloud bill. No GPU. No rate limit. Grove, Prism, and Fuse are MIT licensed; Relay is AGPL-3.0 licensed.
+**Operational cost:** Zero. No subscription. No cloud bill. No GPU. No rate limit. Grove, Prism, and Fuse are MIT licensed; Provasign is AGPL-3.0 licensed.
 
 ---
 
-## What Grove Suite Could Become
+## What Provasign Could Become
 
 We're building the open core of an infrastructure layer that, in the same way Datadog became the observability layer beneath everyone's services, could become the governance layer beneath everyone's agents.
 
 The path we see:
 
-**Today (Phase 1, shipped):** Grove + Prism + Fuse + Relay run locally on developer laptops. Grove, Prism, and Fuse are MIT licensed; Relay is AGPL-3.0 licensed. Single binaries. The "laptop mode" experience.
+**Today (Phase 1, shipped):** Grove + Prism + Fuse + Provasign run locally on developer laptops. Grove, Prism, and Fuse are MIT licensed; Provasign is AGPL-3.0 licensed. Single binaries. The "laptop mode" experience.
 
 **Next (Phase 2, on the roadmap):** Team mode — same binaries, same configs, but backed by Postgres + Redis + KMS for shared state. Self-hosted, on-prem, air-gapped. Useful for teams that want a single audit trail across all developers.
 
-**Eventually (Phase 3, the vision):** Agent execution platform — ephemeral K8s pods with Prism context delivery, Grove-aware test selection, Relay certification, and admission to a branchless main. This is where we'd think about commercialization: an enterprise governance + execution platform that wraps the open-source core.
+**Eventually (Phase 3, the vision):** Agent execution platform — ephemeral K8s pods with Prism context delivery, Grove-aware test selection, Provasign certification, and admission to a branchless main. This is where we'd think about commercialization: an enterprise governance + execution platform that wraps the open-source core.
 
-We are not yet trying to sell you anything. We are trying to get Grove Suite into the hands of teams who feel the four bottlenecks above, because we believe in the wedge — the open-source local-first build, used by individual developers and small teams, is the foundation that has to exist before any enterprise platform makes sense.
+We are not yet trying to sell you anything. We are trying to get Provasign into the hands of teams who feel the four bottlenecks above, because we believe in the wedge — the open-source local-first build, used by individual developers and small teams, is the foundation that has to exist before any enterprise platform makes sense.
 
 ---
 
@@ -141,7 +141,7 @@ We are not yet trying to sell you anything. We are trying to get Grove Suite int
 In order of usefulness:
 
 1. **Try it.** Five minutes to install Prism, see the token savings, decide whether it changes your day.
-2. **Tell us what broke.** [Open an issue](https://github.com/tabladrum/grove-suite/issues) — we want failure reports, weird codebases, language quirks, missing features.
+2. **Tell us what broke.** [Open an issue](https://github.com/provasign/provasign/issues) — we want failure reports, weird codebases, language quirks, missing features.
 3. **Star the repo if it earned it.** Honest signal.
 4. **Tell a colleague who's drowning in agent PR overhead.** The bottleneck is real even when nobody is naming it.
 5. **If you want to fund this work** — early commercial conversations are welcome. Email is in the repo metadata.
@@ -152,11 +152,11 @@ In order of usefulness:
 
 To not bullshit you. Every claim on this page is backed by something specific:
 
-- Token savings: see [Prism README → Performance](https://github.com/tabladrum/grove-suite/tree/main/prism#performance) for the benchmark table
-- Auto-resolution rate: see [Fuse README → Conflict Classification](https://github.com/tabladrum/grove-suite/tree/main/fuse#conflict-classification)
+- Token savings: see [Prism README → Performance](https://github.com/provasign/provasign/tree/main/prism#performance) for the benchmark table
+- Auto-resolution rate: see [Fuse README → Conflict Classification](https://github.com/provasign/provasign/tree/main/fuse#conflict-classification)
 - Sub-10s pre-flight: a target, not a contract; see [Features → Capabilities]({{ '/features/#capabilities' | relative_url }})
 - Comparisons with competitors: see [Comparisons]({{ '/comparisons/' | relative_url }}) — we name names and we link to their docs
 
 If we got something wrong, the right move is to tell us, not to walk away.
 
-Welcome to Grove Suite.
+Welcome to Provasign.

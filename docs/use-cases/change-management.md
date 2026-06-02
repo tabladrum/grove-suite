@@ -3,13 +3,13 @@ title: Change Management
 layout: default
 parent: Use Cases
 nav_order: 3
-description: "How Relay turns every AI-generated change into a gated, signed, intent-linked admission."
+description: "How Provasign turns every AI-generated change into a gated, signed, intent-linked admission."
 permalink: /use-cases/change-management/
 ---
 
 # Change Management
 
-Change management asks: *was this change authorized, reviewed against policy, and recorded?* When most of the diff is written by agents at high volume, the human PR review that traditionally answered those questions can't keep up. Relay encodes the policy into the admission step itself.
+Change management asks: *was this change authorized, reviewed against policy, and recorded?* When most of the diff is written by agents at high volume, the human PR review that traditionally answered those questions can't keep up. Provasign encodes the policy into the admission step itself.
 
 ## Every admission is a controlled change
 
@@ -19,9 +19,9 @@ Change management asks: *was this change authorized, reviewed against policy, an
 
 ## Policy as configuration
 
-Gates live in `.relay/relay.yaml` and merge with built-in defaults. Each gate can be set to `warn` (report, allow) or `enforce` (block), so you can roll out a policy gradually — start in `warn`, watch the findings, then flip to `enforce` once the noise is gone.
+Gates live in `.provasign/provasign.yaml` and merge with built-in defaults. Each gate can be set to `warn` (report, allow) or `enforce` (block), so you can roll out a policy gradually — start in `warn`, watch the findings, then flip to `enforce` once the noise is gone.
 
-Compliance baselines ship as profiles (`relay init --profile=soc2-baseline`, `pci-dss-baseline`, stack-strict variants), and the **effective config hash** is part of every certificate — so you can prove which policy was in force when a given change was admitted.
+Compliance baselines ship as profiles (`provasign init --profile=soc2-baseline`, `pci-dss-baseline`, stack-strict variants), and the **effective config hash** is part of every certificate — so you can prove which policy was in force when a given change was admitted.
 
 ## Separation of duties
 

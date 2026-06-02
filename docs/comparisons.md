@@ -2,13 +2,13 @@
 title: Comparisons
 layout: default
 nav_order: 10
-description: "Honest comparisons — Prism vs Copilot/Claude Code/Cursor, Grove vs Sourcegraph/LSP, Fuse vs AI merge tools, Relay vs CI/CodeRabbit/Sigstore."
+description: "Honest comparisons — Prism vs Copilot/Claude Code/Cursor, Grove vs Sourcegraph/LSP, Fuse vs AI merge tools, Provasign vs CI/CodeRabbit/Sigstore."
 permalink: /comparisons/
 ---
 
 # Comparisons
 
-*An honest look at how Relay — and its open-source components Grove, Prism, and Fuse — stack up against the tools you might already be using or evaluating. We name names, we link to their docs, and we tell you where they are stronger than us.*
+*An honest look at how Provasign — and its open-source components Grove, Prism, and Fuse — stack up against the tools you might already be using or evaluating. We name names, we link to their docs, and we tell you where they are stronger than us.*
 
 This is a living document. If you spot something inaccurate — especially about a competitor — open an issue.
 
@@ -19,8 +19,8 @@ This is a living document. If you spot something inaccurate — especially about
 - [Prism vs. Copilot, Claude Code, Cursor, Codex CLI context delivery](#prism-vs-other-context-delivery)
 - [Grove vs. LSP, Sourcegraph, ctags, Stack Graphs](#grove-vs-other-code-intelligence)
 - [Fuse vs. git merge, IntelliMerge, Plastic SCM, AI-based merge resolvers](#fuse-vs-other-merge-tools)
-- [Relay vs. CI/CD, CodeRabbit, Greptile, Sigstore, SLSA](#relay-vs-other-delivery-tools)
-- [Grove Suite vs. Devin, Cursor Background Agents, Copilot Workspace](#grove-suite-vs-end-to-end-agent-platforms)
+- [Provasign vs. CI/CD, CodeRabbit, Greptile, Sigstore, SLSA](#provasign-vs-other-delivery-tools)
+- [Provasign vs. Devin, Cursor Background Agents, Copilot Workspace](#provasign-vs-end-to-end-agent-platforms)
 
 ---
 
@@ -133,34 +133,34 @@ This deserves a section of its own because it's the most common alternative bein
 
 ---
 
-## Relay vs. Other Delivery Tools
+## Provasign vs. Other Delivery Tools
 
-Relay sits between an AI agent and your repository. The alternatives sit elsewhere in the pipeline.
+Provasign sits between an AI agent and your repository. The alternatives sit elsewhere in the pipeline.
 
-| Capability | **Relay** | **Traditional CI** (GitHub Actions, etc.) | **CodeRabbit** / **Greptile** | **Sigstore** / **SLSA** | **Devin** / **Codex** managed |
+| Capability | **Provasign** | **Traditional CI** (GitHub Actions, etc.) | **CodeRabbit** / **Greptile** | **Sigstore** / **SLSA** | **Devin** / **Codex** managed |
 |------------|-----------|--------------------------------------------|-------------------------------|--------------------------|-------------------------------|
 | Quality gates in the agent loop (pre-PR) | Yes | No (post-PR) | No (post-PR) | No | Internal to platform |
 | Returns structured findings to the agent | Yes (file, line, rule, severity, fix-hint via MCP) | No | Partial (comments) | No | Internal |
 | Build + test + coverage gate | Yes (Stage 1) | Yes | No | No | Internal |
 | SAST + secrets + dep audit | Yes (Stage 2) | Configurable | Some | No (different layer) | Varies |
 | Cryptographic signature on commit | Yes (Ed25519) | No (signed tags only via separate tooling) | No | Yes (artifact-level) | No |
-| Replay / verify cert | Yes (`relay cert replay`) | No | No | Yes (artifact) | No |
+| Replay / verify cert | Yes (`provasign cert replay`) | No | No | Yes (artifact) | No |
 | Captures original user prompt | Yes (YAML intent) | No | No | No | Internal |
 | Audit trail per commit | Yes (Intent-ID + cert) | Logs (rolled off) | Review comments | Provenance attestation | Logs |
 | Runs locally | Yes | Cloud + self-hosted runners | Cloud | Both | Cloud only |
 | Cost | Free (MIT) | Free–$$$ depending on runners | $15+/user/month | Free (open source) | $20–$500/user/month |
 
-**Where Relay is uniquely positioned:**
+**Where Provasign is uniquely positioned:**
 
 - **In the agent loop, not after the PR.** Quality gates that run before the PR opens prevent the loop entirely. CI runs *after* the PR — by then the agent is gone and a human is back in the driver's seat.
-- **The full audit triple.** Relay is the only tool that gives you: (1) the original prompt, (2) cryptographic proof of what gates passed, (3) byte-reproducible replay. Sigstore signs artifacts. Relay signs commits *and* links them to the prompt.
+- **The full audit triple.** Provasign is the only tool that gives you: (1) the original prompt, (2) cryptographic proof of what gates passed, (3) byte-reproducible replay. Sigstore signs artifacts. Provasign signs commits *and* links them to the prompt.
 - **Same binary, three deployment modes.** Laptop (SQLite, local key). Team (Postgres, Redis, shared key in KMS). Air-gapped. No vendor lock-in.
 
-### Relay vs. CodeRabbit / Greptile
+### Provasign vs. CodeRabbit / Greptile
 
 These are AI code review tools. They sit *after* the PR opens and review the diff for issues. Useful — but a different role.
 
-| Question | CodeRabbit / Greptile | Relay |
+| Question | CodeRabbit / Greptile | Provasign |
 |----------|------------------------|-------|
 | What problem does it solve? | "This PR has a bug" — caught by AI review | "This PR's gates already passed" — provable before review |
 | When does it run? | After the PR is opened | Before the PR is opened (in agent loop) |
@@ -168,41 +168,41 @@ These are AI code review tools. They sit *after* the PR opens and review the dif
 | Can the agent use it? | The agent's PR is the input | The agent calls it in its own loop |
 | Is it adversarial-resistant? | LLM can be tricked into approving bad code | Build + tests + SAST run for real; LLM can't fake them |
 
-**These tools complement each other.** Run Relay in the agent loop to prevent the CI-loop churn. Run an AI reviewer after the PR opens to catch things automated gates miss (logic bugs, architectural choices). They are not substitutes.
+**These tools complement each other.** Run Provasign in the agent loop to prevent the CI-loop churn. Run an AI reviewer after the PR opens to catch things automated gates miss (logic bugs, architectural choices). They are not substitutes.
 
-### Relay vs. Sigstore / SLSA
+### Provasign vs. Sigstore / SLSA
 
-Sigstore signs artifacts. Relay signs commits. SLSA defines provenance levels for artifacts; Relay produces SLSA-compatible attestation but at commit time, not build time.
+Sigstore signs artifacts. Provasign signs commits. SLSA defines provenance levels for artifacts; Provasign produces SLSA-compatible attestation but at commit time, not build time.
 
-If your concern is *"someone tampered with my build artifact between source and deployment,"* you want Sigstore + SLSA. If your concern is *"I need cryptographic proof of what gates passed against this exact change at commit time,"* you want Relay. Together: end-to-end provenance from prompt to production.
+If your concern is *"someone tampered with my build artifact between source and deployment,"* you want Sigstore + SLSA. If your concern is *"I need cryptographic proof of what gates passed against this exact change at commit time,"* you want Provasign. Together: end-to-end provenance from prompt to production.
 
-**TL;DR:** Relay is the gate-the-agent-loop tool with the audit-trail-on-commit superpower. CI and CodeRabbit are the post-PR layer. Sigstore/SLSA are the post-build layer. All three layers exist for a reason; Relay fills the one that didn't exist before.
+**TL;DR:** Provasign is the gate-the-agent-loop tool with the audit-trail-on-commit superpower. CI and CodeRabbit are the post-PR layer. Sigstore/SLSA are the post-build layer. All three layers exist for a reason; Provasign fills the one that didn't exist before.
 
 ---
 
-## Grove Suite vs. End-to-End Agent Platforms
+## Provasign vs. End-to-End Agent Platforms
 
-This is the comparison everyone asks for. "If I just use Devin / Cursor Background Agents / Copilot Workspace, do I need Grove Suite?"
+This is the comparison everyone asks for. "If I just use Devin / Cursor Background Agents / Copilot Workspace, do I need Provasign?"
 
-| Capability | **Grove Suite** | **Devin** | **Cursor Background Agents** | **GitHub Copilot Workspace** |
+| Capability | **Provasign** | **Devin** | **Cursor Background Agents** | **GitHub Copilot Workspace** |
 |------------|------------------|-----------|------------------------------|------------------------------|
 | What it is | Open-source infrastructure beneath any agent | Managed autonomous agent | Managed agent in your IDE | Managed agent in your repo |
 | Code stays local | Yes | No (Devin's infrastructure) | No (Cursor's infrastructure) | No (GitHub's infrastructure) |
 | Works with your existing agents | Yes — built for it | N/A (is the agent) | N/A (is the agent) | N/A (is the agent) |
 | Self-hosted | Yes | No | No | No |
-| Customizable policy gates | Yes (`.relay/policies/`) | Vendor-managed | Vendor-managed | Vendor-managed |
+| Customizable policy gates | Yes (`.provasign/policies/`) | Vendor-managed | Vendor-managed | Vendor-managed |
 | Cryptographic commit signing | Yes | No | No | No |
 | Intent capture / audit trail | Yes (committed YAML) | Internal logs | Internal logs | PR description |
-| Open-source licensed | Yes (MIT for Grove/Prism/Fuse, AGPL-3.0 for Relay) | No (closed) | No (closed) | No (closed) |
+| Open-source licensed | Yes (MIT for Grove/Prism/Fuse, AGPL-3.0 for Provasign) | No (closed) | No (closed) | No (closed) |
 | Cost | Free | $500/agent/month | $40/user/month | Bundled with Copilot Enterprise |
 
 **The two paradigms:**
 
 **Managed agent platforms (Devin, Background Agents, Workspace):** You hand the platform a task; the platform writes the code, runs the gates, opens the PR. Convenient. Black-box. Doesn't fit if you can't ship source to a vendor.
 
-**Grove Suite:** You hand any agent (Cursor, Claude Code, Copilot, your own) the task. Grove Suite delivers context, prevents false merge conflicts, certifies before PR, signs commits. The agent is yours to pick and swap.
+**Provasign:** You hand any agent (Cursor, Claude Code, Copilot, your own) the task. Provasign delivers context, prevents false merge conflicts, certifies before PR, signs commits. The agent is yours to pick and swap.
 
-**Honest take:** If your team is already all-in on a single managed platform and that platform's governance story satisfies your compliance team, you may not need Grove Suite. The moment you want to use multiple agents, run locally, self-host, or own the audit trail — Grove Suite is the layer that makes that possible.
+**Honest take:** If your team is already all-in on a single managed platform and that platform's governance story satisfies your compliance team, you may not need Provasign. The moment you want to use multiple agents, run locally, self-host, or own the audit trail — Provasign is the layer that makes that possible.
 
 ---
 
@@ -214,11 +214,11 @@ This is the comparison everyone asks for. "If I just use Devin / Cursor Backgrou
 | IDE-quality navigation | LSP (Grove complements, doesn't replace) |
 | Cross-repo enterprise search | Sourcegraph |
 | False git conflicts on parallel agent work | [Fuse]({{ '/other-tools/' | relative_url }}) |
-| Agents in a loop fighting CI findings | [Relay]({{ '/relay/' | relative_url }}) |
-| Cryptographic audit trail for AI-generated commits | [Relay]({{ '/relay/' | relative_url }}) |
+| Agents in a loop fighting CI findings | [Provasign]({{ '/provasign/' | relative_url }}) |
+| Cryptographic audit trail for AI-generated commits | [Provasign]({{ '/provasign/' | relative_url }}) |
 | Post-PR AI code review | CodeRabbit / Greptile |
 | Build provenance | Sigstore / SLSA |
 | Fully managed autonomous agent | Devin / Cursor Background Agents / Copilot Workspace |
-| Open-source, local-first, self-hosted, multi-agent | **Grove Suite** |
+| Open-source, local-first, self-hosted, multi-agent | **Provasign** |
 
-If we got something wrong about a competitor, [file an issue](https://github.com/tabladrum/grove-suite/issues). We'd rather correct an error here than have you make a buying decision against a misrepresentation.
+If we got something wrong about a competitor, [file an issue](https://github.com/provasign/provasign/issues). We'd rather correct an error here than have you make a buying decision against a misrepresentation.

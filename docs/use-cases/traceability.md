@@ -3,13 +3,13 @@ title: Traceability
 layout: default
 parent: Use Cases
 nav_order: 4
-description: "The unbroken chain Relay maintains from natural-language prompt to admitted commit."
+description: "The unbroken chain Provasign maintains from natural-language prompt to admitted commit."
 permalink: /use-cases/traceability/
 ---
 
 # Traceability
 
-Traceability is the unbroken chain from *what was asked* to *what shipped*. For AI-generated code that chain normally breaks the moment the agent session ends — the prompt is gone, and the diff is all that's left. Relay keeps the chain intact.
+Traceability is the unbroken chain from *what was asked* to *what shipped*. For AI-generated code that chain normally breaks the moment the agent session ends — the prompt is gone, and the diff is all that's left. Provasign keeps the chain intact.
 
 ## The chain
 
@@ -17,7 +17,7 @@ Traceability is the unbroken chain from *what was asked* to *what shipped*. For 
 User prompt
    │  captured verbatim
    ▼
-Intent YAML  (.relay/intents/INT-….yaml)
+Intent YAML  (.provasign/intents/INT-….yaml)
    │  prompt_hash · agent · model · acceptance criteria
    ▼
 ChangeSet  (the diff the agent produced)

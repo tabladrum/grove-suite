@@ -2,38 +2,38 @@
 title: Installation
 layout: default
 nav_order: 7
-description: "How to install Relay on macOS, Linux, and Windows — from GitHub Releases binaries or from source."
+description: "How to install Provasign on macOS, Linux, and Windows — from GitHub Releases binaries or from source."
 permalink: /installation/
 ---
 
 # Installation
 
-Grove Suite ships four single-file binaries: `grove`, `prism`, `fuse`, and `relay`. Pick the installation method that fits your environment.
+Provasign ships four single-file binaries: `grove`, `prism`, `fuse`, and `provasign`. Pick the installation method that fits your environment.
 
 ## One-Command Install (Fastest)
 
 No agent required — download, checksum-verify, and install all four binaries:
 
 ```bash
-curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+curl -fsSL https://provasign.dev/assets/install.sh | bash
 ```
 
 Initialize a project in the same step, or customize what gets installed:
 
 ```bash
 # Install + index/initialize the current project
-GROVE_SUITE_PROJECT="$PWD" curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+GROVE_SUITE_PROJECT="$PWD" curl -fsSL https://provasign.dev/assets/install.sh | bash
 
 # Install only Prism (+ Grove, which it depends on) into /usr/local/bin
 GROVE_SUITE_PRODUCTS="grove prism" GROVE_SUITE_INSTALL_DIR=/usr/local/bin \
-  curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+  curl -fsSL https://provasign.dev/assets/install.sh | bash
 ```
 
 Environment knobs: `GROVE_SUITE_VERSION` (default: latest), `GROVE_SUITE_PRODUCTS`,
 `GROVE_SUITE_INSTALL_DIR` (default: `~/bin`), `GROVE_SUITE_PROJECT`.
 
 After it finishes, open a new terminal and restart your AI coding tool so it picks
-up the MCP servers. Verify with `claude mcp list` (prism/relay should show ✓ Connected).
+up the MCP servers. Verify with `claude mcp list` (prism/provasign should show ✓ Connected).
 
 ## Agent Setup Prompt
 
@@ -41,10 +41,10 @@ Prefer a guided, conversational install (the agent asks which products, where to
 install, VS Code extension mode)? Point your agent at the setup prompt:
 
 [Open Agent Setup Guide]({{ '/setup/' | relative_url }}){: .btn .btn-primary .mr-2 }
-[Agent Setup Prompt File](https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md){: .btn }
+[Agent Setup Prompt File](https://provasign.dev/assets/AGENT_SETUP_PROMPT.md){: .btn }
 
 ```bash
-claude "Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"
+claude "Follow the setup instructions at https://provasign.dev/assets/AGENT_SETUP_PROMPT.md"
 ```
 
 Prefer manual installation? Use the options below.
@@ -64,7 +64,7 @@ Prefer manual installation? Use the options below.
 
 Binaries are signed, checksummed, and built on GitHub Actions for every release tag.
 
-**Releases:** [github.com/tabladrum/grove-suite/releases](https://github.com/tabladrum/grove-suite/releases)
+**Releases:** [github.com/provasign/provasign/releases](https://github.com/provasign/provasign/releases)
 
 ### Supported platforms
 
@@ -79,23 +79,23 @@ Binaries are signed, checksummed, and built on GitHub Actions for every release 
 ### macOS (Apple Silicon)
 
 ```bash
-VERSION=v0.1.0   # check https://github.com/tabladrum/grove-suite/releases/latest
+VERSION=v0.1.0   # check https://github.com/provasign/provasign/releases/latest
 
-for binary in grove prism fuse relay; do
-  curl -L "https://github.com/tabladrum/grove-suite/releases/download/${VERSION}/${binary}-${VERSION}-darwin-arm64" -o "${binary}"
+for binary in grove prism fuse provasign; do
+  curl -L "https://github.com/provasign/provasign/releases/download/${VERSION}/${binary}-${VERSION}-darwin-arm64" -o "${binary}"
   chmod +x "${binary}"
   sudo mv "${binary}" /usr/local/bin/
 done
 
 # Verify
-grove version && prism version && fuse version && relay version
+grove version && prism version && fuse version && provasign version
 ```
 
 If macOS Gatekeeper blocks the binary on first run:
 
 ```bash
 xattr -d com.apple.quarantine /usr/local/bin/grove
-# repeat for prism, fuse, relay
+# repeat for prism, fuse, provasign
 ```
 
 We're working on Apple Developer signing — until then, the quarantine-removal step is required.
@@ -109,8 +109,8 @@ Same as above but replace `darwin-arm64` with `darwin-amd64`.
 ```bash
 VERSION=v0.1.0
 
-for binary in grove prism fuse relay; do
-  curl -L "https://github.com/tabladrum/grove-suite/releases/download/${VERSION}/${binary}-${VERSION}-linux-amd64" -o "${binary}"
+for binary in grove prism fuse provasign; do
+  curl -L "https://github.com/provasign/provasign/releases/download/${VERSION}/${binary}-${VERSION}-linux-amd64" -o "${binary}"
   chmod +x "${binary}"
   sudo mv "${binary}" /usr/local/bin/
 done
@@ -122,22 +122,22 @@ Same as above but replace `linux-amd64` with `linux-arm64`.
 
 ### Windows
 
-1. Open [the latest release page](https://github.com/tabladrum/grove-suite/releases/latest).
-2. Download `grove-vX.Y.Z-windows-amd64.exe`, `prism-...exe`, `fuse-...exe`, `relay-...exe`.
+1. Open [the latest release page](https://github.com/provasign/provasign/releases/latest).
+2. Download `grove-vX.Y.Z-windows-amd64.exe`, `prism-...exe`, `fuse-...exe`, `provasign-...exe`.
 3. Move them to a folder on your `PATH`. We recommend `C:\Users\<you>\bin\` and adding that to `PATH` if it isn't already.
 4. Rename each file by removing the version suffix:
    ```powershell
    Rename-Item grove-v0.1.0-windows-amd64.exe grove.exe
    Rename-Item prism-v0.1.0-windows-amd64.exe prism.exe
    Rename-Item fuse-v0.1.0-windows-amd64.exe fuse.exe
-   Rename-Item relay-v0.1.0-windows-amd64.exe relay.exe
+   Rename-Item provasign-v0.1.0-windows-amd64.exe provasign.exe
    ```
 5. Verify in a new PowerShell window:
    ```powershell
    grove version
    prism version
    fuse version
-   relay version
+   provasign version
    ```
 
 ### Verifying downloads
@@ -146,7 +146,7 @@ Every release ships a `checksums.txt`. Verify integrity before running:
 
 ```bash
 VERSION=v0.1.0
-curl -L "https://github.com/tabladrum/grove-suite/releases/download/${VERSION}/checksums.txt" -o checksums.txt
+curl -L "https://github.com/provasign/provasign/releases/download/${VERSION}/checksums.txt" -o checksums.txt
 sha256sum -c checksums.txt --ignore-missing
 ```
 
@@ -168,7 +168,7 @@ Don't pin to `main` — that's our development branch.
 ## Build from Source
 
 Build from source if:
-- You're contributing to Grove Suite
+- You're contributing to Provasign
 - You need a build for an unsupported platform
 - Your security policy requires building from source
 - You want to test the unreleased main branch
@@ -215,14 +215,14 @@ sudo dnf install -y golang gcc make git
 ### Build steps
 
 ```bash
-git clone https://github.com/tabladrum/grove-suite
-cd grove-suite
+git clone https://github.com/provasign/provasign
+cd provasign
 
-# Grove must be built first — Prism, Fuse, and Relay depend on it
+# Grove must be built first — Prism, Fuse, and Provasign depend on it
 cd grove && make install && cd ..
 cd prism && make install && cd ..
 cd fuse  && make install && cd ..
-cd relay && make install && cd ..
+cd provasign && make install && cd ..
 ```
 
 `make install` compiles to `./bin/<name>` and copies to `$GOPATH/bin` (default `~/go/bin`). Make sure that directory is on your `PATH`:
@@ -235,7 +235,7 @@ source ~/.zshrc
 ### Building a specific version
 
 ```bash
-cd grove-suite
+cd provasign
 git checkout v0.1.0
 cd grove && make install && cd ..
 # ... etc
@@ -247,7 +247,7 @@ cd grove && make install && cd ..
 cd grove && make test && cd ..
 cd prism && make test && cd ..
 cd fuse  && make test && cd ..
-cd relay && make test && cd ..
+cd provasign && make test && cd ..
 ```
 
 ---
@@ -259,15 +259,15 @@ cd relay && make test && cd ..
 When ready, you'll be able to:
 
 ```bash
-brew tap tabladrum/grove-suite
-brew install grove-suite       # installs all four
+brew tap provasign/provasign
+brew install provasign       # installs all four
 brew install grove             # or one at a time
 brew install prism
 brew install fuse
-brew install relay
+brew install provasign
 ```
 
-[Track progress on this issue.](https://github.com/tabladrum/grove-suite/issues)
+[Track progress on this issue.](https://github.com/provasign/provasign/issues)
 
 ---
 
@@ -298,25 +298,25 @@ echo "*.py merge=fuse"  >> .gitattributes
 ### 3. Add certified delivery (optional)
 
 ```bash
-relay init --stack=go-microservice    # scaffolds .relay/, generates Ed25519 key
+provasign init --stack=go-microservice    # scaffolds .provasign/, generates Ed25519 key
                                       # writes agent instructions + MCP config
                                       # for every detected coding tool
-relay hook install                    # git pre-push backstop
+provasign hook install                    # git pre-push backstop
 
-# Pre-download analyzer dependencies now so relay_check never silently skips
+# Pre-download analyzer dependencies now so provasign_check never silently skips
 # tools on first use. For deterministic behavior, install the full stack.
-relay tools install --with-sonar      # gitleaks, govulncheck, golangci-lint + JRE + SonarLint jars
+provasign tools install --with-sonar      # gitleaks, govulncheck, golangci-lint + JRE + SonarLint jars
 # Semgrep/Ruff are Python packages — install separately:
 # pipx install semgrep
 # pipx install ruff
 
 # Verify there are no missing analyzer dependencies.
-relay doctor
+provasign doctor
 
-git add .relay/ && git commit -m "Add Relay configuration"
+git add .provasign/ && git commit -m "Add Provasign configuration"
 ```
 
-Pick the stack matching your project: `go-microservice` | `node-api` | `python-service` | `java-spring`. List all with `relay init --list-stacks`.
+Pick the stack matching your project: `go-microservice` | `node-api` | `python-service` | `java-spring`. List all with `provasign init --list-stacks`.
 
 ---
 
@@ -326,16 +326,16 @@ After installation, run a smoke test:
 
 ```bash
 # Health check — all four binaries on PATH
-which grove prism fuse relay
+which grove prism fuse provasign
 
 # Version sanity
 grove version
 prism version
 fuse version
-relay version
+provasign version
 
 # Start Grove and verify HTTP API
-# Grove is now an embedded library — Prism, Fuse, and Relay open the on-disk
+# Grove is now an embedded library — Prism, Fuse, and Provasign open the on-disk
 # index in-process. The CLI is still available for one-shot queries:
 grove index .
 grove symbols main
@@ -353,17 +353,17 @@ prism query "where is authentication handled?"
 ### One-command uninstall (macOS / Linux)
 
 ```bash
-cd /path/to/grove-suite
-./scripts/uninstall-grove-suite.sh /path/to/your/project
+cd /path/to/provasign
+./scripts/uninstall-provasign.sh /path/to/your/project
 ```
 
 What it removes automatically:
 
-- Relay-managed hooks and MCP registrations (via `relay local uninstall` when relay is available)
-- Relay downloaded tool cache (via `relay tools uninstall` when relay is available)
-- Grove/Prism/Fuse/Relay binaries from common install paths
+- Provasign-managed hooks and MCP registrations (via `provasign local uninstall` when provasign is available)
+- Provasign downloaded tool cache (via `provasign tools uninstall` when provasign is available)
+- Grove/Prism/Fuse/Provasign binaries from common install paths
 - Source-build binaries from `$GOPATH/bin`
-- Per-user runtime/cache dirs (`~/.relay`, `~/.grove`, `~/.prism`, `~/.fuse`, `~/.cache/prism`)
+- Per-user runtime/cache dirs (`~/.provasign`, `~/.grove`, `~/.prism`, `~/.fuse`, `~/.cache/prism`)
 - Per-project runtime state (`.grove`, `.git/fuse`, workspace MCP config files)
 
 Windows uninstall automation is planned; until then use the PowerShell removal commands.
@@ -386,7 +386,7 @@ Your `PATH` doesn't include the install directory.
 xattr -d com.apple.quarantine /usr/local/bin/grove
 xattr -d com.apple.quarantine /usr/local/bin/prism
 xattr -d com.apple.quarantine /usr/local/bin/fuse
-xattr -d com.apple.quarantine /usr/local/bin/relay
+xattr -d com.apple.quarantine /usr/local/bin/provasign
 ```
 
 This is the macOS Gatekeeper challenge on unsigned binaries. We're working on Apple Developer signing.
@@ -402,8 +402,8 @@ Tree-sitter (used by Grove and Fuse) requires a C compiler.
 ### Port conflicts
 
 In the embedded model Grove no longer opens TCP ports. The only Grove‑Suite
-port you may need to manage is Relay's API server (default 9000). Configure it
-via `relay init` or the `RELAY_PORT` environment variable.
+port you may need to manage is Provasign's API server (default 9000). Configure it
+via `provasign init` or the `RELAY_PORT` environment variable.
 
 ### Behind a corporate proxy
 
@@ -415,7 +415,7 @@ export HTTPS_PROXY=http://proxy.corp:8080
 export NO_PROXY=localhost,127.0.0.1
 ```
 
-Grove Suite doesn't make external HTTP calls during normal operation, so proxies only matter for `go install` / `git clone` during source builds.
+Provasign doesn't make external HTTP calls during normal operation, so proxies only matter for `go install` / `git clone` during source builds.
 
 ---
 
@@ -424,4 +424,4 @@ Grove Suite doesn't make external HTTP calls during normal operation, so proxies
 - **[Get up and running fast]({{ '/why/#what-we-want-from-you' | relative_url }})** — the 5-minute path with Prism
 - **[Documentation home]({{ '/' | relative_url }})** — full doc map
 - **[Troubleshooting]({{ '/troubleshooting/' | relative_url }})** — common operational issues
-- **[Compare to alternatives]({{ '/comparisons/' | relative_url }})** — Prism vs Copilot, Fuse vs git merge, Relay vs CI
+- **[Compare to alternatives]({{ '/comparisons/' | relative_url }})** — Prism vs Copilot, Fuse vs git merge, Provasign vs CI
