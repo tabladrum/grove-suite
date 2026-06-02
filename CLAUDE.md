@@ -6,20 +6,20 @@ Guidance for Claude Code when working in this repository.
 
 | Component | CLI | Role | License |
 |---|---|---|---|
-| **Relay** | `relay` | **The product.** Certified delivery for AI coding agents — intent capture, pre-commit gates, Ed25519 admission certificates, audit replay. | AGPL-3.0 |
-| **Grove** | `grove` | Code knowledge graph — Tree-sitter parsing, SQLite storage, BFS traversal. **Embedded as a Go library** into Relay, Prism, and Fuse. Usable standalone via the `grove` CLI. | MIT |
+| **Provasign** | `provasign` | **The product.** Certified delivery for AI coding agents — intent capture, pre-commit gates, Ed25519 admission certificates, audit replay. | AGPL-3.0 |
+| **Grove** | `grove` | Code knowledge graph — Tree-sitter parsing, SQLite storage, BFS traversal. **Embedded as a Go library** into Provasign, Prism, and Fuse. Usable standalone via the `grove` CLI. | MIT |
 | **Prism** | `prism` | Token-optimized context delivery for AI agents — ranking, compression, session deduplication. Standalone OSS; embeds Grove. | MIT |
 | **Fuse** | `fuse` | Semantic Git merge driver — symbol-level three-way merge, breaking change detection. Standalone OSS; embeds Grove. | MIT |
 
 ## Architecture Decision — Embedded Grove (no daemon)
 
-**Grove is a Go library, not a service.** Prism, Fuse, and Relay link against `grove/pkg/grove` and call it in-process. There is no `grove serve`, no HTTP port, no shared-secret token, no `$GROVE_URL`. Each consumer opens `.grove/grove.db` directly via SQLite (WAL mode handles concurrent readers).
+**Grove is a Go library, not a service.** Prism, Fuse, and Provasign link against `grove/pkg/grove` and call it in-process. There is no `grove serve`, no HTTP port, no shared-secret token, no `$GROVE_URL`. Each consumer opens `.grove/grove.db` directly via SQLite (WAL mode handles concurrent readers).
 
 Why: per-project Grove daemons created port collisions, per-repo token mismatches, and an opaque multi-process failure mode. The library model gives zero-config UX, hermetic per-product installs, and a single canonical place for the knowledge graph per repo.
 
 The `grove` CLI still ships for direct human use (`grove index`, `grove impact`, `grove tests`) and for the standalone `grove mcp` stdio server. The HTTP/gRPC servers are removed.
 
-**Dependency order:** Build Grove first — it produces the Go library that Prism, Fuse, and Relay link against (and the standalone `grove` binary).
+**Dependency order:** Build Grove first — it produces the Go library that Prism, Fuse, and Provasign link against (and the standalone `grove` binary).
 
 ## Build Commands
 
@@ -29,7 +29,7 @@ Each product is a Go 1.26 module with a consistent Makefile. From within any pro
 make build      # compile binary
 make test       # run all tests
 make lint       # lint
-make proto      # regenerate gRPC stubs (relay/ only)
+make proto      # regenerate gRPC stubs (provasign/ only)
 
 # Run a single test
 go test ./internal/parser/... -run TestGoExtractor
@@ -52,7 +52,7 @@ vsce package   # build .vsix
 Grove is the only component with its own storage and parser. All others import its public API package `grove/pkg/grove`.
 
 **Packages:**
-- `pkg/grove/` — public API: `Engine` with methods `Index`, `Query`, `Impact`, `Deps`, `Symbols`, `Tests`, `Semantic`, `Status`. Stable surface that Prism/Fuse/Relay depend on.
+- `pkg/grove/` — public API: `Engine` with methods `Index`, `Query`, `Impact`, `Deps`, `Symbols`, `Tests`, `Semantic`, `Status`. Stable surface that Prism/Fuse/Provasign depend on.
 - `internal/parser/` — Tree-sitter engine; language-specific extractors in `strategies/`; all CGO usage is isolated here
 - `internal/store/` — SQLite (WAL + FTS5); delta indexing skips files whose git blob SHA is unchanged
 - `internal/graph/` — In-memory `CodeGraph` with 8 edge types (defines, contains, imports, extends, implements, calls, uses-type, tests); BFS traversal
@@ -82,11 +82,11 @@ Operates at symbol granularity using its own Tree-sitter parsing of in-memory co
 
 Git driver contract: `fuse merge %O %A %B %P`, exit 0 (clean) or exit 1 (conflict markers + `.git/fuse/conflict-<hash>.md`).
 
-### Relay — Delivery Platform
+### Provasign — Delivery Platform
 
 Imports `grove/pkg/grove` for impact analysis and test selection during certification.
 
-**External tools** (semgrep, gitleaks, govulncheck, eslint, ruff, sonarlint-ls, JRE) are downloaded on first use by `relay tools install`, not bundled. Pinned download URLs are in `internal/tools/registry.go`.
+**External tools** (semgrep, gitleaks, govulncheck, eslint, ruff, sonarlint-ls, JRE) are downloaded on first use by `provasign tools install`, not bundled. Pinned download URLs are in `internal/tools/registry.go`.
 
 **Three git repos:** `source-repo` (application code, linear main), `intent-store` (YAML intents, audit trail), `platform-config` (policies).
 
@@ -94,10 +94,10 @@ Imports `grove/pkg/grove` for impact analysis and test selection during certific
 
 ## Inter-Component API — Go library (`grove/pkg/grove`)
 
-Prism, Fuse, and Relay all consume Grove via the in-process Go API. No HTTP, no gRPC, no auth, no ports.
+Prism, Fuse, and Provasign all consume Grove via the in-process Go API. No HTTP, no gRPC, no auth, no ports.
 
 ```go
-import "github.com/tabladrum/grove-suite/grove/pkg/grove"
+import "github.com/provasign/grove/pkg/grove"
 
 eng, err := grove.Open(ctx, grove.Config{RepoRoot: "/path/to/repo"})
 defer eng.Close()
@@ -109,13 +109,13 @@ imp, err := eng.Impact(ctx, grove.ImpactRequest{File: "auth.go", Line: 42})
 | Method | Consumer |
 |---|---|
 | `Index(ctx, dir)` | All |
-| `Query(ctx, intent, limit)` | Prism, Relay |
-| `Impact(ctx, file, line)` | Fuse, Relay |
-| `Deps(ctx, file)` | Fuse, Prism, Relay |
+| `Query(ctx, intent, limit)` | Prism, Provasign |
+| `Impact(ctx, file, line)` | Fuse, Provasign |
+| `Deps(ctx, file)` | Fuse, Prism, Provasign |
 | `Symbols(ctx, query)` | Prism, Fuse |
-| `Tests(ctx, symbol)` | Relay |
+| `Tests(ctx, symbol)` | Provasign |
 | `Semantic(ctx, query)` | Prism |
-| `Status(ctx)` | Prism, Relay |
+| `Status(ctx)` | Prism, Provasign |
 
 The `grove` CLI is still useful for direct human use (`grove index`, `grove impact`, etc.) and for the standalone `grove mcp` stdio server.
 
@@ -144,40 +144,40 @@ Prism MCP tools are registered in this session. Follow these rules:
 | symbol definition     | prism_lookup  |
 
 
-## Relay — certified merge gate (ALWAYS use these tools)
+## Provasign — certified merge gate (ALWAYS use these tools)
 
-This project uses [Relay](https://github.com/tabladrum/grove-suite) for
-certified code admission. Relay MCP tools are registered. Follow this
+This project uses [Provasign](https://github.com/provasign/provasign) for
+certified code admission. Provasign MCP tools are registered. Follow this
 workflow on EVERY coding task:
 
 ### Pre-Flight Autopilot
 
-1. **Open an intent BEFORE making code changes** — call relay_intent_open with
+1. **Open an intent BEFORE making code changes** — call provasign_intent_open with
    {title: <short summary>, description: <verbatim user request>}.
    Save the returned intent_id.
 
-2. **Before asking the user to review** — call relay_check with the unified
+2. **Before asking the user to review** — call provasign_check with the unified
    diff plus {intent: <intent_id>, brief: <one-liner>}.
 
 3. **If Allowed=false** — for each policy entry with Verdict != "allow":
-   - Call relay_explain {gate, rule} for the recommended fix.
-   - Apply the fix, re-diff, and re-call relay_check.
+   - Call provasign_explain {gate, rule} for the recommended fix.
+   - Apply the fix, re-diff, and re-call provasign_check.
    - Loop up to 3 times; on the 3rd failure surface the verdict to the user.
 
-4. **Only call relay_submit when relay_check returns Allowed=true** on the
-   EXACT same diff. Never call relay_submit speculatively.
+4. **Only call provasign_submit when provasign_check returns Allowed=true** on the
+   EXACT same diff. Never call provasign_submit speculatively.
 
-5. **Close the intent when done** — call relay_intent_close {intent_id}.
-   Pass the returned trailer_block to relay_submit so the commit is linked
+5. **Close the intent when done** — call provasign_intent_close {intent_id}.
+   Pass the returned trailer_block to provasign_submit so the commit is linked
    to the intent YAML.
 
 ### Tool quick-reference
 
 | Tool                 | When                                          |
 |----------------------|-----------------------------------------------|
-| relay_intent_open    | First — capture the user request as an intent |
-| relay_check          | Before every review request                   |
-| relay_explain        | On any Verdict != allow                       |
-| relay_submit         | Only after relay_check Allowed=true           |
-| relay_policy         | Discover which gates are active               |
-| relay_intent_close   | When the task is complete                     |
+| provasign_intent_open    | First — capture the user request as an intent |
+| provasign_check          | Before every review request                   |
+| provasign_explain        | On any Verdict != allow                       |
+| provasign_submit         | Only after provasign_check Allowed=true           |
+| provasign_policy         | Discover which gates are active               |
+| provasign_intent_close   | When the task is complete                     |

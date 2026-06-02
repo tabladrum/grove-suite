@@ -1,8 +1,8 @@
 # Architecture
 
-**The product is Relay** — certified delivery for AI coding agents. Grove, Prism, and Fuse are the open-source foundation Relay is built on; each is also usable on its own.
+**The product is Provasign** — certified delivery for AI coding agents. Grove, Prism, and Fuse are the open-source foundation Provasign is built on; each is also usable on its own.
 
-This document describes the **embedded architecture**: Grove is a Go library (`grove/pkg/grove`) linked directly into Relay, Prism, and Fuse and called in-process. There is **no `grove serve` daemon, no HTTP/gRPC port, no `$GROVE_URL`, and no shared-secret token**. Each consumer opens the on-disk index at `<repo>/.grove/grove.db` directly via SQLite (WAL mode handles concurrent readers).
+This document describes the **embedded architecture**: Grove is a Go library (`grove/pkg/grove`) linked directly into Provasign, Prism, and Fuse and called in-process. There is **no `grove serve` daemon, no HTTP/gRPC port, no `$GROVE_URL`, and no shared-secret token**. Each consumer opens the on-disk index at `<repo>/.grove/grove.db` directly via SQLite (WAL mode handles concurrent readers).
 
 > Looking for the old client/server design (`:7777`, `:7778`, bearer tokens)? It was the v1 model and has been removed. See the git history of this file if you need it.
 
@@ -37,8 +37,8 @@ This document describes the **embedded architecture**: Grove is a Go library (`g
                         <repo>/.grove/grove.db
 ```
 
-- **Relay** is the delivery platform — intent capture, in-loop quality gates, Ed25519 admission certificates, audit replay. It is the commercial product (AGPL-3.0).
-- **Prism** and **Fuse** are standalone MIT tools that each embed Grove. You can adopt either without Relay.
+- **Provasign** is the delivery platform — intent capture, in-loop quality gates, Ed25519 admission certificates, audit replay. It is the commercial product (AGPL-3.0).
+- **Prism** and **Fuse** are standalone MIT tools that each embed Grove. You can adopt either without Provasign.
 - **Grove** is the shared engine — a Go library plus a standalone `grove` CLI and a `grove mcp` stdio server for direct human/agent use.
 
 **Dependency / build order:** build Grove first; it produces the library the other three link against.
@@ -47,10 +47,10 @@ This document describes the **embedded architecture**: Grove is a Go library (`g
 
 ## Inter-Component API — the Go library (`grove/pkg/grove`)
 
-Relay, Prism, and Fuse consume Grove entirely in-process. No network, no auth, no ports.
+Provasign, Prism, and Fuse consume Grove entirely in-process. No network, no auth, no ports.
 
 ```go
-import "github.com/tabladrum/grove-suite/grove/pkg/grove"
+import "github.com/provasign/provasign/grove/pkg/grove"
 
 eng, err := grove.Open(ctx, grove.Config{RepoRoot: "/path/to/repo"})
 if err != nil { /* ... */ }
@@ -63,13 +63,13 @@ imp, err := eng.Impact(ctx, grove.ImpactRequest{File: "auth.go", Line: 42})
 | Method | Purpose | Consumers |
 |--------|---------|-----------|
 | `Index(ctx, dir)` | Build/refresh the graph (delta-aware) | All |
-| `Query(ctx, intent, limit)` | Intent → ranked symbols (FTS5 + BFS) | Prism, Relay |
-| `Impact(ctx, file, line)` | Blast radius of a change | Fuse, Relay |
-| `Deps(ctx, file)` | Cross-file dependency edges | Fuse, Prism, Relay |
+| `Query(ctx, intent, limit)` | Intent → ranked symbols (FTS5 + BFS) | Prism, Provasign |
+| `Impact(ctx, file, line)` | Blast radius of a change | Fuse, Provasign |
+| `Deps(ctx, file)` | Cross-file dependency edges | Fuse, Prism, Provasign |
 | `Symbols(ctx, query)` | Symbol lookup by name | Prism, Fuse |
-| `Tests(ctx, symbol)` | Tests covering a symbol | Relay |
+| `Tests(ctx, symbol)` | Tests covering a symbol | Provasign |
 | `Semantic(ctx, query)` | Embedding similarity | Prism |
-| `Status(ctx)` | Index summary (files/symbols/edges) | Prism, Relay |
+| `Status(ctx)` | Index summary (files/symbols/edges) | Prism, Provasign |
 
 ### Lifecycle (important)
 
@@ -79,14 +79,14 @@ imp, err := eng.Impact(ctx, grove.ImpactRequest{File: "auth.go", Line: 42})
 
 ## MCP transport
 
-Relay (`relay mcp serve`), Prism (`prism mcp`), and the standalone `grove mcp` all speak **JSON-RPC 2.0 over stdio using the MCP stdio transport: newline-delimited JSON — one compact object per line, no `Content-Length` framing**. Emitting LSP-style `Content-Length` framing causes every newline-delimited client (Claude Code, Cursor, VS Code, Copilot) to block waiting for a terminating newline and time the connection out after ~30s. The `initialize` response echoes the client's requested `protocolVersion` when supported (`2024-11-05` / `2025-03-26` / `2025-06-18`), else falls back to `2025-03-26`.
+Provasign (`provasign mcp serve`), Prism (`prism mcp`), and the standalone `grove mcp` all speak **JSON-RPC 2.0 over stdio using the MCP stdio transport: newline-delimited JSON — one compact object per line, no `Content-Length` framing**. Emitting LSP-style `Content-Length` framing causes every newline-delimited client (Claude Code, Cursor, VS Code, Copilot) to block waiting for a terminating newline and time the connection out after ~30s. The `initialize` response echoes the client's requested `protocolVersion` when supported (`2024-11-05` / `2025-03-26` / `2025-06-18`), else falls back to `2025-03-26`.
 
 ---
 
 ## Grove — the engine
 
 **Packages:**
-- `pkg/grove/` — public API: `Engine` (`Index`, `Query`, `Impact`, `Deps`, `Symbols`, `Tests`, `Semantic`, `Status`). The stable surface Relay/Prism/Fuse depend on.
+- `pkg/grove/` — public API: `Engine` (`Index`, `Query`, `Impact`, `Deps`, `Symbols`, `Tests`, `Semantic`, `Status`). The stable surface Provasign/Prism/Fuse depend on.
 - `internal/parser/` — Tree-sitter engine; language extractors in `strategies/`; all CGO isolated here.
 - `internal/store/` — SQLite (WAL + FTS5); delta indexing skips files whose git blob SHA is unchanged.
 - `internal/graph/` — in-memory `CodeGraph`, 8 edge types (defines, contains, imports, extends, implements, calls, uses-type, tests), BFS traversal.
@@ -138,19 +138,19 @@ graph context → breaking-change detection → conflict classification → stra
    └─ conflict→ conflict markers + .git/fuse/conflict-<sha>.md · exit 1
 ```
 
-### Relay certification pipeline (the product)
+### Provasign certification pipeline (the product)
 
 ```
 agent writes code
    ▼
-relay_intent_open → intent YAML captured (the prompt, recorded)
+provasign_intent_open → intent YAML captured (the prompt, recorded)
    ▼
-relay_check  (fast, in-loop, sub-10s target)
+provasign_check  (fast, in-loop, sub-10s target)
    └─ SAST on changed files + Grove-affected tests only
       structured findings (file, line, rule, severity, fix-hint) → agent
       agent self-corrects; loops up to 3× until Allowed=true
-   ▼  (relay_certify only after relay_check Allowed=true)
-relay_certify
+   ▼  (provasign_certify only after provasign_check Allowed=true)
+provasign_certify
    ├─ Stage 1: build + full test suite (git worktree isolation)
    │   └─ coverage-of-changed-symbols gate (vs Grove tests edges)
    ├─ Stage 2: static analysis (semgrep, gitleaks, govulncheck, linters)
@@ -167,7 +167,7 @@ relay_intent_close → intent promoted + committed
 
 ---
 
-## Relay data model
+## Provasign data model
 
 ```
 Repo (id, name, url, default_branch)
@@ -184,14 +184,14 @@ Repo (id, name, url, default_branch)
               admitted_commit_sha, admitted_branch
 ```
 
-**Relay's three git repos:** `source-repo` (application code, linear main), `intent-store` (YAML intents + audit trail), `platform-config` (policies). Redis, where used, is transient only (`appendonly no`) — all business state lives in git.
+**Provasign's three git repos:** `source-repo` (application code, linear main), `intent-store` (YAML intents + audit trail), `platform-config` (policies). Redis, where used, is transient only (`appendonly no`) — all business state lives in git.
 
 ---
 
 ## Security model
 
 - **Local-first, no cloud, zero telemetry.** Your code never leaves your machine. There are no network listeners in the embedded model.
-- **Ed25519 admission key.** Relay generates a keypair at `~/.relay/keys/admission.ed25519` (mode 0600) on `relay init`. Every admitted commit is signed over CanonicalBytes (config hash + ChangeSet + test results + findings). The admitted commit SHA is recorded in the trailer *after* signing — the certificate is valid before the commit exists.
+- **Ed25519 admission key.** Provasign generates a keypair at `~/.provasign/keys/admission.ed25519` (mode 0600) on `provasign init`. Every admitted commit is signed over CanonicalBytes (config hash + ChangeSet + test results + findings). The admitted commit SHA is recorded in the trailer *after* signing — the certificate is valid before the commit exists.
 - **No shared-secret tokens, no open ports.** The removed daemon's `127.0.0.1` binding and `.grove/.token` are gone; the embedded library has no attack surface beyond the local filesystem.
 - **Threat boundary.** The model protects against network-adjacent and browser-based attacks by construction (nothing listens). It does not isolate against other local processes running as the same user — full isolation would need OS-level sandboxing, outside the scope of these tools.
 
@@ -200,11 +200,11 @@ Repo (id, name, url, default_branch)
 ## Module paths
 
 ```
-github.com/tabladrum/grove-suite/grove     grove/go.mod   (engine: library + CLI)
-github.com/tabladrum/grove-suite/prism     prism/go.mod   (MIT)
-github.com/tabladrum/grove-suite/fuse      fuse/go.mod    (MIT)
-github.com/tabladrum/grove-suite/relay     relay/go.mod   (AGPL-3.0 — the product)
-github.com/tabladrum/grove-suite/astkit    astkit/go.mod  (shared AST utils)
+github.com/provasign/provasign/grove     grove/go.mod   (engine: library + CLI)
+github.com/provasign/provasign/prism     prism/go.mod   (MIT)
+github.com/provasign/provasign/fuse      fuse/go.mod    (MIT)
+github.com/provasign/provasign/provasign     provasign/go.mod   (AGPL-3.0 — the product)
+github.com/provasign/provasign/astkit    astkit/go.mod  (shared AST utils)
 ```
 
 `go.work` at the repo root references all modules.
@@ -214,12 +214,12 @@ github.com/tabladrum/grove-suite/astkit    astkit/go.mod  (shared AST utils)
 ## Key invariants
 
 1. **Grove is the single source of graph truth.** No consumer rebuilds the symbol graph internally.
-2. **Embedded only.** Relay/Prism/Fuse call `grove/pkg/grove` in-process. No daemon, no ports, no tokens, no `$GROVE_URL`.
+2. **Embedded only.** Provasign/Prism/Fuse call `grove/pkg/grove` in-process. No daemon, no ports, no tokens, no `$GROVE_URL`.
 3. **Every engine opener closes it.** `Open` must be paired with `Close()`/`Shutdown()` before process exit or repo removal, or SQLite handles leak.
 4. **MCP stdio is newline-delimited JSON.** No `Content-Length` framing — it breaks every MCP client.
 5. **`initialize` echoes the client's protocol version** when supported, else falls back to `2025-03-26`.
 6. **Delta indexing by git blob SHA.** Matching SHA → never re-parsed, regardless of repo size.
 7. **Fuse parses merge versions in memory.** It never writes base/ours/theirs to disk; Grove is queried only for cross-file context.
-8. **Relay's CanonicalBytes excludes `admitted_commit_sha`.** Signed before the commit exists; SHA appended to the trailer post-commit.
-9. **`relay init` is the one-command agent wiring step.** It writes Pre-Flight Autopilot instructions to every per-agent instruction file and registers the relay MCP server with every detected tool — idempotent on re-run.
-10. **Runtime state is never committed.** `.grove/` (engine DB) and `.relay/*.db` are git-ignored; per-agent `mcp.json` files carry machine-specific absolute paths and are ignored too.
+8. **Provasign's CanonicalBytes excludes `admitted_commit_sha`.** Signed before the commit exists; SHA appended to the trailer post-commit.
+9. **`provasign init` is the one-command agent wiring step.** It writes Pre-Flight Autopilot instructions to every per-agent instruction file and registers the provasign MCP server with every detected tool — idempotent on re-run.
+10. **Runtime state is never committed.** `.grove/` (engine DB) and `.provasign/*.db` are git-ignored; per-agent `mcp.json` files carry machine-specific absolute paths and are ignored too.

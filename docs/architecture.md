@@ -2,27 +2,27 @@
 title: Architecture
 layout: default
 nav_order: 4
-description: "How Relay is built: a single binary with the Grove code-knowledge-graph engine embedded in-process. No daemon, no ports, no tokens."
+description: "How Provasign is built: a single binary with the Grove code-knowledge-graph engine embedded in-process. No daemon, no ports, no tokens."
 permalink: /architecture/
 ---
 
 # Architecture
 {: .no_toc }
 
-Relay is a **single Go binary**. There is no server to run, no port to open, no token to manage, and no background daemon. Everything — intent capture, policy gates, test selection, impact analysis, Ed25519 signing, and audit replay — happens in-process when your agent (or you) invokes it.
+Provasign is a **single Go binary**. There is no server to run, no port to open, no token to manage, and no background daemon. Everything — intent capture, policy gates, test selection, impact analysis, Ed25519 signing, and audit replay — happens in-process when your agent (or you) invokes it.
 
-The engine that makes Relay *understand your code* rather than just scan diffs is **Grove**, and it is compiled directly into the Relay binary.
+The engine that makes Provasign *understand your code* rather than just scan diffs is **Grove**, and it is compiled directly into the Provasign binary.
 
 1. TOC
 {:toc}
 
 ---
 
-## Grove — the knowledge-graph engine inside Relay
+## Grove — the knowledge-graph engine inside Provasign
 
-**Grove is the code knowledge graph that Relay runs on.** It is not a separate service you install or connect to — Relay links against the Go library `grove/pkg/grove` and calls it directly in the same process.
+**Grove is the code knowledge graph that Provasign runs on.** It is not a separate service you install or connect to — Provasign links against the Go library `grove/pkg/grove` and calls it directly in the same process.
 
-Where a diff scanner sees *lines changed*, Grove sees *symbols changed and everything connected to them*. That is what lets Relay answer the questions a certification gate actually needs to answer:
+Where a diff scanner sees *lines changed*, Grove sees *symbols changed and everything connected to them*. That is what lets Provasign answer the questions a certification gate actually needs to answer:
 
 - **What does this change break?** — blast radius across the whole repository, not just the edited file.
 - **Which tests cover the changed symbols?** — so certification runs the *relevant* suite, not all of it or none of it.
@@ -46,19 +46,19 @@ Symbols are addressed as `{filePath}::{qualifiedName}@{blobSHA}`, so a symbol id
 
 ### One graph per repository
 
-Each repository has exactly one Grove database at `<repo>/.grove/grove.db`. Relay opens it in-process; so can the standalone `grove` CLI, Prism, and Fuse if you use them. WAL mode handles concurrent readers, and Grove uses a single writer connection with a 30-second busy timeout so multiple agents (Claude Code + Copilot + a Relay pre-push hook) don't collide.
+Each repository has exactly one Grove database at `<repo>/.grove/grove.db`. Provasign opens it in-process; so can the standalone `grove` CLI, Prism, and Fuse if you use them. WAL mode handles concurrent readers, and Grove uses a single writer connection with a 30-second busy timeout so multiple agents (Claude Code + Copilot + a Provasign pre-push hook) don't collide.
 
 > **Why embedded, not a daemon?** Per-project Grove daemons created port collisions, per-repo token mismatches, and an opaque multi-process failure mode. The library model gives zero-config startup, hermetic installs, and a single canonical knowledge graph per repo. There is no `grove serve`, no `$GROVE_URL`, no shared secret.
 
 ---
 
-## The Relay binary
+## The Provasign binary
 
-Relay sits on top of Grove and adds the certification machinery:
+Provasign sits on top of Grove and adds the certification machinery:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  relay  (single binary)                                    │
+│  provasign  (single binary)                                    │
 │                                                            │
 │  ┌─────────────┐   ┌──────────────┐   ┌────────────────┐   │
 │  │ Intent      │   │ Policy gates │   │ Signer         │   │
@@ -70,7 +70,7 @@ Relay sits on top of Grove and adds the certification machinery:
 │  │ Analyzers   │                       │ Engine store   │   │
 │  │ semgrep …   │   ┌──────────────┐    │ certs +        │   │
 │  │ (downloaded │   │  Grove        │   │ changesets     │   │
-│  │  on demand) │◄──┤  pkg/grove    │   │ (.relay/       │   │
+│  │  on demand) │◄──┤  pkg/grove    │   │ (.provasign/       │   │
 │  └─────────────┘   │  EMBEDDED     │   │  engine.db)    │   │
 │                    │  impact·tests │    └────────────────┘   │
 │                    │  deps·query   │                        │
@@ -80,9 +80,9 @@ Relay sits on top of Grove and adds the certification machinery:
                   <repo>/.grove/grove.db   (one graph per repo)
 ```
 
-Relay calls Grove for the analysis that needs code understanding:
+Provasign calls Grove for the analysis that needs code understanding:
 
-| Grove method | Relay uses it for |
+| Grove method | Provasign uses it for |
 |---|---|
 | `Impact(file, line)` | blast radius of a change during certification |
 | `Tests(symbol)` | selecting the tests that actually cover the change |
@@ -92,7 +92,7 @@ Relay calls Grove for the analysis that needs code understanding:
 
 ### External analyzers are downloaded, not bundled
 
-The heavy security tooling — semgrep, gitleaks, govulncheck, eslint, ruff, sonarlint-ls, a JRE — is **not** baked into the binary. `relay tools install` fetches pinned versions on first use (Python/Node tools via pipx/npm). This keeps the binary small and lets you pin and audit exactly which analyzer versions produced a certificate.
+The heavy security tooling — semgrep, gitleaks, govulncheck, eslint, ruff, sonarlint-ls, a JRE — is **not** baked into the binary. `provasign tools install` fetches pinned versions on first use (Python/Node tools via pipx/npm). This keeps the binary small and lets you pin and audit exactly which analyzer versions produced a certificate.
 
 ---
 
@@ -100,11 +100,11 @@ The heavy security tooling — semgrep, gitleaks, govulncheck, eslint, ruff, son
 
 | Property | Detail |
 |---|---|
-| **No network listeners** | Grove is in-process; Relay's core flow opens no ports and runs no daemon |
+| **No network listeners** | Grove is in-process; Provasign's core flow opens no ports and runs no daemon |
 | **No telemetry** | Nothing phones home; your source never leaves the machine |
-| **Local signing key** | Ed25519 keypair at `<repo>/.relay/keys/signing.ed25519.key` (mode `0600`), or `~/.relay/keys/` with `--user`; generated on first use |
-| **State in git + local SQLite** | Committed intents live in `.relay/intents/`; certificates and changesets live in `.relay/engine.db` (gitignored) |
-| **Secrets via env only** | Credentials are never written into `.relay/relay.yaml` |
+| **Local signing key** | Ed25519 keypair at `<repo>/.provasign/keys/signing.ed25519.key` (mode `0600`), or `~/.provasign/keys/` with `--user`; generated on first use |
+| **State in git + local SQLite** | Committed intents live in `.provasign/intents/`; certificates and changesets live in `.provasign/engine.db` (gitignored) |
+| **Secrets via env only** | Credentials are never written into `.provasign/provasign.yaml` |
 
 ---
 
@@ -120,7 +120,7 @@ One binary, three modes — same config, same certificate format:
 
 The signer is an interface: laptop mode uses a local Ed25519 key; team mode swaps in a KMS-backed signer behind the same interface, so certificates keep the same shape.
 
-> **Verification scope.** In laptop mode, certificates and the signing key live on the developer's machine (`.relay/engine.db` and `.relay/keys/`, both gitignored), so `relay cert verify` / `relay cert replay` are local to that machine. **Independent, cross-machine verification — by an auditor, a CI job, or a reviewer on a fresh clone — is a server (team) mode capability**, where a shared certificate store and a KMS-backed public key make admissions verifiable anywhere. Server mode is on the roadmap.
+> **Verification scope.** In laptop mode, certificates and the signing key live on the developer's machine (`.provasign/engine.db` and `.provasign/keys/`, both gitignored), so `provasign cert verify` / `provasign cert replay` are local to that machine. **Independent, cross-machine verification — by an auditor, a CI job, or a reviewer on a fresh clone — is a server (team) mode capability**, where a shared certificate store and a KMS-backed public key make admissions verifiable anywhere. Server mode is on the roadmap.
 
 ---
 
@@ -129,4 +129,4 @@ The signer is an interface: laptop mode uses a local Ed25519 key; team mode swap
 - [How It Works]({{ '/how-it-works/' | relative_url }}) — the certify → sign → replay flow end to end
 - [Features]({{ '/features/' | relative_url }}) — gates, certificates, and agent wiring
 - [Other developer tools]({{ '/other-tools/' | relative_url }}) — Prism and Fuse, which embed the same Grove engine
-- [Grove source on GitHub](https://github.com/tabladrum/grove-suite/tree/main/grove#readme)
+- [Grove source on GitHub](https://github.com/provasign/provasign/tree/main/grove#readme)

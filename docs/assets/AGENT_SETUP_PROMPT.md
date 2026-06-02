@@ -1,6 +1,6 @@
-# Grove Suite — AI Agent Setup Prompt
+# Provasign — AI Agent Setup Prompt
 
-*This file is a prompt for your AI coding agent. Point any agent at it — Claude Code, Cursor, Codex CLI, GitHub Copilot, Windsurf — and it will install and configure Grove Suite for you, always at the latest version.*
+*This file is a prompt for your AI coding agent. Point any agent at it — Claude Code, Cursor, Codex CLI, GitHub Copilot, Windsurf — and it will install and configure Provasign for you, always at the latest version.*
 
 ---
 
@@ -8,12 +8,12 @@
 
 **Prefer one command? (no agent required)**
 ```bash
-curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+curl -fsSL https://provasign.dev/assets/install.sh | bash
 ```
 This downloads, checksum-verifies, and installs all four binaries to `~/bin`.
 To also initialize a project in the same step:
 ```bash
-GROVE_SUITE_PROJECT="$PWD" curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+GROVE_SUITE_PROJECT="$PWD" curl -fsSL https://provasign.dev/assets/install.sh | bash
 ```
 Knobs: `GROVE_SUITE_VERSION`, `GROVE_SUITE_PRODUCTS`, `GROVE_SUITE_INSTALL_DIR`,
 `GROVE_SUITE_PROJECT`. After it finishes, restart your AI coding tool and verify
@@ -28,24 +28,24 @@ guided choices (which products, install location, VS Code extension mode).
 ```
 Or from outside the repo:
 ```
-claude "Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"
+claude "Follow the setup instructions at https://provasign.dev/assets/AGENT_SETUP_PROMPT.md"
 ```
 
 **Cursor / Codex CLI / any agent with web fetch:**
 Paste the URL below into chat and say "follow the setup instructions in this file":
 ```
-https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md
+https://provasign.dev/assets/AGENT_SETUP_PROMPT.md
 ```
 
 ---
 
 ## Instructions for the Agent
 
-You are setting up Grove Suite — infrastructure that makes AI coding agents production-safe. Follow each step in order. Ask the user when a decision is needed. Do not skip checksum verification.
+You are setting up Provasign — infrastructure that makes AI coding agents production-safe. Follow each step in order. Ask the user when a decision is needed. Do not skip checksum verification.
 
 Before Step 1, ask:
 
-> Do you want to **install/update** Grove Suite, or **fully uninstall/reset** it?
+> Do you want to **install/update** Provasign, or **fully uninstall/reset** it?
 
 - If the user says **install/update**, continue with Step 1 as written.
 - If the user says **uninstall/reset**, skip to **Step U1 — Full Uninstall / Reset** below.
@@ -55,7 +55,7 @@ Before Step 1, ask:
 Before doing anything else, fetch the latest version of this file:
 
 ```
-https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md
+https://provasign.dev/assets/AGENT_SETUP_PROMPT.md
 ```
 
 If the fetched content differs from what you are reading now, use the fetched version for all remaining steps. This ensures you always follow the most current setup procedure.
@@ -66,16 +66,16 @@ If the fetched content differs from what you are reading now, use the fetched ve
 
 Ask the user:
 
-> Which Grove Suite products would you like to install?
+> Which Provasign products would you like to install?
 >
-> **1. Full suite** *(recommended)* — Grove + Prism + Fuse + Relay
+> **1. Full suite** *(recommended)* — Grove + Prism + Fuse + Provasign
 > **2. Prism only** — token-optimized context for your AI agent (most common single install)
 > **3. Grove + Prism** — context delivery with the full knowledge graph
 > **4. Grove + Fuse** — symbol-aware merge for teams running parallel agents
-> **5. Grove + Relay** — quality gates and certified commits for your agent
+> **5. Grove + Provasign** — quality gates and certified commits for your agent
 > **6. Custom** — I'll choose individually
 
-Grove is always included — Prism, Fuse, and Relay all depend on it.
+Grove is always included — Prism, Fuse, and Provasign all depend on it.
 
 Also ask:
 
@@ -140,7 +140,7 @@ Fetch the current release tag from the GitHub API:
 
 **Linux / macOS:**
 ```bash
-VERSION=$(curl -sf https://api.github.com/repos/tabladrum/grove-suite/releases/latest \
+VERSION=$(curl -sf https://api.github.com/repos/provasign/provasign/releases/latest \
   | grep '"tag_name"' \
   | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
 echo "Latest release: ${VERSION}"
@@ -148,18 +148,18 @@ echo "Latest release: ${VERSION}"
 
 If `curl` is unavailable:
 ```bash
-VERSION=$(wget -qO- https://api.github.com/repos/tabladrum/grove-suite/releases/latest \
+VERSION=$(wget -qO- https://api.github.com/repos/provasign/provasign/releases/latest \
   | grep '"tag_name"' \
   | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
 ```
 
 **Windows (PowerShell):**
 ```powershell
-$VERSION = (Invoke-RestMethod https://api.github.com/repos/tabladrum/grove-suite/releases/latest).tag_name
+$VERSION = (Invoke-RestMethod https://api.github.com/repos/provasign/provasign/releases/latest).tag_name
 Write-Host "Latest release: $VERSION"
 ```
 
-If the API is unreachable, tell the user to check https://github.com/tabladrum/grove-suite/releases and provide the version manually.
+If the API is unreachable, tell the user to check https://github.com/provasign/provasign/releases and provide the version manually.
 
 ---
 
@@ -169,7 +169,7 @@ For each product the user selected, check what is already installed and at what 
 
 **Linux / macOS:**
 ```bash
-for bin in grove prism fuse relay; do
+for bin in grove prism fuse provasign; do
   if command -v "$bin" &>/dev/null; then
     LOC=$(which "$bin")
     VER=$("$bin" version 2>/dev/null | head -1 || echo "version unknown")
@@ -182,7 +182,7 @@ done
 
 **Windows (PowerShell):**
 ```powershell
-foreach ($bin in @("grove","prism","fuse","relay")) {
+foreach ($bin in @("grove","prism","fuse","provasign")) {
   $path = Get-Command $bin -ErrorAction SilentlyContinue
   if ($path) {
     $ver = & $bin version 2>$null | Select-Object -First 1
@@ -206,21 +206,21 @@ Set the base URL:
 
 **Linux / macOS:**
 ```bash
-BASE="https://github.com/tabladrum/grove-suite/releases/download/${VERSION}"
+BASE="https://github.com/provasign/provasign/releases/download/${VERSION}"
 ```
 
 Download the checksums file first:
 
 **Linux / macOS:**
 ```bash
-curl -fL "${BASE}/checksums.txt" -o /tmp/grove-suite-checksums.txt
+curl -fL "${BASE}/checksums.txt" -o /tmp/provasign-checksums.txt
 echo "Checksums downloaded."
 ```
 
 **Windows (PowerShell):**
 ```powershell
-$BASE = "https://github.com/tabladrum/grove-suite/releases/download/$VERSION"
-Invoke-WebRequest "$BASE/checksums.txt" -OutFile "$env:TEMP\grove-suite-checksums.txt"
+$BASE = "https://github.com/provasign/provasign/releases/download/$VERSION"
+Invoke-WebRequest "$BASE/checksums.txt" -OutFile "$env:TEMP\provasign-checksums.txt"
 Write-Host "Checksums downloaded."
 ```
 
@@ -228,7 +228,7 @@ Now download each selected binary. Install **Grove first** — the others depend
 
 **Linux / macOS — for each product:**
 ```bash
-PRODUCT=grove   # repeat for: prism, fuse, relay
+PRODUCT=grove   # repeat for: prism, fuse, provasign
 FILENAME="${PRODUCT}-${VERSION}-${OS}-${ARCH}"
 curl -fL "${BASE}/${FILENAME}" -o "/tmp/${FILENAME}"
 echo "Downloaded ${FILENAME}"
@@ -236,7 +236,7 @@ echo "Downloaded ${FILENAME}"
 
 **Windows (PowerShell) — for each product:**
 ```powershell
-$PRODUCT = "grove"  # repeat for: prism, fuse, relay
+$PRODUCT = "grove"  # repeat for: prism, fuse, provasign
 $FILENAME = "$PRODUCT-$VERSION-windows-$ARCH.exe"
 Invoke-WebRequest "$BASE/$FILENAME" -OutFile "$env:TEMP\$FILENAME"
 Write-Host "Downloaded $FILENAME"
@@ -254,7 +254,7 @@ PRODUCT=grove   # repeat for each binary
 FILENAME="${PRODUCT}-${VERSION}-${OS}-${ARCH}"
 
 EXPECTED=$(grep "^[a-f0-9]*  ${FILENAME}$\|^[a-f0-9]*  \./${FILENAME}$" \
-           /tmp/grove-suite-checksums.txt | awk '{print $1}')
+           /tmp/provasign-checksums.txt | awk '{print $1}')
 
 if command -v sha256sum &>/dev/null; then
   ACTUAL=$(sha256sum "/tmp/${FILENAME}" | awk '{print $1}')
@@ -277,7 +277,7 @@ fi
 $PRODUCT = "grove"  # repeat for each binary
 $FILENAME = "$PRODUCT-$VERSION-windows-$ARCH.exe"
 
-$checksums = Get-Content "$env:TEMP\grove-suite-checksums.txt"
+$checksums = Get-Content "$env:TEMP\provasign-checksums.txt"
 $expected = ($checksums | Where-Object { $_ -match $FILENAME }) -split '\s+' | Select-Object -First 1
 
 $actual = (Get-FileHash "$env:TEMP\$FILENAME" -Algorithm SHA256).Hash.ToLower()
@@ -305,7 +305,7 @@ install directory chosen in Step 1.
 
 ```bash
 mkdir -p ~/bin
-for PRODUCT in grove prism fuse relay; do   # only selected products
+for PRODUCT in grove prism fuse provasign; do   # only selected products
   FILENAME="${PRODUCT}-${VERSION}-${OS}-${ARCH}"
   mv "/tmp/${FILENAME}" ~/bin/${PRODUCT}
   chmod +x ~/bin/${PRODUCT}
@@ -319,8 +319,8 @@ Register `~/bin` with the system so it is available to **all processes**
 ```bash
 # macOS: register via path_helper — works for git hooks, GUI apps, /bin/sh
 if [[ "$(uname)" == "Darwin" ]]; then
-  echo "$HOME/bin" | sudo tee /etc/paths.d/grove-suite > /dev/null
-  echo "Registered $HOME/bin in /etc/paths.d/grove-suite (all processes)"
+  echo "$HOME/bin" | sudo tee /etc/paths.d/provasign > /dev/null
+  echo "Registered $HOME/bin in /etc/paths.d/provasign (all processes)"
 fi
 
 # All platforms: add to shell RC for interactive sessions (idempotent)
@@ -338,7 +338,7 @@ echo "~/bin is now on PATH for this session"
 
 macOS — clear Gatekeeper quarantine:
 ```bash
-for PRODUCT in grove prism fuse relay; do
+for PRODUCT in grove prism fuse provasign; do
   xattr -d com.apple.quarantine ~/bin/${PRODUCT} 2>/dev/null || true
 done
 ```
@@ -363,7 +363,7 @@ OS="darwin"        # filled in by agent
 ARCH="arm64"       # filled in by agent
 INSTALL_DIR="/usr/local/bin"
 
-for PRODUCT in grove prism fuse relay; do
+for PRODUCT in grove prism fuse provasign; do
   sudo mv "/tmp/${PRODUCT}-${VERSION}-${OS}-${ARCH}" "${INSTALL_DIR}/${PRODUCT}"
   sudo chmod +x "${INSTALL_DIR}/${PRODUCT}"
   xattr -d com.apple.quarantine "${INSTALL_DIR}/${PRODUCT}" 2>/dev/null || true
@@ -377,7 +377,7 @@ done
 
 **Windows — move to target directory (agent runs this):**
 ```powershell
-$PRODUCTS = @("grove","prism","fuse","relay")   # only selected products
+$PRODUCTS = @("grove","prism","fuse","provasign")   # only selected products
 $TARGET = "$env:USERPROFILE\bin"                # or user-specified path
 New-Item -ItemType Directory -Force -Path $TARGET | Out-Null
 foreach ($PRODUCT in $PRODUCTS) {
@@ -466,23 +466,23 @@ echo "Fuse: installed. Next git merge will use symbol-aware resolution."
 
 Ask the user which languages they use and only add those lines.
 
-**Relay (if selected):**
+**Provasign (if selected):**
 
 Then run:
 ```bash
-relay init --list-stacks  # show available stacks: go-microservice, java-spring,
+provasign init --list-stacks  # show available stacks: go-microservice, java-spring,
                           # node-api, python-service
-relay init --stack=<stack> # pick the stack that matches your project;
-                          # scaffolds .relay/ config, generates Ed25519 key,
+provasign init --stack=<stack> # pick the stack that matches your project;
+                          # scaffolds .provasign/ config, generates Ed25519 key,
                           # writes agent steering instructions to CLAUDE.md /
                           # .cursorrules / AGENTS.md / .clinerules automatically
-relay hook install        # installs pre-push backstop
+provasign hook install        # installs pre-push backstop
 
 # Pre-download analyzer dependencies now so there is no first-use delay.
 # (Downloads JRE + sonarlint-ls.jar + plugins; roughly 500+ MB total with --with-sonar.)
 # Ask the user before running --with-sonar if bandwidth is a concern.
-relay tools install --with-sonar
-echo "Relay tools installed."
+provasign tools install --with-sonar
+echo "Provasign tools installed."
 
 # govulncheck requires Go in PATH. Add it if missing:
 export PATH="/usr/local/go/bin:$PATH"
@@ -503,29 +503,29 @@ else
   echo "    then: pipx install semgrep && pipx install ruff"
 fi
 
-# eslint is optional — only needed if JS/TS SAST is enabled in relay.yaml.
+# eslint is optional — only needed if JS/TS SAST is enabled in provasign.yaml.
 # npm install -g eslint
 
 # Verify all tools after install.
-# relay doctor exits non-zero if any check needs attention — read its output
+# provasign doctor exits non-zero if any check needs attention — read its output
 # rather than treating a non-zero exit as a hard failure. Only stop if a
 # tool that is enabled AND required for your stack shows "missing".
-relay doctor || true
-# If govulncheck shows missing: ensure Go is on PATH and re-run relay tools install.
+provasign doctor || true
+# If govulncheck shows missing: ensure Go is on PATH and re-run provasign tools install.
 # If eslint shows missing: safe to ignore for Go/Python projects.
 
-git add .relay/
-echo "Relay: initialized. Your agent will call relay_check before every commit."
+git add .provasign/
+echo "Provasign: initialized. Your agent will call provasign_check before every commit."
 ```
 
-> **Claude Code users:** `relay init` also writes `.mcp.json` at the project root
+> **Claude Code users:** `provasign init` also writes `.mcp.json` at the project root
 > (merging with Prism's entry if already present). When you restart Claude Code,
 > approve the pending `.mcp.json` MCP servers when prompted.
 
 **Start MCP servers** (do this after all products are initialized):
 
 ```bash
-# Grove is now an embedded library — Prism, Fuse, and Relay link it directly
+# Grove is now an embedded library — Prism, Fuse, and Provasign link it directly
 # and open the on-disk index in-process. No `grove serve` daemon, no ports,
 # no tokens. The CLI is still available for one-shot queries.
 
@@ -545,14 +545,14 @@ against the indexed project. Run from the project root with Grove already servin
 **Linux / macOS:**
 ```bash
 echo ""
-echo "=== Grove Suite smoke test ==="
+echo "=== Provasign smoke test ==="
 echo ""
 
 # ── Binary versions ──────────────────────────────────────────────────
 grove version  && echo "✅ grove binary ok"  || echo "❌ grove binary failed"
 command -v prism &>/dev/null && { prism version && echo "✅ prism binary ok" || echo "❌ prism binary failed"; }
 command -v fuse  &>/dev/null && { fuse version  && echo "✅ fuse binary ok"  || echo "❌ fuse binary failed";  }
-command -v relay &>/dev/null && { relay version && echo "✅ relay binary ok" || echo "❌ relay binary failed"; }
+command -v provasign &>/dev/null && { provasign version && echo "✅ provasign binary ok" || echo "❌ provasign binary failed"; }
 echo ""
 
 # ── Grove: live query against the indexed project ────────────────────
@@ -583,15 +583,15 @@ if command -v fuse &>/dev/null; then
   echo ""
 fi
 
-# ── Relay: policy + doctor ───────────────────────────────────────────
-if command -v relay &>/dev/null; then
-  echo "--- Relay: policy gates ---"
-  relay policy 2>/dev/null | head -10 \
-    && echo "✅ Relay policy loaded" \
-    || echo "❌ Relay policy failed — run: relay init --stack=<stack>"
+# ── Provasign: policy + doctor ───────────────────────────────────────────
+if command -v provasign &>/dev/null; then
+  echo "--- Provasign: policy gates ---"
+  provasign policy 2>/dev/null | head -10 \
+    && echo "✅ Provasign policy loaded" \
+    || echo "❌ Provasign policy failed — run: provasign init --stack=<stack>"
   echo ""
-  echo "--- Relay: analyzer status ---"
-  relay doctor || true   # non-zero is expected if optional tools (eslint) are missing
+  echo "--- Provasign: analyzer status ---"
+  provasign doctor || true   # non-zero is expected if optional tools (eslint) are missing
   echo ""
 fi
 
@@ -601,14 +601,14 @@ echo "=== Smoke test complete ==="
 **Windows (PowerShell):**
 ```powershell
 Write-Host ""
-Write-Host "=== Grove Suite smoke test ==="
+Write-Host "=== Provasign smoke test ==="
 Write-Host ""
 
 # Binary versions
 & grove version  && Write-Host "✅ grove binary ok"  || Write-Host "❌ grove binary failed"
 if (Get-Command prism  -EA 0) { & prism version  && Write-Host "✅ prism binary ok"  || Write-Host "❌ prism binary failed" }
 if (Get-Command fuse   -EA 0) { & fuse version   && Write-Host "✅ fuse binary ok"   || Write-Host "❌ fuse binary failed"  }
-if (Get-Command relay  -EA 0) { & relay version  && Write-Host "✅ relay binary ok"  || Write-Host "❌ relay binary failed" }
+if (Get-Command provasign  -EA 0) { & provasign version  && Write-Host "✅ provasign binary ok"  || Write-Host "❌ provasign binary failed" }
 
 # Grove live query
 $groveResult = & grove symbols "main" 2>$null | Select-Object -First 5
@@ -620,8 +620,8 @@ $fuseDriver = git config --global merge.fuse.driver 2>$null
 if ($fuseDriver) { Write-Host "✅ Fuse merge driver registered" }
 else { Write-Host "❌ Fuse not registered — run: fuse install" }
 
-# Relay policy
-if (Get-Command relay -EA 0) { & relay policy | Select-Object -First 10 }
+# Provasign policy
+if (Get-Command provasign -EA 0) { & provasign policy | Select-Object -First 10 }
 ```
 
 **Verify MCP servers actually CONNECT (Claude Code) — do not skip:**
@@ -634,7 +634,7 @@ as a failure to fix before reporting done:
 echo "--- MCP connectivity ---"
 MCP_OUT="$(claude mcp list 2>&1)"
 echo "$MCP_OUT"
-for SRV in prism relay; do
+for SRV in prism provasign; do
   if echo "$MCP_OUT" | grep -qiE "^${SRV}:.*(✓|connected)"; then
     echo "✅ ${SRV}: connected"
   elif echo "$MCP_OUT" | grep -qi "${SRV}"; then
@@ -653,8 +653,8 @@ tail -n 5 "$(ls -t "$LOGDIR"/*/mcp-logs-prism/*.jsonl 2>/dev/null | head -1)" 2>
 
 A `connection timed out` error with binaries that otherwise run usually means a
 **wire-protocol mismatch**: MCP stdio requires newline-delimited JSON. This was
-a bug in grove-suite **before v0.3.0** — upgrade to the latest release if you
-see it. Expected after the fix: both `prism` and `relay` show **✓ Connected**.
+a bug in provasign **before v0.3.0** — upgrade to the latest release if you
+see it. Expected after the fix: both `prism` and `provasign` show **✓ Connected**.
 
 **Common failures and fixes:**
 
@@ -663,17 +663,17 @@ see it. Expected after the fix: both `prism` and `relay` show **✓ Connected**.
 | `command not found` | Install directory not on `$PATH` — add it and restart shell |
 | macOS "cannot be opened because the developer cannot be verified" | Run `xattr -d com.apple.quarantine $(which grove)` |
 | macOS `zsh: killed` (exit 137) when binary is in `/opt/homebrew/bin` | Run `codesign -f -s - $(which grove)` (repeat for each binary) |
-| `grove: connection refused` on Prism/Fuse/Relay | Should not happen in embedded mode — if you see this, you're on a pre-embedded build; upgrade |
-| `relay: key not found` | Run `relay init` from the project root |
-| `relay init --stack=auto` fails with "unknown stack" | Use `relay init --list-stacks` to see valid stack names, then `relay init --stack=<name>` |
-| `relay_check` passes but no SAST/secrets findings appear | Run `relay tools install` — analyzers are silently skipped when not pre-downloaded |
-| semgrep not running in relay_check | Install separately: `pipx install semgrep` |
-| `relay doctor` shows `govulncheck missing` | Go is not in PATH — run `export PATH="/usr/local/go/bin:$PATH"` then re-run `relay tools install` |
-| `relay doctor` shows `eslint missing` | Safe to ignore for Go/Python projects; only needed for JS/TS SAST. Install with `npm install -g eslint` if required |
-| `relay doctor` exits non-zero but output shows only `eslint missing` | Not a hard failure — relay doctor exits 1 whenever any check needs attention, even optional ones. Read the output to distinguish required vs optional gaps |
+| `grove: connection refused` on Prism/Fuse/Provasign | Should not happen in embedded mode — if you see this, you're on a pre-embedded build; upgrade |
+| `provasign: key not found` | Run `provasign init` from the project root |
+| `provasign init --stack=auto` fails with "unknown stack" | Use `provasign init --list-stacks` to see valid stack names, then `provasign init --stack=<name>` |
+| `provasign_check` passes but no SAST/secrets findings appear | Run `provasign tools install` — analyzers are silently skipped when not pre-downloaded |
+| semgrep not running in provasign_check | Install separately: `pipx install semgrep` |
+| `provasign doctor` shows `govulncheck missing` | Go is not in PATH — run `export PATH="/usr/local/go/bin:$PATH"` then re-run `provasign tools install` |
+| `provasign doctor` shows `eslint missing` | Safe to ignore for Go/Python projects; only needed for JS/TS SAST. Install with `npm install -g eslint` if required |
+| `provasign doctor` exits non-zero but output shows only `eslint missing` | Not a hard failure — provasign doctor exits 1 whenever any check needs attention, even optional ones. Read the output to distinguish required vs optional gaps |
 | `pipx install semgrep` fails: "externally-managed-environment" | System Python blocks pip — install pipx first: `brew install pipx`, then retry |
-| Claude Code `claude mcp list` doesn't show prism/relay | Re-run `prism init` / `relay init` from the project root, then restart Claude Code and approve `.mcp.json` when prompted |
-| `claude mcp list` shows prism/relay **Failed to connect** (~30s timeout) but `prism version` works | Wire-protocol bug fixed in **v0.3.0** — upgrade to the latest release. MCP stdio requires newline-delimited JSON; older binaries emitted `Content-Length` framing that clients can't parse |
+| Claude Code `claude mcp list` doesn't show prism/provasign | Re-run `prism init` / `provasign init` from the project root, then restart Claude Code and approve `.mcp.json` when prompted |
+| `claude mcp list` shows prism/provasign **Failed to connect** (~30s timeout) but `prism version` works | Wire-protocol bug fixed in **v0.3.0** — upgrade to the latest release. MCP stdio requires newline-delimited JSON; older binaries emitted `Content-Length` framing that clients can't parse |
 | Same timeout persists after upgrade | Confirm the on-PATH binary is the new one (`which prism`; `prism version`), then fully restart your AI tool so it re-spawns the server |
 
 If anything fails, diagnose and fix before reporting done.
@@ -685,12 +685,12 @@ If anything fails, diagnose and fix before reporting done.
 Print a clear summary of what was installed, where, and what to do next:
 
 ```
-Grove Suite installation complete
+Provasign installation complete
 ══════════════════════════════════════════════════════════
  grove  v0.x.x  ✅  /usr/local/bin/grove
  prism  v0.x.x  ✅  /usr/local/bin/prism
  fuse   v0.x.x  ✅  /usr/local/bin/fuse
- relay  v0.x.x  ✅  /usr/local/bin/relay
+ provasign  v0.x.x  ✅  /usr/local/bin/provasign
 ══════════════════════════════════════════════════════════
 
 Next steps
@@ -702,14 +702,14 @@ Next steps
   Fuse   → Your next `git merge` uses symbol-aware resolution automatically
            Audit log: .git/fuse/audit.json
 
-  Relay  → Your agent now calls relay_check before every commit automatically
-           After your first commit: relay cert show HEAD
+  Provasign  → Your agent now calls provasign_check before every commit automatically
+           After your first commit: provasign cert show HEAD
 
 Documentation
 ─────────────
-  Full docs:  https://tabladrum.github.io/grove-suite/
-  Setup help: https://tabladrum.github.io/grove-suite/setup/
-  Issues:     https://github.com/tabladrum/grove-suite/issues
+  Full docs:  https://provasign.dev/
+  Setup help: https://provasign.dev/setup/
+  Issues:     https://github.com/provasign/provasign/issues
 ```
 
 List any products that were skipped or failed, with specific next steps for each.
@@ -718,7 +718,7 @@ List any products that were skipped or failed, with specific next steps for each
 
 ## Step U1 — Full Uninstall / Reset
 
-Use this flow when the user asks to remove Grove Suite and start from a clean slate.
+Use this flow when the user asks to remove Provasign and start from a clean slate.
 
 Ask for the target project path first (the repo where MCP/hook wiring should be removed).
 
@@ -726,16 +726,16 @@ Then run:
 
 **macOS / Linux:**
 ```bash
-cd /path/to/grove-suite
-./scripts/uninstall-grove-suite.sh /path/to/target/project
+cd /path/to/provasign
+./scripts/uninstall-provasign.sh /path/to/target/project
 ```
 
 What this removes:
-- Grove/Prism/Fuse/Relay binaries from common install paths
-- Relay-managed hooks and MCP registrations
-- Relay tool cache (`~/.relay/tools`) and user runtime/cache state
+- Grove/Prism/Fuse/Provasign binaries from common install paths
+- Provasign-managed hooks and MCP registrations
+- Provasign tool cache (`~/.provasign/tools`) and user runtime/cache state
 - Project-local runtime state (`.grove`, `.git/fuse`, workspace MCP config files)
-- Lingering local processes (`prism mcp`, `relay mcp serve`, etc.)
+- Lingering local processes (`prism mcp`, `provasign mcp serve`, etc.)
 
 After uninstall, verify:
 
@@ -743,7 +743,7 @@ After uninstall, verify:
 command -v grove || echo "grove removed"
 command -v prism || echo "prism removed"
 command -v fuse  || echo "fuse removed"
-command -v relay || echo "relay removed"
+command -v provasign || echo "provasign removed"
 ```
 
 Then report a short uninstall summary to the user and confirm they can now rerun this prompt for a clean install.
@@ -754,4 +754,4 @@ Then report a short uninstall summary to the user and confirm they can now rerun
 
 ---
 
-*Grove, Prism, and Fuse are MIT licensed. Relay is AGPL-3.0 licensed. No telemetry. Your code never leaves your machine.*
+*Grove, Prism, and Fuse are MIT licensed. Provasign is AGPL-3.0 licensed. No telemetry. Your code never leaves your machine.*

@@ -1,12 +1,12 @@
-# Relay
+# Provasign
 
 **Certified delivery for AI coding agents.** Every AI-generated commit signed, tested, and traceable to the prompt that created it.
 
-> Built on three open-source components — [Grove](grove/README.md) (code knowledge graph), [Prism](prism/README.md) (context delivery), [Fuse](fuse/README.md) (semantic merge) — all embedded into the Relay binary. No services to run. No ports to manage. One install.
+> Built on three open-source components — [Grove](grove/README.md) (code knowledge graph), [Prism](prism/README.md) (context delivery), [Fuse](fuse/README.md) (semantic merge) — all embedded into the Provasign binary. No services to run. No ports to manage. One install.
 
 ```bash
 # Let your agent install everything:
-claude "Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"
+claude "Follow the setup instructions at https://provasign.dev/assets/AGENT_SETUP_PROMPT.md"
 ```
 
 ---
@@ -21,58 +21,58 @@ Every agent — Devin, Cursor, Copilot Workspace, Claude Code — still pushes t
 
 More critically: when a security audit asks *what did the agent do, and who verified it was safe?* — the PR says "refactor auth," CI shows green, the agent session is gone, the original prompt is gone. There is no answer.
 
-**Relay is the answer.**
+**Provasign is the answer.**
 
 ---
 
-## What Relay Does
+## What Provasign Does
 
-An admission control layer between your AI agent and your main branch. Before agent-produced code touches main, Relay:
+An admission control layer between your AI agent and your main branch. Before agent-produced code touches main, Provasign:
 
 1. **Captures the original user prompt** as a signed YAML intent in your repo — the record of what the agent was asked to do.
 2. **Runs quality gates in the agent loop** — build, tests, coverage, secrets scan, SAST, dependency audit — before any commit, in under 10 seconds.
 3. **Issues an Ed25519-signed certificate** proving which gates ran, which tool versions, what passed — permanently linked to the commit.
-4. **Enables audit replay** — `relay cert replay <id>` re-runs the same gates against a 6-month-old commit and tells you `byte_reproducible`, `tool_drift`, or `config_drift`.
+4. **Enables audit replay** — `provasign cert replay <id>` re-runs the same gates against a 6-month-old commit and tells you `byte_reproducible`, `tool_drift`, or `config_drift`.
 
 The agent self-corrects before opening a PR. The CI loop drops from 3–5 iterations to 0–1. Every commit has a cryptographic proof of quality that survives the agent session.
 
 ```bash
 # What the agent sees, via MCP:
-relay_intent_open   → captures the user's prompt as a YAML artifact
-relay_check         → structured findings in < 10 s; agent self-corrects
-relay_submit        → Ed25519-signed admission certificate issued
+provasign_intent_open   → captures the user's prompt as a YAML artifact
+provasign_check         → structured findings in < 10 s; agent self-corrects
+provasign_submit        → Ed25519-signed admission certificate issued
 
 # What the auditor sees, six months later:
-relay cert show <id>     → original prompt + gates + toolchain versions + signature
-relay cert replay <id>   → re-run the gates; prove they still hold
+provasign cert show <id>     → original prompt + gates + toolchain versions + signature
+provasign cert replay <id>   → re-run the gates; prove they still hold
 ```
 
 ---
 
-## Why Relay Is Different
+## Why Provasign Is Different
 
-| | Relay | CI (GitHub Actions, etc.) | CodeRabbit / Greptile | Sigstore / SLSA |
+| | Provasign | CI (GitHub Actions, etc.) | CodeRabbit / Greptile | Sigstore / SLSA |
 |---|---|---|---|---|
 | Runs before the commit | Yes (in the agent loop) | No (after push) | No (after PR open) | No (build-time) |
 | Captures the original prompt | Yes (signed YAML) | No | No | No |
-| Replayable months later | Yes (`relay cert replay`) | No (logs expire) | No | Partial (provenance only) |
+| Replayable months later | Yes (`provasign cert replay`) | No (logs expire) | No | Partial (provenance only) |
 | Signed by your private key | Yes (Ed25519) | No | No | Yes |
 | Knows your codebase graph | Yes (via Grove) | No | Partial | No |
 | Local-first, no cloud | Yes | Cloud-dependent | Cloud | Hybrid |
 
-Relay is the first tool to bind **prompt → certificate → commit** with cryptographic proof that survives the agent session.
+Provasign is the first tool to bind **prompt → certificate → commit** with cryptographic proof that survives the agent session.
 
-[Full Relay docs →](relay/README.md)
+[Full Provasign docs →](provasign/README.md)
 
 ---
 
 ## The Open-Source Foundation
 
-Relay is built on three components. Each is useful on its own and independently licensed under MIT. You can adopt any of them without Relay.
+Provasign is built on three components. Each is useful on its own and independently licensed under MIT. You can adopt any of them without Provasign.
 
 ### [Grove](grove/README.md) — Code Knowledge Graph
 
-Tree-sitter parser, SQLite-backed graph (11 languages, 8 edge types), BFS traversal, FTS5 search, delta indexing by git blob SHA. The substrate Relay uses for impact analysis and test selection.
+Tree-sitter parser, SQLite-backed graph (11 languages, 8 edge types), BFS traversal, FTS5 search, delta indexing by git blob SHA. The substrate Provasign uses for impact analysis and test selection.
 
 **Independent use:** `grove index .`, then `grove impact "validatePassword"`, `grove tests "Login"`. MIT licensed. Embed it in your own tools — Grove is a Go library, not a daemon.
 
@@ -99,7 +99,7 @@ Replaces git's line-based merge with symbol-level understanding. Parses the thre
                         │  MCP
                         ▼
               ┌──────────────────┐
-              │      Relay       │  ← the product
+              │      Provasign       │  ← the product
               │  Intent capture  │
               │  Quality gates   │
               │  Ed25519 certs   │
@@ -117,7 +117,7 @@ Replaces git's line-based merge with symbol-level understanding. Parses the thre
                  Your codebase
 ```
 
-**No daemons. No ports. No tokens.** Grove is compiled into Relay (and into Prism and Fuse when used standalone) as a Go library. Index data lives in `.grove/` per repo. SQLite handles concurrent readers.
+**No daemons. No ports. No tokens.** Grove is compiled into Provasign (and into Prism and Fuse when used standalone) as a Go library. Index data lives in `.grove/` per repo. SQLite handles concurrent readers.
 
 ---
 
@@ -126,39 +126,39 @@ Replaces git's line-based merge with symbol-level understanding. Parses the thre
 ### Fastest — let your agent do it
 
 ```bash
-claude "Follow the setup instructions at https://tabladrum.github.io/grove-suite/assets/AGENT_SETUP_PROMPT.md"
+claude "Follow the setup instructions at https://provasign.dev/assets/AGENT_SETUP_PROMPT.md"
 ```
 
-The agent detects your platform, fetches the latest release, verifies checksums, and wires Relay into your project.
+The agent detects your platform, fetches the latest release, verifies checksums, and wires Provasign into your project.
 
 ### Manual install
 
 ```bash
 # Pre-built binaries (macOS, Linux, Windows):
-curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+curl -fsSL https://provasign.dev/assets/install.sh | bash
 
 # Or from source:
-git clone https://github.com/tabladrum/grove-suite && cd grove-suite/relay && make install
+git clone https://github.com/provasign/provasign && cd grove-suite/provasign && make install
 ```
 
 ### Initialize in your project
 
 ```bash
 cd /your/project
-relay init --stack=auto   # detects Go/Node/Python; generates Ed25519 key;
+provasign init --stack=auto   # detects Go/Node/Python; generates Ed25519 key;
                           # writes agent instructions into CLAUDE.md, .cursorrules, etc.
-relay hook install        # git pre-push backstop
+provasign hook install        # git pre-push backstop
 ```
 
-Relay's MCP server is registered with every AI coding tool installed on your machine. Your agent's next session has `relay_intent_open`, `relay_check`, `relay_submit` available — and uses them automatically per the instructions in `CLAUDE.md`.
+Provasign's MCP server is registered with every AI coding tool installed on your machine. Your agent's next session has `provasign_intent_open`, `provasign_check`, `provasign_submit` available — and uses them automatically per the instructions in `CLAUDE.md`.
 
 ### Adopt the OSS components independently (optional)
 
 ```bash
-# Better context for any AI agent, no Relay needed:
+# Better context for any AI agent, no Provasign needed:
 prism init && prism index
 
-# Symbol-level git merge, no Relay needed:
+# Symbol-level git merge, no Provasign needed:
 fuse install
 echo "*.go merge=fuse" >> .gitattributes
 ```
@@ -169,7 +169,7 @@ echo "*.go merge=fuse" >> .gitattributes
 
 Benchmarks on real hardware (macOS, 2026-05-27):
 
-| Project | Files | Index (cold) | BFS query | Relay pre-flight |
+| Project | Files | Index (cold) | BFS query | Provasign pre-flight |
 |---------|------:|------------:|----------:|-----------------:|
 | Small | 61 | 0.06 s | 6 ms | < 10 s |
 | Medium | 801 | 0.85 s | 6 ms | < 10 s |
@@ -184,7 +184,7 @@ Delta indexing: after the first run, unchanged files are never re-parsed. One-fi
 
 | Who you are | What to read |
 |-------------|--------------|
-| Developer wanting to try Relay | [Get Started](#get-started) above |
+| Developer wanting to try Provasign | [Get Started](#get-started) above |
 | Security / CISO evaluation | [FAQ — Security](docs/faq.md#for-security--ciso) · [Audiences: Security](docs/audiences/security.md) |
 | Compliance / audit evidence | [FAQ — Compliance](docs/faq.md#for-compliance--audit) · [Audiences: Audit](docs/audiences/audit.md) |
 | Adopting Grove / Prism / Fuse on their own | [Grove](grove/README.md) · [Prism](prism/README.md) · [Fuse](fuse/README.md) |
@@ -198,8 +198,8 @@ Delta indexing: after the first run, unchanged files are never re-parsed. One-fi
 
 ```
 grove-suite/
-├── relay/              the product — certified delivery (AGPL-3.0)
-├── grove/              code knowledge graph (MIT) — also embedded in Relay
+├── provasign/              the product — certified delivery (AGPL-3.0)
+├── grove/              code knowledge graph (MIT) — also embedded in Provasign
 ├── prism/              token-optimized context for AI agents (MIT)
 │   └── vscode-extension/  VS Code native extension
 ├── fuse/               semantic git merge driver (MIT)
@@ -208,13 +208,13 @@ grove-suite/
 └── go.work             Go workspace
 ```
 
-**Licensing:** Relay is AGPL-3.0. Grove, Prism, and Fuse are MIT — adopt them independently in commercial products without obligation.
+**Licensing:** Provasign is AGPL-3.0. Grove, Prism, and Fuse are MIT — adopt them independently in commercial products without obligation.
 
 ---
 
 ## Security
 
-- Relay's Ed25519 admission key is at `~/.relay/keys/admission.ed25519` (mode 0600), generated once on `relay init`.
+- Provasign's Ed25519 admission key is at `~/.provasign/keys/admission.ed25519` (mode 0600), generated once on `provasign init`.
 - Grove runs in-process as a library; index data is in `.grove/` per repo. No network ports, no shared secrets.
 - Zero telemetry. Your code never leaves your machine.
 

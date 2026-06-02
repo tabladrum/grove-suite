@@ -30,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [grove, prism, fuse, relay]
+        module: [grove, prism, fuse, provasign]
         goarch: [amd64, arm64]
     steps:
       - uses: actions/checkout@v5
@@ -70,7 +70,7 @@ jobs:
           mkdir -p ../dist
           OUT="${{ matrix.module }}-${{ steps.ver.outputs.version }}-linux-${{ matrix.goarch }}"
           go build \
-            -ldflags="-s -w -X github.com/tabladrum/grove-suite/${{ matrix.module }}/internal/version.Version=${{ steps.ver.outputs.stripped }}" \
+            -ldflags="-s -w -X github.com/provasign/provasign/${{ matrix.module }}/internal/version.Version=${{ steps.ver.outputs.stripped }}" \
             -o "../dist/${OUT}" \
             ./cmd/${{ matrix.module }}
 
@@ -91,7 +91,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [grove, prism, fuse, relay]
+        module: [grove, prism, fuse, provasign]
         goarch: [amd64, arm64]
     steps:
       - uses: actions/checkout@v5
@@ -126,7 +126,7 @@ jobs:
           mkdir -p ../dist
           OUT="${{ matrix.module }}-${{ steps.ver.outputs.version }}-darwin-${{ matrix.goarch }}"
           go build \
-            -ldflags="-s -w -X github.com/tabladrum/grove-suite/${{ matrix.module }}/internal/version.Version=${{ steps.ver.outputs.stripped }}" \
+            -ldflags="-s -w -X github.com/provasign/provasign/${{ matrix.module }}/internal/version.Version=${{ steps.ver.outputs.stripped }}" \
             -o "../dist/${OUT}" \
             ./cmd/${{ matrix.module }}
 
@@ -147,7 +147,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [grove, prism, fuse, relay]
+        module: [grove, prism, fuse, provasign]
     steps:
       - uses: actions/checkout@v5
 
@@ -181,7 +181,7 @@ jobs:
           mkdir -p ../dist
           OUT="${{ matrix.module }}-${{ steps.ver.outputs.version }}-windows-amd64.exe"
           go build \
-            -ldflags="-s -w -X github.com/tabladrum/grove-suite/${{ matrix.module }}/internal/version.Version=${{ steps.ver.outputs.stripped }}" \
+            -ldflags="-s -w -X github.com/provasign/provasign/${{ matrix.module }}/internal/version.Version=${{ steps.ver.outputs.stripped }}" \
             -o "../dist/${OUT}" \
             ./cmd/${{ matrix.module }}
 
@@ -258,7 +258,7 @@ jobs:
             | grove  | ✅ | ✅ | ✅ | ✅ | ✅ |
             | prism  | ✅ | ✅ | ✅ | ✅ | ✅ |
             | fuse   | ✅ | ✅ | ✅ | ✅ | ✅ |
-            | relay  | ✅ | ✅ | ✅ | ✅ | ✅ |
+            | provasign | ✅ | ✅ | ✅ | ✅ | ✅ |
 
             Download per-OS binaries below. Verify with `checksums.txt`.
 
@@ -267,13 +267,13 @@ jobs:
             ```bash
             # Example: install grove on macOS Apple Silicon
             VERSION=${{ github.ref_name }}
-            curl -L https://github.com/tabladrum/grove-suite/releases/download/${VERSION}/grove-${VERSION}-darwin-arm64 -o grove
+            curl -L https://github.com/provasign/provasign/releases/download/${VERSION}/grove-${VERSION}-darwin-arm64 -o grove
             chmod +x grove
             sudo mv grove /usr/local/bin/
             grove version
             ```
 
-            Repeat for `prism`, `fuse`, `relay` as needed. See [the installation guide](https://tabladrum.github.io/grove-suite/installation) for the full per-OS instructions including Windows.
+            Repeat for `prism`, `fuse`, `relay` as needed. See [the installation guide](https://provasign.dev/installation) for the full per-OS instructions including Windows.
 
             ### Install (Windows)
 
@@ -286,7 +286,7 @@ jobs:
             ### Verify
 
             ```bash
-            curl -L https://github.com/tabladrum/grove-suite/releases/download/${{ github.ref_name }}/checksums.txt -o checksums.txt
+            curl -L https://github.com/provasign/provasign/releases/download/${{ github.ref_name }}/checksums.txt -o checksums.txt
             sha256sum -c checksums.txt --ignore-missing
             ```
           files: dist/*

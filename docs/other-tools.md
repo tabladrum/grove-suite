@@ -2,13 +2,13 @@
 title: Other Developer Tools
 layout: default
 nav_order: 9
-description: "Prism and Fuse — the open-source tools that share Relay's embedded Grove engine, usable standalone."
+description: "Prism and Fuse — the open-source tools that share Provasign's embedded Grove engine, usable standalone."
 permalink: /other-tools/
 ---
 
 # Other Developer Tools
 
-Relay is the product this site is about. The same [Grove knowledge-graph engine]({{ '/architecture/#grove--the-knowledge-graph-engine-inside-relay' | relative_url }}) that powers Relay's impact analysis and test selection also powers two standalone, MIT-licensed tools you can adopt independently. Their full documentation lives in their repositories — this page is a short orientation.
+Provasign is the product this site is about. The same [Grove knowledge-graph engine]({{ '/architecture/#grove--the-knowledge-graph-engine-inside-provasign' | relative_url }}) that powers Provasign's impact analysis and test selection also powers two standalone, MIT-licensed tools you can adopt independently. Their full documentation lives in their repositories — this page is a short orientation.
 
 ---
 
@@ -20,7 +20,7 @@ Prism gives an AI coding agent the *right* code instead of a dump of nearby file
 - Integrates over MCP (Claude Code, Cursor, Codex CLI, Windsurf, Continue) or as a native VS Code extension.
 - Embeds Grove in-process — no daemon, no port.
 
-[Prism README on GitHub →](https://github.com/tabladrum/grove-suite/tree/main/prism#readme){: .btn .btn-primary }
+[Prism README on GitHub →](https://github.com/provasign/provasign/tree/main/prism#readme){: .btn .btn-primary }
 
 ---
 
@@ -32,17 +32,17 @@ Git merges lines; Fuse merges **symbols**. When one agent changes `Login()` and 
 - Genuinely ambiguous conflicts get markers plus a structured AI-handoff prompt at `.git/fuse/conflict-<hash>.md`.
 - Drops in as a git merge driver: `fuse merge %O %A %B %P`.
 
-[Fuse README on GitHub →](https://github.com/tabladrum/grove-suite/tree/main/fuse#readme){: .btn .btn-primary }
+[Fuse README on GitHub →](https://github.com/provasign/provasign/tree/main/fuse#readme){: .btn .btn-primary }
 
 ---
 
-## How they relate to Relay
+## How they relate to Provasign
 
-| | Role | License | Relationship to Relay |
+| | Role | License | Relationship to Provasign |
 |---|---|---|---|
-| **Grove** | Code knowledge graph | MIT | **Embedded inside Relay** (see [Architecture]({{ '/architecture/' | relative_url }})) |
+| **Grove** | Code knowledge graph | MIT | **Embedded inside Provasign** (see [Architecture]({{ '/architecture/' | relative_url }})) |
 | **Prism** | Context delivery for agents | MIT | Standalone; shares the Grove engine |
 | **Fuse** | Symbol-level merge driver | MIT | Standalone; shares the Grove engine |
-| **Relay** | Certified delivery | AGPL-3.0 | **The product** — embeds Grove |
+| **Provasign** | Certified delivery | AGPL-3.0 | **The product** — embeds Grove |
 
-You do not need Prism or Fuse to use Relay. They solve adjacent problems in the AI-assisted workflow and happen to be built on the same foundation.
+You do not need Prism or Fuse to use Provasign. They solve adjacent problems in the AI-assisted workflow and happen to be built on the same foundation.

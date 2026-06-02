@@ -2,27 +2,27 @@
 #
 # Grove Suite one-command installer.
 #
-#   curl -fsSL https://tabladrum.github.io/grove-suite/assets/install.sh | bash
+#   curl -fsSL https://tabladrum.github.io/provasign/assets/install.sh | bash
 #
-# Installs grove, prism, fuse, relay from GitHub Releases, verifies checksums,
+# Installs grove, prism, fuse, provasign from GitHub Releases, verifies checksums,
 # puts them on PATH, and (optionally) initializes a project. Non-interactive:
 # everything is driven by environment variables so it works in CI, Dockerfiles,
 # and "one click" flows.
 #
 # Environment variables (all optional):
 #   GROVE_SUITE_VERSION       release tag to install            (default: latest)
-#   GROVE_SUITE_PRODUCTS      space-separated product list       (default: "grove prism fuse relay")
+#   PROVASIGN_PRODUCTS      space-separated product list       (default: "grove prism fuse provasign")
 #   GROVE_SUITE_INSTALL_DIR   install directory                  (default: $HOME/bin)
 #   GROVE_SUITE_PROJECT       project dir to init after install  (default: none)
-#   GROVE_SUITE_REPO          github owner/repo                  (default: tabladrum/grove-suite)
+#   PROVASIGN_REPO          github owner/repo                  (default: tabladrum/provasign)
 #
 # This script NEVER skips checksum verification. Grove is always installed first
-# (prism/fuse/relay depend on it). Canonical copy: scripts/install.sh — keep
+# (prism/fuse/provasign depend on it). Canonical copy: scripts/install.sh — keep
 # docs/assets/install.sh byte-identical so the published URL matches.
 set -euo pipefail
 
-REPO="${GROVE_SUITE_REPO:-tabladrum/grove-suite}"
-PRODUCTS="${GROVE_SUITE_PRODUCTS:-grove prism fuse relay}"
+REPO="${PROVASIGN_REPO:-tabladrum/provasign}"
+PRODUCTS="${PROVASIGN_PRODUCTS:-grove prism fuse provasign}"
 INSTALL_DIR="${GROVE_SUITE_INSTALL_DIR:-$HOME/bin}"
 PROJECT="${GROVE_SUITE_PROJECT:-}"
 
@@ -102,9 +102,9 @@ done
 
 # ---- 5. Put install dir on PATH ---------------------------------------------
 if [ "$OS" = "darwin" ] && [ "$INSTALL_DIR" = "$HOME/bin" ]; then
-  if command -v sudo >/dev/null 2>&1 && [ ! -f /etc/paths.d/grove-suite ]; then
-    echo "$INSTALL_DIR" | sudo tee /etc/paths.d/grove-suite >/dev/null 2>&1 \
-      && ok "Registered ${INSTALL_DIR} system-wide via /etc/paths.d/grove-suite" || true
+  if command -v sudo >/dev/null 2>&1 && [ ! -f /etc/paths.d/provasign ]; then
+    echo "$INSTALL_DIR" | sudo tee /etc/paths.d/provasign >/dev/null 2>&1 \
+      && ok "Registered ${INSTALL_DIR} system-wide via /etc/paths.d/provasign" || true
   fi
 fi
 SHELL_RC="$HOME/.zshrc"; [ -n "${BASH_VERSION:-}" ] && SHELL_RC="$HOME/.bashrc"
@@ -121,7 +121,7 @@ if [ -n "$PROJECT" ]; then
   ( cd "$PROJECT"
     "${INSTALL_DIR}/grove" index . >/dev/null 2>&1 && ok "grove: indexed" || err "grove index failed"
     case " $PRODUCTS " in *" prism "*) "${INSTALL_DIR}/prism" init && "${INSTALL_DIR}/prism" index >/dev/null 2>&1 && ok "prism: initialized";; esac
-    case " $PRODUCTS " in *" relay "*) "${INSTALL_DIR}/relay" init >/dev/null 2>&1 && ok "relay: initialized (run 'relay tools install' for analyzers)";; esac
+    case " $PRODUCTS " in *" provasign "*) "${INSTALL_DIR}/provasign" init >/dev/null 2>&1 && ok "provasign: initialized (run 'provasign tools install' for analyzers)";; esac
   )
 fi
 
@@ -143,6 +143,6 @@ Next steps:
   • Open a NEW terminal (or: export PATH="${INSTALL_DIR}:\$PATH") so the binaries are on PATH.
   • If you initialized a project, RESTART your AI coding tool (Claude Code, Cursor,
     VS Code, Copilot) so it spawns the freshly-registered MCP servers.
-  • Verify MCP wiring in Claude Code:  claude mcp list   → prism/relay should show ✓ Connected
-  • Docs: https://tabladrum.github.io/grove-suite/
+  • Verify MCP wiring in Claude Code:  claude mcp list   → prism/provasign should show ✓ Connected
+  • Docs: https://tabladrum.github.io/provasign/
 EOF

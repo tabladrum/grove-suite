@@ -41,7 +41,7 @@ jobs:
         run: go work sync
 
       - name: Vet all modules
-        run: go vet ./astkit/... ./grove/... ./fuse/... ./prism/... ./relay/...
+        run: go vet ./astkit/... ./grove/... ./fuse/... ./prism/... ./provasign/...
 
       - name: Test astkit
         run: cd astkit && go test ./... -count=1 -timeout 120s
@@ -55,8 +55,8 @@ jobs:
       - name: Test prism
         run: cd prism && go test ./... -count=1 -timeout 120s
 
-      - name: Test relay
-        run: cd relay && go test ./... -count=1 -timeout 120s
+      - name: Test provasign
+        run: cd provasign && go test ./... -count=1 -timeout 120s
 
       - name: Build VS Code extension
         run: |
